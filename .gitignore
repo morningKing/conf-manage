@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytype/
+cov.xml
+*.cover
+*.log
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# Frontend build
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/database.db
+
+# Application data
+data/
+logs/
+workspaces/
+execution_spaces/
+scripts/
+uploads/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS
+Thumbs.db
+Desktop.ini
+.Spotlight-V100
+.Trashes
+._*
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Documentation (auto-generated)
+#$PROJECT_ANALYSIS.md
+#QUICK_REFERENCE.md
+#FILE_INDEX.md
+#DOCUMENTATION_GUIDE.md
+
+# Backup files
+*.backup
+backup/
+
+# Security
+*.key
+*.pem
+*.crt
+credentials.json
+secrets.json

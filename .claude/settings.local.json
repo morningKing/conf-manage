@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(tree:*)",
+      "Bash(node --version:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3:*)",
+      "Bash(PYTHONPATH=/mnt/e/Code/ccr/conf-manage:$PYTHONPATH python3:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(PYTHONPATH=/mnt/e/Code/ccr/conf-manage/backend:$PYTHONPATH python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
