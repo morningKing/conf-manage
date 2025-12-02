@@ -24,6 +24,11 @@ const routes = [
     path: '/files',
     name: 'Files',
     component: () => import('../views/Files.vue')
+  },
+  {
+    path: '/environments',
+    name: 'Environments',
+    component: () => import('../views/Environments.vue')
   }
 ]
 

@@ -36,3 +36,13 @@ export const uploadFile = (formData) => request.post('/files/upload', formData, 
 export const downloadFile = (path) => `/api/files/download?path=${encodeURIComponent(path)}`
 export const deleteFile = (path) => request.delete('/files/delete', { params: { path } })
 export const createFolder = (data) => request.post('/files/create-folder', data)
+
+// 执行环境管理
+export const getEnvironments = () => request.get('/environments')
+export const getEnvironment = (id) => request.get(`/environments/${id}`)
+export const createEnvironment = (data) => request.post('/environments', data)
+export const updateEnvironment = (id, data) => request.put(`/environments/${id}`, data)
+export const deleteEnvironment = (id) => request.delete(`/environments/${id}`)
+export const setDefaultEnvironment = (id) => request.post(`/environments/${id}/set-default`)
+export const detectEnvironment = (data) => request.post('/environments/detect', data)
+

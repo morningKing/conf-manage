@@ -6,7 +6,7 @@ import subprocess
 import json
 import shutil
 from datetime import datetime
-from models import db, Execution, Script
+from models import db, Execution, Script, Environment
 from config import Config
 import tempfile
 
@@ -75,14 +75,28 @@ def execute_script(execution_id):
         db.session.commit()  # 立即提交，让SSE端点能找到日志文件路径
 
         try:
+            # 获取解释器路径
+            python_executable = Config.PYTHON_EXECUTABLE
+            node_executable = Config.NODE_EXECUTABLE
+
+            # 如果脚本指定了执行环境，使用环境的解释器
+            if script.environment_id:
+                environment = Environment.query.get(script.environment_id)
+                if environment:
+                    if script.type == 'python' and environment.type == 'python':
+                        python_executable = environment.executable_path
+                    elif script.type == 'javascript' and environment.type == 'javascript':
+                        node_executable = environment.executable_path
+                    print(f"使用环境 '{environment.name}' 的解释器: {environment.executable_path}")
+
             # 准备执行命令
             if script.type == 'python':
                 # 安装依赖
                 if script.dependencies:
-                    install_dependencies_python(script.dependencies)
+                    install_dependencies_python(script.dependencies, python_executable)
 
                 # 构建命令
-                cmd = [Config.PYTHON_EXECUTABLE, script_filename]
+                cmd = [python_executable, script_filename]
 
                 # 准备环境变量，包含所有参数
                 env = os.environ.copy()
@@ -97,10 +111,10 @@ def execute_script(execution_id):
             elif script.type == 'javascript':
                 # 安装依赖
                 if script.dependencies:
-                    install_dependencies_node(script.dependencies)
+                    install_dependencies_node(script.dependencies, node_executable)
 
                 # 构建命令
-                cmd = [Config.NODE_EXECUTABLE, script_filename]
+                cmd = [node_executable, script_filename]
 
                 # 准备环境变量，包含所有参数
                 env = os.environ.copy()
@@ -166,9 +180,12 @@ def execute_script(execution_id):
             pass
 
 
-def install_dependencies_python(dependencies):
+def install_dependencies_python(dependencies, python_executable=None):
     """安装Python依赖"""
     try:
+        if python_executable is None:
+            python_executable = Config.PYTHON_EXECUTABLE
+
         deps = json.loads(dependencies) if isinstance(dependencies, str) else dependencies
         if isinstance(deps, dict):
             deps = deps.get('packages', [])
@@ -176,13 +193,13 @@ def install_dependencies_python(dependencies):
             deps = [d.strip() for d in deps.split(',') if d.strip()]
 
         if deps:
-            cmd = [Config.PYTHON_EXECUTABLE, '-m', 'pip', 'install'] + deps
+            cmd = [python_executable, '-m', 'pip', 'install'] + deps
             subprocess.run(cmd, check=True, capture_output=True)
     except Exception as e:
         print(f'安装Python依赖失败: {str(e)}')
 
 
-def install_dependencies_node(dependencies):
+def install_dependencies_node(dependencies, node_executable=None):
     """安装Node.js依赖"""
     try:
         deps = json.loads(dependencies) if isinstance(dependencies, str) else dependencies

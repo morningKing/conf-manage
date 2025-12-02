@@ -24,6 +24,10 @@
             <el-icon><Clock /></el-icon>
             <span>定时任务</span>
           </el-menu-item>
+          <el-menu-item index="/environments">
+            <el-icon><Setting /></el-icon>
+            <span>执行环境</span>
+          </el-menu-item>
           <el-menu-item index="/files">
             <el-icon><Folder /></el-icon>
             <span>文件管理</span>

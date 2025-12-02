@@ -44,16 +44,33 @@
       :title="dialogTitle"
       width="80%"
       :close-on-click-modal="false"
+      class="script-dialog"
     >
-      <el-form :model="form" label-width="100px">
+      <el-form :model="form" label-width="100px" class="script-form">
         <el-form-item label="脚本名称">
           <el-input v-model="form.name" placeholder="请输入脚本名称" />
         </el-form-item>
         <el-form-item label="脚本类型">
-          <el-select v-model="form.type" placeholder="请选择脚本类型">
+          <el-select v-model="form.type" placeholder="请选择脚本类型" @change="handleTypeChange">
             <el-option label="Python" value="python" />
             <el-option label="JavaScript" value="javascript" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="执行环境">
+          <el-select v-model="form.environment_id" placeholder="默认环境（可选）" clearable>
+            <el-option
+              v-for="env in filteredEnvironments"
+              :key="env.id"
+              :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
+              :value="env.id"
+            >
+              <span>{{ env.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px;">{{ env.version }}</span>
+            </el-option>
+          </el-select>
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            {{ form.environment_id ? '将使用指定环境的解释器执行' : '将使用系统默认解释器或环境类型的默认环境' }}
+          </div>
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" rows="2" />
@@ -73,7 +90,7 @@
           <CodeEditor
             v-model="form.code"
             :language="form.type"
-            height="500px"
+            height="400px"
             theme="dark"
           />
         </el-form-item>
@@ -195,7 +212,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getScripts,
@@ -204,7 +221,8 @@ import {
   deleteScript,
   getScriptVersions,
   rollbackScript,
-  executeScriptWithFiles
+  executeScriptWithFiles,
+  getEnvironments
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -213,6 +231,7 @@ import ExecutionParams from '../components/ExecutionParams.vue'
 import { Plus } from '@element-plus/icons-vue'
 
 const scripts = ref([])
+const environments = ref([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新建脚本')
 const form = ref({
@@ -221,7 +240,8 @@ const form = ref({
   description: '',
   code: '',
   dependencies: '',
-  parameters: ''
+  parameters: '',
+  environment_id: null
 })
 const currentScript = ref(null)
 const executeVisible = ref(false)
@@ -242,12 +262,36 @@ const logStatus = ref('pending')
 const logContainer = ref(null)
 let eventSource = null
 
+// 根据当前脚本类型过滤环境
+const filteredEnvironments = computed(() => {
+  return environments.value.filter(env => env.type === form.value.type)
+})
+
 const loadScripts = async () => {
   try {
     const res = await getScripts()
     scripts.value = res.data
   } catch (error) {
     console.error(error)
+  }
+}
+
+const loadEnvironments = async () => {
+  try {
+    const res = await getEnvironments()
+    environments.value = res.data
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const handleTypeChange = () => {
+  // 当脚本类型改变时，清空环境选择（如果当前选择的环境类型不匹配）
+  if (form.value.environment_id) {
+    const selectedEnv = environments.value.find(env => env.id === form.value.environment_id)
+    if (selectedEnv && selectedEnv.type !== form.value.type) {
+      form.value.environment_id = null
+    }
   }
 }
 
@@ -259,7 +303,8 @@ const handleCreate = () => {
     description: '',
     code: '',
     dependencies: '',
-    parameters: ''
+    parameters: '',
+    environment_id: null
   }
   currentScript.value = null
   dialogVisible.value = true
@@ -468,6 +513,7 @@ const formatTime = (time) => {
 
 onMounted(() => {
   loadScripts()
+  loadEnvironments()
 })
 </script>
 
@@ -480,6 +526,17 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* 脚本编辑对话框样式 */
+.script-dialog :deep(.el-dialog__body) {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.script-form {
+  padding-right: 10px;
 }
 
 .log-header {

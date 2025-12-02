@@ -16,11 +16,13 @@ class Script(db.Model):
     code = db.Column(db.Text, nullable=False)
     dependencies = db.Column(db.Text)  # JSON格式存储依赖
     parameters = db.Column(db.Text)  # JSON格式存储参数定义 [{"key": "param1", "description": "参数说明", "default_value": "默认值", "required": true}]
+    environment_id = db.Column(db.Integer, db.ForeignKey('environments.id'), nullable=True)  # 执行环境ID
     version = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # 关系
+    environment = db.relationship('Environment', backref='scripts', foreign_keys=[environment_id])
     versions = db.relationship('ScriptVersion', backref='script', lazy='dynamic', cascade='all, delete-orphan')
     executions = db.relationship('Execution', backref='script', lazy='dynamic', cascade='all, delete-orphan')
     schedules = db.relationship('Schedule', backref='script', lazy='dynamic', cascade='all, delete-orphan')
@@ -35,6 +37,7 @@ class Script(db.Model):
             'code': self.code,
             'dependencies': self.dependencies,
             'parameters': self.parameters,
+            'environment_id': self.environment_id,
             'version': self.version,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None

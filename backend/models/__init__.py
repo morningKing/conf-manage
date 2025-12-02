@@ -8,5 +8,6 @@ db = SQLAlchemy()
 from .script import Script, ScriptVersion
 from .execution import Execution
 from .schedule import Schedule
+from .environment import Environment
 
-__all__ = ['db', 'Script', 'ScriptVersion', 'Execution', 'Schedule']
+__all__ = ['db', 'Script', 'ScriptVersion', 'Execution', 'Schedule', 'Environment']
