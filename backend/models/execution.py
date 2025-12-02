@@ -11,6 +11,7 @@ class Execution(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     script_id = db.Column(db.Integer, db.ForeignKey('scripts.id'), nullable=False)
+    environment_id = db.Column(db.Integer, db.ForeignKey('environments.id'), nullable=True)  # 实际使用的执行环境
     status = db.Column(db.String(20), nullable=False)  # pending, running, success, failed
     params = db.Column(db.Text)  # JSON格式存储参数
     output = db.Column(db.Text)  # 执行输出
@@ -20,12 +21,17 @@ class Execution(db.Model):
     end_time = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 关系
+    environment = db.relationship('Environment', backref='executions', foreign_keys=[environment_id])
+
     def to_dict(self):
         """转换为字典"""
         return {
             'id': self.id,
             'script_id': self.script_id,
             'script_name': self.script.name if self.script else None,
+            'environment_id': self.environment_id,
+            'environment_name': self.environment.name if self.environment else None,
             'status': self.status,
             'params': self.params,
             'output': self.output,

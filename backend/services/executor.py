@@ -79,15 +79,19 @@ def execute_script(execution_id):
             python_executable = Config.PYTHON_EXECUTABLE
             node_executable = Config.NODE_EXECUTABLE
 
-            # 如果脚本指定了执行环境，使用环境的解释器
-            if script.environment_id:
-                environment = Environment.query.get(script.environment_id)
+            # 确定使用的执行环境（优先级：execution.environment_id > script.environment_id）
+            env_id = execution.environment_id or script.environment_id
+
+            if env_id:
+                environment = Environment.query.get(env_id)
                 if environment:
                     if script.type == 'python' and environment.type == 'python':
                         python_executable = environment.executable_path
                     elif script.type == 'javascript' and environment.type == 'javascript':
                         node_executable = environment.executable_path
-                    print(f"使用环境 '{environment.name}' 的解释器: {environment.executable_path}")
+
+                    source = "执行时指定" if execution.environment_id else "脚本默认"
+                    print(f"使用{source}的环境 '{environment.name}' 的解释器: {environment.executable_path}")
 
             # 准备执行命令
             if script.type == 'python':

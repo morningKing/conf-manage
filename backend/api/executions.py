@@ -23,9 +23,13 @@ def execute_script_api(script_id):
         if request.form.get('params'):
             params = json.loads(request.form.get('params'))
 
+        # 获取执行环境ID（如果指定）
+        environment_id = request.form.get('environment_id', type=int)
+
         # 创建执行记录（先创建以获取execution_id）
         execution = Execution(
             script_id=script_id,
+            environment_id=environment_id,
             status='pending',
             params=json.dumps(params) if params else None
         )

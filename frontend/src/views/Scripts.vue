@@ -115,6 +115,28 @@
           />
         </el-form-item>
 
+        <el-form-item label="执行环境">
+          <el-select v-model="executeForm.environment_id" placeholder="默认环境（可选）" clearable style="width: 100%;">
+            <el-option
+              v-for="env in executeEnvironments"
+              :key="env.id"
+              :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
+              :value="env.id"
+            >
+              <span>{{ env.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px;">{{ env.version }}</span>
+            </el-option>
+          </el-select>
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            {{ executeForm.environment_id
+              ? '将使用指定环境的解释器执行'
+              : currentScript?.environment_id
+                ? '将使用脚本预设的环境'
+                : '将使用系统默认解释器'
+            }}
+          </div>
+        </el-form-item>
+
         <el-form-item label="上传文件">
           <FileUpload v-model="uploadFiles" />
         </el-form-item>
@@ -262,9 +284,15 @@ const logStatus = ref('pending')
 const logContainer = ref(null)
 let eventSource = null
 
-// 根据当前脚本类型过滤环境
+// 根据当前脚本类型过滤环境（用于创建/编辑脚本）
 const filteredEnvironments = computed(() => {
   return environments.value.filter(env => env.type === form.value.type)
+})
+
+// 根据当前执行脚本类型过滤环境（用于执行脚本）
+const executeEnvironments = computed(() => {
+  if (!currentScript.value) return []
+  return environments.value.filter(env => env.type === currentScript.value.type)
 })
 
 const loadScripts = async () => {
@@ -355,6 +383,9 @@ const handleExecute = (row) => {
   executeParams.value = ''
   executeParamsObj.value = {}
   uploadFiles.value = []
+  executeForm.value = {
+    environment_id: null  // 初始化为 null，用户可选择
+  }
   executeVisible.value = true
 }
 
@@ -370,6 +401,11 @@ const handleExecuteConfirm = async () => {
     // 添加参数（使用ExecutionParams组件收集的参数）
     if (executeParamsObj.value && Object.keys(executeParamsObj.value).length > 0) {
       formData.append('params', JSON.stringify(executeParamsObj.value))
+    }
+
+    // 添加执行环境ID（如果指定）
+    if (executeForm.value.environment_id) {
+      formData.append('environment_id', executeForm.value.environment_id)
     }
 
     const res = await executeScriptWithFiles(currentScript.value.id, formData)
