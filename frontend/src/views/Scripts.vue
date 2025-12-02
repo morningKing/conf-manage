@@ -159,14 +159,36 @@
         <el-tag :type="getStatusType(logStatus)" size="large">
           {{ getStatusText(logStatus) }}
         </el-tag>
-        <el-button
-          v-if="logStatus === 'running'"
-          type="danger"
-          size="small"
-          @click="closeLogStream"
-        >
-          停止监听
-        </el-button>
+        <div class="log-actions">
+          <el-button
+            v-if="logStatus === 'running'"
+            type="danger"
+            size="small"
+            @click="handleCancelExecution"
+          >
+            中断执行
+          </el-button>
+          <el-button
+            v-if="logStatus === 'running'"
+            type="info"
+            size="small"
+            @click="closeLogStream"
+          >
+            停止监听
+          </el-button>
+        </div>
+      </div>
+
+      <el-divider />
+
+      <!-- 进度显示 -->
+      <div class="progress-section">
+        <ExecutionProgress
+          :progress="logProgress"
+          :stage="logStage"
+          :status="logStatus"
+          :show-detail="true"
+        />
       </div>
 
       <el-divider />
@@ -291,13 +313,15 @@ import {
   getScriptVersions,
   rollbackScript,
   executeScriptWithFiles,
-  getEnvironments
+  getEnvironments,
+  cancelExecution
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
 import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
+import ExecutionProgress from '../components/ExecutionProgress.vue'
 import { Plus } from '@element-plus/icons-vue'
 
 const scripts = ref([])
@@ -331,6 +355,9 @@ const logVisible = ref(false)
 const realTimeLogs = ref('')
 const logError = ref('')
 const logStatus = ref('pending')
+const logProgress = ref(0)
+const logStage = ref('pending')
+const currentExecutionId = ref(null)
 const logContainer = ref(null)
 let eventSource = null
 
@@ -477,6 +504,9 @@ const openLogStream = (executionId) => {
   realTimeLogs.value = ''
   logError.value = ''
   logStatus.value = 'pending'
+  logProgress.value = 0
+  logStage.value = 'pending'
+  currentExecutionId.value = executionId
   logVisible.value = true
 
   // 关闭已有的连接
@@ -501,9 +531,19 @@ const openLogStream = (executionId) => {
             logContainer.value.scrollTop = logContainer.value.scrollHeight
           }
         })
+      } else if (data.type === 'progress') {
+        // 更新进度信息
+        logProgress.value = data.progress || 0
+        logStage.value = data.stage || 'pending'
+        // 根据阶段更新状态
+        if (data.stage === 'running' || data.stage === 'preparing' || data.stage === 'installing_deps' || data.stage === 'finishing') {
+          logStatus.value = 'running'
+        }
       } else if (data.type === 'status') {
         // 更新状态
         logStatus.value = data.status
+        logProgress.value = data.progress || 100
+        logStage.value = data.stage || (data.status === 'success' ? 'completed' : 'failed')
         if (data.error) {
           logError.value = data.error
         }
@@ -605,6 +645,30 @@ const handleRollback = async (row) => {
   }
 }
 
+const handleCancelExecution = async () => {
+  try {
+    await ElMessageBox.confirm('确定要中断当前执行吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await cancelExecution(currentExecutionId.value)
+    ElMessage.success('执行已中断')
+
+    // 更新状态
+    logStatus.value = 'failed'
+    logStage.value = 'cancelled'
+    logProgress.value = 100
+
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('中断执行失败: ' + (error.message || error))
+      console.error(error)
+    }
+  }
+}
+
 const formatTime = (time) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN')
@@ -643,6 +707,15 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+}
+
+.log-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.progress-section {
+  margin-bottom: 16px;
 }
 
 .log-container {

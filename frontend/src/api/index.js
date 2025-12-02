@@ -18,6 +18,7 @@ export const getExecutions = (params) => request.get('/executions', { params })
 export const getExecution = (id) => request.get(`/executions/${id}`)
 export const getExecutionLogs = (id) => request.get(`/executions/${id}/logs`)
 export const deleteExecution = (id) => request.delete(`/executions/${id}`)
+export const cancelExecution = (id) => request.post(`/executions/${id}/cancel`)
 
 // 定时任务
 export const getSchedules = () => request.get('/schedules')

@@ -24,6 +24,24 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="进度" width="200">
+          <template #default="{ row }">
+            <div v-if="row.status === 'running' || row.status === 'pending'">
+              <ExecutionProgress
+                :progress="row.progress || 0"
+                :stage="row.stage || 'pending'"
+                :status="row.status"
+                :show-detail="false"
+              />
+            </div>
+            <span v-else-if="row.status === 'success'" style="color: #67c23a;">
+              100%
+            </span>
+            <span v-else-if="row.status === 'failed'" style="color: #f56c6c;">
+              {{ row.stage === 'cancelled' ? '已取消' : '失败' }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="180">
           <template #default="{ row }">
             {{ formatTime(row.start_time) }}
@@ -39,8 +57,16 @@
             {{ getDuration(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'running'"
+              size="small"
+              type="warning"
+              @click="handleCancel(row)"
+            >
+              中断
+            </el-button>
             <el-button size="small" @click="handleViewLogs(row)">日志</el-button>
             <el-button size="small" type="primary" @click="handleViewFiles(row)">文件</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
@@ -80,6 +106,17 @@
           </el-descriptions-item>
         </el-descriptions>
 
+        <!-- 进度显示 -->
+        <div v-if="currentExecution.status === 'running' || currentExecution.progress" class="progress-section">
+          <el-divider>执行进度</el-divider>
+          <ExecutionProgress
+            :progress="currentExecution.progress || 0"
+            :stage="currentExecution.stage || 'pending'"
+            :status="currentExecution.status"
+            :show-detail="true"
+          />
+        </div>
+
         <el-divider>执行日志</el-divider>
         <div class="log-container">
           <pre>{{ logs }}</pre>
@@ -117,8 +154,9 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import { getExecutions, getExecutionLogs, deleteExecution } from '../api'
+import { getExecutions, getExecutionLogs, deleteExecution, cancelExecution } from '../api'
 import ExecutionFiles from '../components/ExecutionFiles.vue'
+import ExecutionProgress from '../components/ExecutionProgress.vue'
 
 const executions = ref([])
 const currentPage = ref(1)
@@ -159,6 +197,24 @@ const handleViewFiles = (row) => {
   // 打开文件浏览对话框
   currentExecution.value = row
   filesVisible.value = true
+}
+
+const handleCancel = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定要中断此执行吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await cancelExecution(row.id)
+    ElMessage.success('执行已中断')
+    loadExecutions()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('中断执行失败: ' + (error.message || error))
+      console.error(error)
+    }
+  }
 }
 
 const handleDelete = async (row) => {
@@ -233,6 +289,10 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.progress-section {
+  margin: 16px 0;
 }
 
 .log-container,
