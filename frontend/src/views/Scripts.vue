@@ -188,7 +188,37 @@
 
     <!-- 版本历史对话框 -->
     <el-dialog v-model="versionVisible" title="版本历史" width="80%">
-      <el-table :data="versions" stripe>
+      <el-alert
+        v-if="compareVersions.length > 0"
+        type="info"
+        :closable="false"
+        style="margin-bottom: 16px;"
+      >
+        已选择 {{ compareVersions.length }} 个版本用于对比
+        <el-button
+          v-if="compareVersions.length === 2"
+          type="primary"
+          size="small"
+          @click="showVersionDiff"
+          style="margin-left: 10px;"
+        >
+          开始对比
+        </el-button>
+        <el-button
+          size="small"
+          @click="compareVersions = []"
+          style="margin-left: 10px;"
+        >
+          清空选择
+        </el-button>
+      </el-alert>
+
+      <el-table
+        :data="versions"
+        stripe
+        @selection-change="handleVersionSelection"
+      >
+        <el-table-column type="selection" width="55" :selectable="() => compareVersions.length < 2" />
         <el-table-column prop="version" label="版本号" width="100" />
         <el-table-column prop="description" label="描述" />
         <el-table-column prop="created_at" label="创建时间" width="180">
@@ -196,7 +226,7 @@
             {{ formatTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button size="small" @click="handleViewVersion(row)">查看</el-button>
             <el-button
@@ -230,6 +260,23 @@
         <el-button @click="versionCodeVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 版本对比对话框 -->
+    <el-dialog v-model="diffVisible" title="版本对比" width="95%" :close-on-click-modal="false">
+      <CodeDiff
+        v-if="diffVisible && compareVersions.length === 2"
+        :old-code="compareVersions[0].code"
+        :new-code="compareVersions[1].code"
+        :old-version="`v${compareVersions[0].version}`"
+        :new-version="`v${compareVersions[1].version}`"
+        :language="currentScript?.type || 'python'"
+        height="600px"
+        theme="dark"
+      />
+      <template #footer>
+        <el-button @click="diffVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -248,6 +295,7 @@ import {
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
+import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import { Plus } from '@element-plus/icons-vue'
@@ -275,6 +323,8 @@ const versionVisible = ref(false)
 const versions = ref([])
 const versionCodeVisible = ref(false)
 const currentVersion = ref(null)
+const compareVersions = ref([])  // 用于对比的版本列表
+const diffVisible = ref(false)  // 对比对话框显示状态
 
 // 实时日志相关
 const logVisible = ref(false)
@@ -513,10 +563,23 @@ const handleVersions = async (row) => {
     currentScript.value = row
     const res = await getScriptVersions(row.id)
     versions.value = res.data
+    compareVersions.value = []  // 清空对比选择
     versionVisible.value = true
   } catch (error) {
     console.error(error)
   }
+}
+
+const handleVersionSelection = (selection) => {
+  compareVersions.value = selection
+}
+
+const showVersionDiff = () => {
+  if (compareVersions.value.length !== 2) {
+    ElMessage.warning('请选择两个版本进行对比')
+    return
+  }
+  diffVisible.value = true
 }
 
 const handleViewVersion = (row) => {
