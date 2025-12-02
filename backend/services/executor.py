@@ -104,8 +104,8 @@ def execute_script(execution_id):
                     db.session.commit()
                     install_dependencies_python(script.dependencies, python_executable)
 
-                # 构建命令
-                cmd = [python_executable, script_filename]
+                # 构建命令 (-u 参数禁用输出缓冲，确保实时输出)
+                cmd = [python_executable, '-u', script_filename]
 
                 # 准备环境变量，包含所有参数
                 env = os.environ.copy()
