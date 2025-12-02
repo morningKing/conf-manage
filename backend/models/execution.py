@@ -13,6 +13,9 @@ class Execution(db.Model):
     script_id = db.Column(db.Integer, db.ForeignKey('scripts.id'), nullable=False)
     environment_id = db.Column(db.Integer, db.ForeignKey('environments.id'), nullable=True)  # 实际使用的执行环境
     status = db.Column(db.String(20), nullable=False)  # pending, running, success, failed
+    progress = db.Column(db.Integer, default=0)  # 执行进度 0-100
+    stage = db.Column(db.String(50), default='pending')  # 执行阶段: pending, preparing, installing_deps, running, finishing
+    pid = db.Column(db.Integer)  # 进程ID，用于中断执行
     params = db.Column(db.Text)  # JSON格式存储参数
     output = db.Column(db.Text)  # 执行输出
     error = db.Column(db.Text)  # 错误信息
@@ -33,6 +36,9 @@ class Execution(db.Model):
             'environment_id': self.environment_id,
             'environment_name': self.environment.name if self.environment else None,
             'status': self.status,
+            'progress': self.progress or 0,
+            'stage': self.stage or 'pending',
+            'pid': self.pid,
             'params': self.params,
             'output': self.output,
             'error': self.error,

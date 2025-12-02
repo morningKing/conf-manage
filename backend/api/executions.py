@@ -251,6 +251,80 @@ def delete_execution(execution_id):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
+@api_bp.route('/executions/<int:execution_id>/cancel', methods=['POST'])
+def cancel_execution(execution_id):
+    """中断执行"""
+    try:
+        import signal
+        import psutil
+
+        execution = Execution.query.get_or_404(execution_id)
+
+        if execution.status != 'running':
+            return jsonify({
+                'code': 1,
+                'message': '只能中断正在运行的执行'
+            }), 400
+
+        if not execution.pid:
+            return jsonify({
+                'code': 1,
+                'message': '未找到进程ID'
+            }), 400
+
+        try:
+            # 使用 psutil 终止进程及其子进程
+            parent = psutil.Process(execution.pid)
+            children = parent.children(recursive=True)
+
+            # 先终止子进程
+            for child in children:
+                try:
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    pass
+
+            # 等待子进程结束
+            gone, alive = psutil.wait_procs(children, timeout=3)
+
+            # 强制杀死仍存活的子进程
+            for p in alive:
+                try:
+                    p.kill()
+                except psutil.NoSuchProcess:
+                    pass
+
+            # 终止主进程
+            parent.terminate()
+            parent.wait(timeout=3)
+
+        except psutil.NoSuchProcess:
+            # 进程已经不存在
+            pass
+        except psutil.TimeoutExpired:
+            # 超时后强制杀死
+            try:
+                parent.kill()
+            except:
+                pass
+
+        # 更新执行状态
+        execution.status = 'failed'
+        execution.stage = 'cancelled'
+        execution.progress = 100
+        execution.error = '执行已被用户中断'
+        execution.end_time = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': '执行已中断'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
 @api_bp.route('/executions/<int:execution_id>/files', methods=['GET'])
 def get_execution_files(execution_id):
     """获取执行空间的文件列表"""

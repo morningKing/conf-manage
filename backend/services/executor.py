@@ -29,6 +29,8 @@ def execute_script(execution_id):
 
         # 更新状态为运行中
         execution.status = 'running'
+        execution.stage = 'preparing'
+        execution.progress = 10
         execution.start_time = datetime.utcnow()
         db.session.commit()
 
@@ -97,6 +99,9 @@ def execute_script(execution_id):
             if script.type == 'python':
                 # 安装依赖
                 if script.dependencies:
+                    execution.stage = 'installing_deps'
+                    execution.progress = 30
+                    db.session.commit()
                     install_dependencies_python(script.dependencies, python_executable)
 
                 # 构建命令
@@ -115,6 +120,9 @@ def execute_script(execution_id):
             elif script.type == 'javascript':
                 # 安装依赖
                 if script.dependencies:
+                    execution.stage = 'installing_deps'
+                    execution.progress = 30
+                    db.session.commit()
                     install_dependencies_node(script.dependencies, node_executable)
 
                 # 构建命令
@@ -133,6 +141,10 @@ def execute_script(execution_id):
                 raise Exception(f'不支持的脚本类型: {script.type}')
 
             # 执行脚本（在执行空间中执行）
+            execution.stage = 'running'
+            execution.progress = 50
+            db.session.commit()
+
             with open(log_file, 'w', encoding='utf-8') as log_f:
                 process = subprocess.Popen(
                     cmd,
@@ -142,12 +154,21 @@ def execute_script(execution_id):
                     cwd=execution_space  # 在执行空间中执行
                 )
 
+                # 保存进程ID
+                execution.pid = process.pid
+                db.session.commit()
+
                 # 等待执行完成（带超时）
                 try:
                     process.wait(timeout=Config.EXECUTION_TIMEOUT)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     raise Exception('脚本执行超时')
+
+            # 完成阶段
+            execution.stage = 'finishing'
+            execution.progress = 90
+            db.session.commit()
 
             # 读取输出
             with open(log_file, 'r', encoding='utf-8') as log_f:
@@ -156,13 +177,19 @@ def execute_script(execution_id):
             # 更新执行结果
             if process.returncode == 0:
                 execution.status = 'success'
+                execution.progress = 100
+                execution.stage = 'completed'
                 execution.output = output[:10000]  # 限制输出长度
             else:
                 execution.status = 'failed'
+                execution.progress = 100
+                execution.stage = 'failed'
                 execution.error = output[-5000:]  # 保存最后的错误信息
 
         except Exception as e:
             execution.status = 'failed'
+            execution.progress = 100
+            execution.stage = 'failed'
             execution.error = str(e)
 
         finally:
