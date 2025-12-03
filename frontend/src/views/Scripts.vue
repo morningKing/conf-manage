@@ -139,6 +139,35 @@
 
         <el-form-item label="上传文件">
           <FileUpload v-model="uploadFiles" />
+          <el-alert
+            v-if="uploadFiles.length > 0"
+            type="info"
+            :closable="false"
+            style="margin-top: 10px;"
+          >
+            <template #title>
+              <div style="font-size: 13px; line-height: 1.6;">
+                <strong>如何在脚本中获取上传的文件：</strong>
+                <div style="margin-top: 8px;">
+                  <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                    <code style="color: #303133;">
+                      import os, json<br>
+                      files = json.loads(os.environ.get('FILES', '[]'))<br>
+                      # files 是文件名列表，如 ['test.txt', 'data.csv']<br>
+                      # 文件在当前目录，可直接使用文件名访问
+                    </code>
+                  </div>
+                  <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                    <code style="color: #303133;">
+                      const files = JSON.parse(process.env.FILES || '[]');<br>
+                      // files 是文件名列表，如 ['test.txt', 'data.csv']<br>
+                      // 文件在当前目录，可直接使用文件名访问
+                    </code>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </el-alert>
         </el-form-item>
       </el-form>
       <template #footer>
