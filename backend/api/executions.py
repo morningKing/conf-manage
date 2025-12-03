@@ -192,6 +192,14 @@ def stream_execution_logs(execution_id):
             while True:
                 db.session.refresh(execution)
 
+                # 发送进度更新
+                progress_data = {
+                    'type': 'progress',
+                    'progress': execution.progress or 0,
+                    'stage': execution.stage or 'pending'
+                }
+                yield f"data: {json.dumps(progress_data)}\n\n"
+
                 # 检查执行状态
                 if execution.status in ['success', 'failed']:
                     # 读取剩余内容
@@ -200,7 +208,14 @@ def stream_execution_logs(execution_id):
                         yield f"data: {json.dumps({'type': 'log', 'content': new_content})}\n\n"
 
                     # 发送完成信息
-                    yield f"data: {json.dumps({'type': 'status', 'status': execution.status, 'error': execution.error or ''})}\n\n"
+                    completion_data = {
+                        'type': 'status',
+                        'status': execution.status,
+                        'progress': execution.progress or 100,
+                        'stage': execution.stage or ('completed' if execution.status == 'success' else 'failed'),
+                        'error': execution.error or ''
+                    }
+                    yield f"data: {json.dumps(completion_data)}\n\n"
                     break
 
                 # 读取新内容
