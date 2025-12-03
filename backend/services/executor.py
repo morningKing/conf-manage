@@ -14,6 +14,9 @@ import tempfile
 def execute_script(execution_id):
     """执行脚本"""
     try:
+        # 在新线程中，需要移除旧的会话并创建新的会话
+        db.session.remove()
+
         # 获取执行记录
         execution = Execution.query.get(execution_id)
         if not execution:
