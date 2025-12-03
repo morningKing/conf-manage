@@ -140,29 +140,55 @@
         <el-form-item label="上传文件">
           <FileUpload v-model="uploadFiles" />
           <el-alert
-            v-if="uploadFiles.length > 0"
             type="info"
             :closable="false"
             style="margin-top: 10px;"
           >
             <template #title>
               <div style="font-size: 13px; line-height: 1.6;">
-                <strong>如何在脚本中获取上传的文件：</strong>
+                <strong>文件访问说明：</strong>
                 <div style="margin-top: 8px;">
-                  <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                    <code style="color: #303133;">
-                      import os, json<br>
-                      files = json.loads(os.environ.get('FILES', '[]'))<br>
-                      # files 是文件名列表，如 ['test.txt', 'data.csv']<br>
-                      # 文件在当前目录，可直接使用文件名访问
-                    </code>
+                  <div style="margin-bottom: 10px;">
+                    <strong style="color: #409eff;">1. 获取执行时上传的文件：</strong>
+                    <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                      <code style="color: #303133;">
+                        import os, json<br>
+                        files = json.loads(os.environ.get('FILES', '[]'))<br>
+                        # files 是文件名列表，如 ['test.txt', 'data.csv']<br>
+                        # 文件在当前工作目录，可直接用文件名打开<br>
+                        # 示例: with open(files[0], 'r') as f: ...
+                      </code>
+                    </div>
+                    <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                      <code style="color: #303133;">
+                        const fs = require('fs');<br>
+                        const files = JSON.parse(process.env.FILES || '[]');<br>
+                        // files 是文件名列表，如 ['test.txt', 'data.csv']<br>
+                        // 文件在当前工作目录，可直接用文件名读取<br>
+                        // 示例: const data = fs.readFileSync(files[0], 'utf8');
+                      </code>
+                    </div>
                   </div>
-                  <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                    <code style="color: #303133;">
-                      const files = JSON.parse(process.env.FILES || '[]');<br>
-                      // files 是文件名列表，如 ['test.txt', 'data.csv']<br>
-                      // 文件在当前目录，可直接使用文件名访问
-                    </code>
+                  <div>
+                    <strong style="color: #409eff;">2. 访问文件管理中的公共文件：</strong>
+                    <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                      <code style="color: #303133;">
+                        import os<br>
+                        # 获取项目根目录<br>
+                        base_dir = os.path.dirname(os.path.dirname(os.getcwd()))<br>
+                        upload_dir = os.path.join(base_dir, 'data', 'uploads')<br>
+                        file_path = os.path.join(upload_dir, 'your_file.txt')
+                      </code>
+                    </div>
+                    <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
+                      <code style="color: #303133;">
+                        const path = require('path');<br>
+                        // 获取项目根目录<br>
+                        const baseDir = path.dirname(path.dirname(process.cwd()));<br>
+                        const uploadDir = path.join(baseDir, 'data', 'uploads');<br>
+                        const filePath = path.join(uploadDir, 'your_file.txt');
+                      </code>
+                    </div>
                   </div>
                 </div>
               </div>
