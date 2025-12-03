@@ -3,7 +3,7 @@
 """
 from flask import request, jsonify
 from . import api_bp
-from models import db, Script, ScriptVersion
+from models import db, Script, ScriptVersion, Tag
 from config import Config
 from datetime import datetime
 import json
@@ -13,9 +13,44 @@ import shutil
 
 @api_bp.route('/scripts', methods=['GET'])
 def get_scripts():
-    """获取脚本列表"""
+    """获取脚本列表，支持过滤和搜索"""
     try:
-        scripts = Script.query.order_by(Script.created_at.desc()).all()
+        # 获取过滤参数
+        category_id = request.args.get('category_id', type=int)
+        tag_ids = request.args.get('tags', '')  # 逗号分隔的标签ID
+        is_favorite = request.args.get('is_favorite', type=str)
+        search = request.args.get('search', '').strip()
+
+        # 构建查询
+        query = Script.query
+
+        # 按分类过滤
+        if category_id:
+            query = query.filter(Script.category_id == category_id)
+
+        # 按收藏过滤
+        if is_favorite and is_favorite.lower() == 'true':
+            query = query.filter(Script.is_favorite == True)
+
+        # 按标签过滤
+        if tag_ids:
+            tag_id_list = [int(tid) for tid in tag_ids.split(',') if tid.strip()]
+            if tag_id_list:
+                # 找到包含所有指定标签的脚本
+                for tag_id in tag_id_list:
+                    query = query.filter(Script.tags.any(Tag.id == tag_id))
+
+        # 按名称或描述搜索
+        if search:
+            search_pattern = f'%{search}%'
+            query = query.filter(
+                db.or_(
+                    Script.name.like(search_pattern),
+                    Script.description.like(search_pattern)
+                )
+            )
+
+        scripts = query.order_by(Script.created_at.desc()).all()
         return jsonify({
             'code': 0,
             'data': [script.to_dict() for script in scripts]
@@ -63,10 +98,23 @@ def create_script():
             code=data['code'],
             dependencies=data.get('dependencies', ''),
             parameters=data.get('parameters', ''),
+            category_id=data.get('category_id'),
+            is_favorite=data.get('is_favorite', False),
             version=1
         )
+
+        # 设置环境
+        if data.get('environment_id'):
+            script.environment_id = data['environment_id']
+
         db.session.add(script)
         db.session.flush()
+
+        # 添加标签
+        tag_ids = data.get('tag_ids', [])
+        if tag_ids:
+            tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+            script.tags = tags
 
         # 创建脚本工作目录
         workspace_path = Config.ensure_script_workspace(script.id)
@@ -121,6 +169,18 @@ def update_script(script_id):
             script.dependencies = data['dependencies']
         if 'parameters' in data:
             script.parameters = data['parameters']
+        if 'category_id' in data:
+            script.category_id = data['category_id']
+        if 'is_favorite' in data:
+            script.is_favorite = data['is_favorite']
+        if 'environment_id' in data:
+            script.environment_id = data['environment_id']
+
+        # 更新标签
+        if 'tag_ids' in data:
+            tag_ids = data['tag_ids']
+            tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+            script.tags = tags
 
         script.updated_at = datetime.utcnow()
 
@@ -235,6 +295,28 @@ def rollback_script(script_id, version_num):
             'code': 0,
             'data': script.to_dict(),
             'message': f'已回滚到版本 {version_num}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/<int:script_id>/favorite', methods=['POST'])
+def toggle_favorite(script_id):
+    """切换脚本的收藏状态"""
+    try:
+        script = Script.query.get_or_404(script_id)
+        script.is_favorite = not script.is_favorite
+        script.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'id': script.id,
+                'is_favorite': script.is_favorite
+            },
+            'message': '已收藏' if script.is_favorite else '已取消收藏'
         })
     except Exception as e:
         db.session.rollback()

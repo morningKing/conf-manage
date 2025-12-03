@@ -24,6 +24,14 @@
             <el-icon><Clock /></el-icon>
             <span>定时任务</span>
           </el-menu-item>
+          <el-menu-item index="/categories">
+            <el-icon><Menu /></el-icon>
+            <span>分类管理</span>
+          </el-menu-item>
+          <el-menu-item index="/tags">
+            <el-icon><CollectionTag /></el-icon>
+            <span>标签管理</span>
+          </el-menu-item>
           <el-menu-item index="/environments">
             <el-icon><Setting /></el-icon>
             <span>执行环境</span>

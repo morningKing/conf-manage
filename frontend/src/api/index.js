@@ -1,7 +1,7 @@
 import request from './request'
 
 // 脚本管理
-export const getScripts = () => request.get('/scripts')
+export const getScripts = (params) => request.get('/scripts', { params })
 export const getScript = (id) => request.get(`/scripts/${id}`)
 export const createScript = (data) => request.post('/scripts', data)
 export const updateScript = (id, data) => request.put(`/scripts/${id}`, data)
@@ -12,6 +12,7 @@ export const executeScript = (id, params) => request.post(`/scripts/${id}/execut
 export const executeScriptWithFiles = (id, formData) => request.post(`/scripts/${id}/execute`, formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 })
+export const toggleScriptFavorite = (id) => request.post(`/scripts/${id}/favorite`)
 
 // 执行历史
 export const getExecutions = (params) => request.get('/executions', { params })
@@ -37,6 +38,7 @@ export const uploadFile = (formData) => request.post('/files/upload', formData, 
 export const downloadFile = (path) => `/api/files/download?path=${encodeURIComponent(path)}`
 export const deleteFile = (path) => request.delete('/files/delete', { params: { path } })
 export const createFolder = (data) => request.post('/files/create-folder', data)
+export const updateFile = (data) => request.put('/files/update', data)
 
 // 执行环境管理
 export const getEnvironments = () => request.get('/environments')
@@ -46,4 +48,16 @@ export const updateEnvironment = (id, data) => request.put(`/environments/${id}`
 export const deleteEnvironment = (id) => request.delete(`/environments/${id}`)
 export const setDefaultEnvironment = (id) => request.post(`/environments/${id}/set-default`)
 export const detectEnvironment = (data) => request.post('/environments/detect', data)
+
+// 分类管理
+export const getCategories = () => request.get('/categories')
+export const createCategory = (data) => request.post('/categories', data)
+export const updateCategory = (id, data) => request.put(`/categories/${id}`, data)
+export const deleteCategory = (id) => request.delete(`/categories/${id}`)
+
+// 标签管理
+export const getTags = () => request.get('/tags')
+export const createTag = (data) => request.post('/tags', data)
+export const updateTag = (id, data) => request.put(`/tags/${id}`, data)
+export const deleteTag = (id) => request.delete(`/tags/${id}`)
 

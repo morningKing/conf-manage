@@ -11,12 +11,96 @@
         </div>
       </template>
 
+      <!-- 筛选和搜索区域 -->
+      <div class="filter-bar">
+        <el-input
+          v-model="searchText"
+          placeholder="搜索脚本名称或描述"
+          style="width: 300px;"
+          clearable
+          @input="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+
+        <el-select
+          v-model="filterCategory"
+          placeholder="选择分类"
+          clearable
+          style="width: 200px;"
+          @change="handleFilter"
+        >
+          <el-option label="全部分类" :value="null" />
+          <el-option
+            v-for="category in categories"
+            :key="category.id"
+            :label="category.name"
+            :value="category.id"
+          >
+            <span :style="{ color: category.color }">{{ category.name }}</span>
+          </el-option>
+        </el-select>
+
+        <el-select
+          v-model="filterTags"
+          placeholder="选择标签"
+          multiple
+          clearable
+          collapse-tags
+          collapse-tags-tooltip
+          style="width: 250px;"
+          @change="handleFilter"
+        >
+          <el-option
+            v-for="tag in tags"
+            :key="tag.id"
+            :label="tag.name"
+            :value="tag.id"
+          >
+            <el-tag :color="tag.color" size="small" effect="plain">{{ tag.name }}</el-tag>
+          </el-option>
+        </el-select>
+
+        <el-button
+          :type="filterFavorite ? 'warning' : ''"
+          @click="toggleFavorite"
+          style="margin-left: 10px;"
+        >
+          <el-icon><Star /></el-icon>
+          {{ filterFavorite ? '仅收藏' : '全部' }}
+        </el-button>
+      </div>
+
       <el-table :data="scripts" stripe>
         <el-table-column prop="name" label="脚本名称" width="200" />
         <el-table-column prop="type" label="类型" width="100">
           <template #default="{ row }">
             <el-tag :type="row.type === 'python' ? 'success' : 'warning'">
               {{ row.type }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="分类" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.category" :color="row.category.color" effect="plain">
+              {{ row.category.name }}
+            </el-tag>
+            <span v-else style="color: #909399;">未分类</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" width="200">
+          <template #default="{ row }">
+            <el-tag
+              v-for="tag in row.tags"
+              :key="tag.id"
+              :color="tag.color"
+              size="small"
+              style="margin-right: 5px;"
+              effect="plain"
+            >
+              {{ tag.name }}
             </el-tag>
           </template>
         </el-table-column>
@@ -27,8 +111,15 @@
             {{ formatTime(row.updated_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="350" fixed="right">
+        <el-table-column label="操作" width="400" fixed="right">
           <template #default="{ row }">
+            <el-button
+              :type="row.is_favorite ? 'warning' : ''"
+              size="small"
+              @click="handleToggleFavorite(row)"
+            >
+              <el-icon><Star /></el-icon>
+            </el-button>
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button size="small" type="success" @click="handleExecute(row)">执行</el-button>
             <el-button size="small" type="info" @click="handleVersions(row)">版本</el-button>
@@ -55,6 +146,40 @@
             <el-option label="Python" value="python" />
             <el-option label="JavaScript" value="javascript" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-select v-model="form.category_id" placeholder="选择分类（可选）" clearable>
+            <el-option
+              v-for="category in categories"
+              :key="category.id"
+              :label="category.name"
+              :value="category.id"
+            >
+              <span :style="{ color: category.color }">{{ category.name }}</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-select
+            v-model="form.tag_ids"
+            placeholder="选择标签（可选）"
+            multiple
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+          >
+            <el-option
+              v-for="tag in tags"
+              :key="tag.id"
+              :label="tag.name"
+              :value="tag.id"
+            >
+              <el-tag :color="tag.color" size="small" effect="plain">{{ tag.name }}</el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="收藏">
+          <el-switch v-model="form.is_favorite" />
         </el-form-item>
         <el-form-item label="执行环境">
           <el-select v-model="form.environment_id" placeholder="默认环境（可选）" clearable>
@@ -369,7 +494,10 @@ import {
   rollbackScript,
   executeScriptWithFiles,
   getEnvironments,
-  cancelExecution
+  cancelExecution,
+  getCategories,
+  getTags,
+  toggleScriptFavorite
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -377,10 +505,19 @@ import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Search, Star } from '@element-plus/icons-vue'
 
 const scripts = ref([])
 const environments = ref([])
+const categories = ref([])
+const tags = ref([])
+
+// 筛选相关
+const searchText = ref('')
+const filterCategory = ref(null)
+const filterTags = ref([])
+const filterFavorite = ref(false)
+
 const dialogVisible = ref(false)
 const dialogTitle = ref('新建脚本')
 const form = ref({
@@ -390,7 +527,10 @@ const form = ref({
   code: '',
   dependencies: '',
   parameters: '',
-  environment_id: null
+  environment_id: null,
+  category_id: null,
+  tag_ids: [],
+  is_favorite: false
 })
 const currentScript = ref(null)
 const executeVisible = ref(false)
@@ -429,7 +569,13 @@ const executeEnvironments = computed(() => {
 
 const loadScripts = async () => {
   try {
-    const res = await getScripts()
+    const params = {}
+    if (filterCategory.value) params.category_id = filterCategory.value
+    if (filterTags.value.length > 0) params.tags = filterTags.value.join(',')
+    if (filterFavorite.value) params.is_favorite = 'true'
+    if (searchText.value) params.search = searchText.value
+
+    const res = await getScripts(params)
     scripts.value = res.data
   } catch (error) {
     console.error(error)
@@ -442,6 +588,48 @@ const loadEnvironments = async () => {
     environments.value = res.data
   } catch (error) {
     console.error(error)
+  }
+}
+
+const loadCategories = async () => {
+  try {
+    const res = await getCategories()
+    categories.value = res.data
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const loadTags = async () => {
+  try {
+    const res = await getTags()
+    tags.value = res.data
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const handleFilter = () => {
+  loadScripts()
+}
+
+const handleSearch = () => {
+  loadScripts()
+}
+
+const toggleFavorite = () => {
+  filterFavorite.value = !filterFavorite.value
+  loadScripts()
+}
+
+const handleToggleFavorite = async (row) => {
+  try {
+    await toggleScriptFavorite(row.id)
+    ElMessage.success(row.is_favorite ? '已取消收藏' : '已收藏')
+    loadScripts()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('操作失败')
   }
 }
 
@@ -464,7 +652,10 @@ const handleCreate = () => {
     code: '',
     dependencies: '',
     parameters: '',
-    environment_id: null
+    environment_id: null,
+    category_id: null,
+    tag_ids: [],
+    is_favorite: false
   }
   currentScript.value = null
   dialogVisible.value = true
@@ -472,7 +663,10 @@ const handleCreate = () => {
 
 const handleEdit = (row) => {
   dialogTitle.value = '编辑脚本'
-  form.value = { ...row }
+  form.value = {
+    ...row,
+    tag_ids: row.tags ? row.tags.map(t => t.id) : []
+  }
   currentScript.value = row
   dialogVisible.value = true
 }
@@ -732,6 +926,8 @@ const formatTime = (time) => {
 onMounted(() => {
   loadScripts()
   loadEnvironments()
+  loadCategories()
+  loadTags()
 })
 </script>
 
@@ -743,6 +939,14 @@ onMounted(() => {
 .card-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
   align-items: center;
 }
 
