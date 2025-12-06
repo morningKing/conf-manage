@@ -51,7 +51,7 @@
         <el-table-column label="操作" width="180" align="center">
           <template #default="{ row }">
             <el-button
-              v-if="row.is_text"
+              v-if="canPreview(row.path)"
               size="small"
               type="primary"
               link
@@ -75,12 +75,23 @@
     <!-- 文件预览对话框 -->
     <el-dialog
       v-model="previewVisible"
-      :title="`预览: ${currentFile?.name}`"
+      :title="`预览: ${currentFile?.name || currentFile?.path}`"
       width="80%"
       top="5vh"
     >
       <div v-loading="previewLoading" class="preview-content">
-        <pre v-if="fileContent" class="file-preview">{{ fileContent }}</pre>
+        <!-- 文本内容 -->
+        <pre v-if="previewType === 'text' && fileContent" class="file-preview">{{ fileContent }}</pre>
+
+        <!-- 图片内容 -->
+        <div v-else-if="previewType === 'image' && fileContent" style="text-align: center">
+          <img
+            :src="fileContent"
+            style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;"
+            alt="预览图片"
+          />
+        </div>
+
         <el-empty v-else description="无法加载文件内容" />
       </div>
       <template #footer>
@@ -112,6 +123,27 @@ const previewVisible = ref(false)
 const previewLoading = ref(false)
 const currentFile = ref(null)
 const fileContent = ref('')
+const previewType = ref('text')
+
+const canPreview = (filename) => {
+  const ext = filename.toLowerCase().split('.').pop()
+  const supportedExts = [
+    // 文本文件
+    'txt', 'md', 'log', 'py', 'js', 'json', 'xml', 'html', 'css', 'yaml', 'yml', 'ini', 'conf', 'sh', 'bat', 'csv', 'sql',
+    // 图片文件
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'
+  ]
+  return supportedExts.includes(ext)
+}
+
+const getFileExtension = (filename) => {
+  return filename.toLowerCase().split('.').pop()
+}
+
+const isImageFile = (filename) => {
+  const ext = getFileExtension(filename)
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext)
+}
 
 const loadFiles = async () => {
   loading.value = true
@@ -133,10 +165,20 @@ const previewFile = async (file) => {
   fileContent.value = ''
 
   try {
-    const res = await request.get(
-      `/executions/${props.executionId}/files/${encodeURIComponent(file.path)}`
-    )
-    fileContent.value = res.data.content
+    // 判断文件类型
+    if (isImageFile(file.path)) {
+      // 图片文件 - 直接使用下载URL作为图片源
+      const apiUrl = import.meta.env.VITE_API_URL || '/api'
+      fileContent.value = `${apiUrl}/executions/${props.executionId}/files/${encodeURIComponent(file.path)}`
+      previewType.value = 'image'
+    } else {
+      // 文本文件
+      const res = await request.get(
+        `/executions/${props.executionId}/files/${encodeURIComponent(file.path)}`
+      )
+      fileContent.value = res.data.content
+      previewType.value = 'text'
+    }
   } catch (error) {
     ElMessage.error('加载文件内容失败: ' + error.message)
   } finally {

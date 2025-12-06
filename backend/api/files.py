@@ -120,8 +120,105 @@ def preview_file():
         # 获取文件扩展名
         ext = os.path.splitext(file_path)[1].lower()
 
+        # 文本文件预览 (txt, md, log, py, js, etc.)
+        if ext in ['.txt', '.md', '.log', '.py', '.js', '.json', '.xml', '.html', '.css', '.yaml', '.yml', '.ini', '.conf', '.sh', '.bat', '.csv']:
+            try:
+                # 尝试不同的编码
+                encodings = ['utf-8', 'gbk', 'gb2312', 'latin1']
+                content = None
+                used_encoding = None
+
+                for encoding in encodings:
+                    try:
+                        with open(file_path, 'r', encoding=encoding) as f:
+                            content = f.read(1024 * 1024)  # 最多读取1MB
+                        used_encoding = encoding
+                        break
+                    except UnicodeDecodeError:
+                        continue
+
+                if content is None:
+                    return jsonify({'code': 1, 'message': '无法读取文件内容，可能是二进制文件或编码不支持'}), 400
+
+                return jsonify({
+                    'code': 0,
+                    'data': {
+                        'type': 'text',
+                        'content': content,
+                        'encoding': used_encoding,
+                        'extension': ext
+                    }
+                })
+            except Exception as e:
+                return jsonify({'code': 1, 'message': f'文本文件读取失败: {str(e)}'}), 500
+
+        # 图片文件预览 (jpg, png, gif, bmp, webp, svg)
+        elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico']:
+            try:
+                import base64
+                with open(file_path, 'rb') as f:
+                    image_data = f.read()
+                base64_data = base64.b64encode(image_data).decode('utf-8')
+
+                # 确定MIME类型
+                mime_types = {
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.png': 'image/png',
+                    '.gif': 'image/gif',
+                    '.bmp': 'image/bmp',
+                    '.webp': 'image/webp',
+                    '.svg': 'image/svg+xml',
+                    '.ico': 'image/x-icon'
+                }
+                mime_type = mime_types.get(ext, 'image/jpeg')
+
+                return jsonify({
+                    'code': 0,
+                    'data': {
+                        'type': 'image',
+                        'content': base64_data,
+                        'mime_type': mime_type,
+                        'extension': ext
+                    }
+                })
+            except Exception as e:
+                return jsonify({'code': 1, 'message': f'图片文件读取失败: {str(e)}'}), 500
+
+        # JSON文件特殊处理（格式化显示）
+        elif ext == '.json':
+            try:
+                import json
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+
+                return jsonify({
+                    'code': 0,
+                    'data': {
+                        'type': 'json',
+                        'content': json.dumps(json_data, ensure_ascii=False, indent=2),
+                        'json_data': json_data
+                    }
+                })
+            except Exception as e:
+                # 如果JSON解析失败，尝试作为普通文本读取
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read(1024 * 1024)
+                    return jsonify({
+                        'code': 0,
+                        'data': {
+                            'type': 'text',
+                            'content': content,
+                            'encoding': 'utf-8',
+                            'extension': ext
+                        }
+                    })
+                except:
+                    return jsonify({'code': 1, 'message': f'JSON文件读取失败: {str(e)}'}), 500
+
         # Excel文件预览
-        if ext in ['.xlsx', '.xls']:
+        elif ext in ['.xlsx', '.xls']:
             import openpyxl
             try:
                 wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
@@ -154,8 +251,27 @@ def preview_file():
                 })
             except Exception as e:
                 return jsonify({'code': 1, 'message': f'Excel文件解析失败: {str(e)}'}), 500
+
+        # PDF文件预览
+        elif ext == '.pdf':
+            try:
+                import base64
+                with open(file_path, 'rb') as f:
+                    pdf_data = f.read()
+                base64_data = base64.b64encode(pdf_data).decode('utf-8')
+
+                return jsonify({
+                    'code': 0,
+                    'data': {
+                        'type': 'pdf',
+                        'content': base64_data
+                    }
+                })
+            except Exception as e:
+                return jsonify({'code': 1, 'message': f'PDF文件读取失败: {str(e)}'}), 500
+
         else:
-            return jsonify({'code': 1, 'message': '不支持的文件类型'}), 400
+            return jsonify({'code': 1, 'message': f'不支持的文件类型: {ext}'}), 400
 
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -222,5 +338,69 @@ def create_folder():
             },
             'message': '文件夹创建成功'
         })
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/files/update', methods=['PUT'])
+def update_file():
+    """更新文件内容"""
+    try:
+        data = request.get_json()
+        path = data.get('path', '')
+        content = data.get('content', '')
+
+        if not path:
+            return jsonify({'code': 1, 'message': '文件路径不能为空'}), 400
+
+        base_dir = os.path.join(Config.DATA_DIR, 'uploads')
+        file_path = os.path.join(base_dir, path)
+
+        # 安全检查
+        if not os.path.abspath(file_path).startswith(os.path.abspath(base_dir)):
+            return jsonify({'code': 1, 'message': '非法路径'}), 400
+
+        if not os.path.exists(file_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        if not os.path.isfile(file_path):
+            return jsonify({'code': 1, 'message': '不是文件'}), 400
+
+        # 检查文件类型是否可编辑
+        ext = os.path.splitext(file_path)[1].lower()
+        editable_extensions = [
+            '.txt', '.md', '.log', '.py', '.js', '.json', '.xml', '.html',
+            '.css', '.yaml', '.yml', '.ini', '.conf', '.sh', '.bat', '.csv', '.sql'
+        ]
+
+        if ext not in editable_extensions:
+            return jsonify({'code': 1, 'message': f'不支持编辑该类型的文件: {ext}'}), 400
+
+        # 备份原文件
+        backup_path = file_path + '.backup'
+        if os.path.exists(file_path):
+            import shutil
+            shutil.copy2(file_path, backup_path)
+
+        try:
+            # 写入新内容
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            # 删除备份
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+
+            return jsonify({
+                'code': 0,
+                'message': '文件保存成功'
+            })
+        except Exception as e:
+            # 恢复备份
+            if os.path.exists(backup_path):
+                import shutil
+                shutil.move(backup_path, file_path)
+            raise e
+
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500

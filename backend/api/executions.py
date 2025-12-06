@@ -426,24 +426,50 @@ def get_execution_file(execution_id, file_path):
             )
         else:
             # 预览文件
+            ext = os.path.splitext(full_path)[1].lower()
+
+            # 图片文件：直接返回图片
+            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico']:
+                return send_file(full_path, mimetype=f'image/{ext[1:]}')
+
+            # 文本文件：返回内容
             if is_text_file(full_path):
-                # 文本文件：返回内容
                 try:
-                    with open(full_path, 'r', encoding='utf-8') as f:
-                        content = f.read(10000)  # 限制10000字符
+                    # 尝试多种编码
+                    encodings = ['utf-8', 'gbk', 'gb2312', 'latin1']
+                    content = None
+
+                    for encoding in encodings:
+                        try:
+                            with open(full_path, 'r', encoding=encoding) as f:
+                                content = f.read(100000)  # 限制100KB
+                            break
+                        except UnicodeDecodeError:
+                            continue
+
+                    if content is None:
                         return jsonify({
                             'code': 0,
                             'data': {
-                                'content': content,
-                                'type': 'text',
+                                'content': '无法预览：文件编码不支持',
+                                'type': 'binary',
                                 'size': os.path.getsize(full_path)
                             }
                         })
-                except UnicodeDecodeError:
+
                     return jsonify({
                         'code': 0,
                         'data': {
-                            'content': '无法预览：文件编码不支持',
+                            'content': content,
+                            'type': 'text',
+                            'size': os.path.getsize(full_path)
+                        }
+                    })
+                except Exception as e:
+                    return jsonify({
+                        'code': 0,
+                        'data': {
+                            'content': f'无法预览：{str(e)}',
                             'type': 'binary',
                             'size': os.path.getsize(full_path)
                         }

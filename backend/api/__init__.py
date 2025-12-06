@@ -7,6 +7,6 @@ from flask import Blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # 导入路由
-from . import scripts, executions, schedules, files, environments, categories
+from . import scripts, executions, schedules, files, environments, categories, workflows, workflow_templates, global_variables
 
 __all__ = ['api_bp']

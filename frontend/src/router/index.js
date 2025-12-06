@@ -39,6 +39,16 @@ const routes = [
     path: '/tags',
     name: 'Tags',
     component: () => import('../views/Tags.vue')
+  },
+  {
+    path: '/workflows',
+    name: 'Workflows',
+    component: () => import('../views/Workflows.vue')
+  },
+  {
+    path: '/global-variables',
+    name: 'GlobalVariables',
+    component: () => import('../views/GlobalVariables.vue')
   }
 ]
 

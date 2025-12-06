@@ -6,9 +6,19 @@ import subprocess
 import json
 import shutil
 from datetime import datetime
-from models import db, Execution, Script, Environment
+from models import db, Execution, Script, Environment, GlobalVariable
 from config import Config
 import tempfile
+
+
+def get_global_variables_dict():
+    """获取全局变量字典"""
+    try:
+        variables = GlobalVariable.query.all()
+        return {var.key: var.value for var in variables}
+    except Exception as e:
+        print(f'获取全局变量失败: {str(e)}')
+        return {}
 
 
 def execute_script(execution_id):
@@ -112,6 +122,13 @@ def execute_script(execution_id):
 
                 # 准备环境变量，包含所有参数
                 env = os.environ.copy()
+
+                # 注入全局变量
+                global_vars = get_global_variables_dict()
+                for key, value in global_vars.items():
+                    env[key] = str(value)
+
+                # 注入执行参数（执行参数优先级高于全局变量）
                 for key, value in params.items():
                     env[key] = str(value)
 
@@ -133,6 +150,13 @@ def execute_script(execution_id):
 
                 # 准备环境变量，包含所有参数
                 env = os.environ.copy()
+
+                # 注入全局变量
+                global_vars = get_global_variables_dict()
+                for key, value in global_vars.items():
+                    env[key] = str(value)
+
+                # 注入执行参数（执行参数优先级高于全局变量）
                 for key, value in params.items():
                     env[key] = str(value)
 

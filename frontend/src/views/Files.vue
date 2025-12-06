@@ -75,7 +75,7 @@
             <el-table-column label="操作" width="200">
               <template #default="{ row }">
                 <el-button
-                  v-if="!row.is_dir && isExcelFile(row.name)"
+                  v-if="!row.is_dir && canPreview(row.name)"
                   size="small"
                   type="success"
                   @click.stop="handlePreview(row)"
@@ -156,9 +156,10 @@
       top="5vh"
     >
       <div v-loading="previewLoading" style="min-height: 200px">
-        <el-tabs v-if="excelData && excelData.sheets" v-model="activeSheet" type="border-card">
+        <!-- Excel预览 -->
+        <el-tabs v-if="previewData?.type === 'excel' && previewData.sheets" v-model="activeSheet" type="border-card">
           <el-tab-pane
-            v-for="(sheet, index) in excelData.sheets"
+            v-for="(sheet, index) in previewData.sheets"
             :key="index"
             :label="sheet.name"
             :name="String(index)"
@@ -184,11 +185,60 @@
             </el-table>
           </el-tab-pane>
         </el-tabs>
+
+        <!-- 文本预览/编辑 -->
+        <div v-else-if="previewData?.type === 'text' || previewData?.type === 'json'" style="max-height: 600px; overflow: auto">
+          <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <el-switch
+              v-if="isEditable(currentPreviewFile?.name)"
+              v-model="editMode"
+              active-text="编辑模式"
+              inactive-text="预览模式"
+            />
+            <div v-if="previewData.encoding" style="color: #909399; font-size: 12px;">
+              编码: {{ previewData.encoding }}
+            </div>
+          </div>
+          <el-input
+            v-if="editMode"
+            v-model="editContent"
+            type="textarea"
+            :rows="25"
+            style="font-family: 'Courier New', monospace;"
+          />
+          <pre v-else style="background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; line-height: 1.6; margin: 0;">{{ previewData.content }}</pre>
+        </div>
+
+        <!-- 图片预览 -->
+        <div v-else-if="previewData?.type === 'image'" style="text-align: center; max-height: 600px; overflow: auto">
+          <img
+            :src="`data:${previewData.mime_type};base64,${previewData.content}`"
+            style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;"
+            alt="预览图片"
+          />
+        </div>
+
+        <!-- PDF预览 -->
+        <div v-else-if="previewData?.type === 'pdf'" style="height: 600px">
+          <iframe
+            :src="`data:application/pdf;base64,${previewData.content}`"
+            style="width: 100%; height: 100%; border: none"
+          ></iframe>
+        </div>
+
         <el-empty v-else-if="!previewLoading" description="无法加载预览数据" />
       </div>
       <template #footer>
         <el-button @click="previewVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleDownload(currentPreviewFile)">
+        <el-button
+          v-if="editMode"
+          type="warning"
+          @click="handleSaveFile"
+          :loading="saving"
+        >
+          保存
+        </el-button>
+        <el-button v-else type="primary" @click="handleDownload(currentPreviewFile)">
           下载文件
         </el-button>
       </template>
@@ -219,8 +269,13 @@ const selectedExecution = ref(null)
 const previewVisible = ref(false)
 const previewLoading = ref(false)
 const currentPreviewFile = ref(null)
-const excelData = ref(null)
+const previewData = ref(null)
 const activeSheet = ref('0')
+
+// 编辑相关
+const editMode = ref(false)
+const editContent = ref('')
+const saving = ref(false)
 
 const pathParts = computed(() => {
   return currentPath.value ? currentPath.value.split('/').filter(Boolean) : []
@@ -319,30 +374,101 @@ const handleUploadSuccess = () => {
   loadFiles(currentPath.value)
 }
 
+const canPreview = (filename) => {
+  const ext = filename.toLowerCase().split('.').pop()
+  const supportedExts = [
+    // 文本文件
+    'txt', 'md', 'log', 'py', 'js', 'json', 'xml', 'html', 'css', 'yaml', 'yml', 'ini', 'conf', 'sh', 'bat', 'csv',
+    // 图片文件
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico',
+    // Excel文件
+    'xlsx', 'xls',
+    // PDF文件
+    'pdf'
+  ]
+  return supportedExts.includes(ext)
+}
+
 const isExcelFile = (filename) => {
   const ext = filename.toLowerCase().split('.').pop()
   return ext === 'xlsx' || ext === 'xls'
+}
+
+const isEditable = (filename) => {
+  if (!filename) return false
+  const ext = filename.toLowerCase().split('.').pop()
+  const editableExts = [
+    'txt', 'md', 'log', 'py', 'js', 'json', 'xml', 'html',
+    'css', 'yaml', 'yml', 'ini', 'conf', 'sh', 'bat', 'csv', 'sql'
+  ]
+  return editableExts.includes(ext)
 }
 
 const handlePreview = async (row) => {
   currentPreviewFile.value = row
   previewVisible.value = true
   previewLoading.value = true
-  excelData.value = null
+  previewData.value = null
   activeSheet.value = '0'
+  editMode.value = false
+  editContent.value = ''
 
   try {
     const res = await request.get(`/files/preview?path=${encodeURIComponent(row.path)}`)
-    if (res.data.type === 'excel') {
-      excelData.value = res.data
-    } else {
-      ElMessage.warning('不支持的文件类型')
+    previewData.value = res.data
+    // 如果是可编辑的文本文件，初始化编辑内容
+    if (res.data.type === 'text' || res.data.type === 'json') {
+      editContent.value = res.data.content
     }
   } catch (error) {
     console.error('Preview error:', error)
     ElMessage.error('预览失败: ' + (error.message || '未知错误'))
   } finally {
     previewLoading.value = false
+  }
+}
+
+const handleSaveFile = async () => {
+  if (!currentPreviewFile.value) {
+    ElMessage.error('未选择文件')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '确定要保存对文件的修改吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    saving.value = true
+
+    await request.put('/files/update', {
+      path: currentPreviewFile.value.path,
+      content: editContent.value
+    })
+
+    ElMessage.success('文件保存成功')
+
+    // 更新预览数据
+    previewData.value.content = editContent.value
+
+    // 切换回预览模式
+    editMode.value = false
+
+    // 刷新文件列表
+    loadFiles(currentPath.value)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Save error:', error)
+      ElMessage.error('保存失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+    }
+  } finally {
+    saving.value = false
   }
 }
 

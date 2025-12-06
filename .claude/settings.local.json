@@ -11,7 +11,18 @@
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(curl:*)",
-      "Bash(PYTHONPATH=/mnt/e/Code/ccr/conf-manage/backend:$PYTHONPATH python3:*)"
+      "Bash(PYTHONPATH=/mnt/e/Code/ccr/conf-manage/backend:$PYTHONPATH python3:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)",
+      "Bash(cat:*)",
+      "Bash(sqlite3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(git log:*)",
+      "Bash(git push)",
+      "Bash(npm --version:*)",
+      "Bash(env)"
     ],
     "deny": [],
     "ask": []
