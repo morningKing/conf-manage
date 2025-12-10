@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, defineProps, defineEmits } from 'vue'
+import { ref, watch, computed, defineProps, defineEmits, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -133,6 +133,10 @@ const currentNode = ref({})
 const currentEdge = ref({})
 const nodeIdCounter = ref(1)
 const edgeIdCounter = ref(1)
+
+// 防止循环更新的标志
+const isUpdatingFromProps = ref(false)
+const isUpdatingFromInternal = ref(false)
 
 // 将外部 nodes 转换为 VueFlow 格式
 const convertToFlowNodes = (nodes) => {
@@ -190,24 +194,64 @@ const convertFromFlowEdges = (edges) => {
 
 // 监听外部数据变化
 watch(() => props.nodes, (newNodes) => {
-  if (newNodes && newNodes.length > 0) {
-    flowNodes.value = convertToFlowNodes(newNodes)
+  if (isUpdatingFromInternal.value) {
+    return // 如果是内部更新触发的,跳过
   }
-}, { immediate: true, deep: true })
+
+  isUpdatingFromProps.value = true
+  nextTick(() => {
+    if (newNodes && newNodes.length > 0) {
+      flowNodes.value = convertToFlowNodes(newNodes)
+    } else {
+      flowNodes.value = []
+    }
+    nextTick(() => {
+      isUpdatingFromProps.value = false
+    })
+  })
+}, { immediate: true })
 
 watch(() => props.edges, (newEdges) => {
-  if (newEdges && newEdges.length > 0) {
-    flowEdges.value = convertToFlowEdges(newEdges)
+  if (isUpdatingFromInternal.value) {
+    return // 如果是内部更新触发的,跳过
   }
-}, { immediate: true, deep: true })
+
+  isUpdatingFromProps.value = true
+  nextTick(() => {
+    if (newEdges && newEdges.length > 0) {
+      flowEdges.value = convertToFlowEdges(newEdges)
+    } else {
+      flowEdges.value = []
+    }
+    nextTick(() => {
+      isUpdatingFromProps.value = false
+    })
+  })
+}, { immediate: true })
 
 // 监听内部变化并同步到外部
 watch(flowNodes, (newNodes) => {
+  if (isUpdatingFromProps.value) {
+    return // 如果是props更新触发的,跳过
+  }
+
+  isUpdatingFromInternal.value = true
   emit('update:nodes', convertFromFlowNodes(newNodes))
+  nextTick(() => {
+    isUpdatingFromInternal.value = false
+  })
 }, { deep: true })
 
 watch(flowEdges, (newEdges) => {
+  if (isUpdatingFromProps.value) {
+    return // 如果是props更新触发的,跳过
+  }
+
+  isUpdatingFromInternal.value = true
   emit('update:edges', convertFromFlowEdges(newEdges))
+  nextTick(() => {
+    isUpdatingFromInternal.value = false
+  })
 }, { deep: true })
 
 // 添加脚本节点

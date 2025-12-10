@@ -99,6 +99,43 @@
       </template>
     </el-dialog>
 
+    <!-- 执行状态显示对话框 -->
+    <el-dialog
+      v-model="statusVisible"
+      title="工作流执行状态"
+      width="90%"
+      :close-on-click-modal="false"
+      @close="closeStatusStream"
+    >
+      <div class="status-header">
+        <el-tag :type="getStatusType(executionStatus)" size="large">
+          {{ getStatusText(executionStatus) }}
+        </el-tag>
+        <div v-if="executionStatus === 'running'">
+          <el-button type="danger" size="small" @click="handleCancelWorkflow">
+            取消执行
+          </el-button>
+        </div>
+      </div>
+
+      <el-divider />
+
+      <!-- 工作流图显示，节点状态实时更新 -->
+      <div class="workflow-status-container">
+        <WorkflowEditor
+          v-model:nodes="statusNodes"
+          v-model:edges="statusEdges"
+          :scripts="scripts"
+          :readonly="true"
+          :node-statuses="nodeStatuses"
+        />
+      </div>
+
+      <template #footer>
+        <el-button @click="closeStatusStream">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 模板选择对话框 -->
     <el-dialog v-model="templateDialogVisible" title="选择工作流模板" width="900px">
       <el-form label-width="80px" style="margin-bottom: 16px">
@@ -148,17 +185,20 @@ import {
   List, Share, DataAnalysis, Timer, Link, Document
 } from '@element-plus/icons-vue'
 import {
-  getWorkflows,
-  getWorkflow,
-  createWorkflow,
-  updateWorkflow,
-  deleteWorkflow as deleteWorkflowApi,
-  executeWorkflow as executeWorkflowApi,
-  toggleWorkflow as toggleWorkflowApi,
   getWorkflowTemplates,
   useWorkflowTemplate
 } from '@/api/workflow'
-import { getScripts } from '@/api'
+import {
+  getScripts,
+  getWorkflows as getWorkflowsApi,
+  getWorkflow as getWorkflowApi,
+  createWorkflow as createWorkflowApi,
+  updateWorkflow as updateWorkflowApi,
+  deleteWorkflow as deleteWorkflowApi,
+  executeWorkflow as executeWorkflowApi,
+  toggleWorkflow as toggleWorkflowApi,
+  cancelWorkflowExecution
+} from '@/api'
 import WorkflowEditor from '@/components/WorkflowEditor.vue'
 
 const workflows = ref([])
@@ -172,6 +212,15 @@ const currentWorkflow = ref(null)
 const executeParams = ref('')
 const selectedCategory = ref('')
 
+// 执行状态相关
+const statusVisible = ref(false)
+const executionStatus = ref('pending')
+const currentExecutionId = ref(null)
+const nodeStatuses = ref({})
+const statusNodes = ref([])
+const statusEdges = ref([])
+let statusEventSource = null
+
 const form = ref({
   name: '',
   description: '',
@@ -182,7 +231,7 @@ const form = ref({
 // 加载工作流列表
 const loadWorkflows = async () => {
   try {
-    const res = await getWorkflows()
+    const res = await getWorkflowsApi()
     workflows.value = res.data  // 修复：响应拦截器已经返回了 response.data
   } catch (error) {
     ElMessage.error('加载工作流列表失败')
@@ -283,7 +332,7 @@ const showCreateDialog = () => {
 // 编辑工作流
 const editWorkflow = async (workflow) => {
   try {
-    const res = await getWorkflow(workflow.id)
+    const res = await getWorkflowApi(workflow.id)
     const data = res.data
 
     currentWorkflow.value = workflow
@@ -308,10 +357,10 @@ const handleSave = async () => {
 
   try {
     if (currentWorkflow.value) {
-      await updateWorkflow(currentWorkflow.value.id, form.value)
+      await updateWorkflowApi(currentWorkflow.value.id, form.value)
       ElMessage.success('更新成功')
     } else {
-      await createWorkflow(form.value)
+      await createWorkflowApi(form.value)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -358,12 +407,121 @@ const handleExecute = async () => {
   }
 
   try {
-    await executeWorkflowApi(currentWorkflow.value.id, params)
+    const res = await executeWorkflowApi(currentWorkflow.value.id, params)
+    const executionId = res.data.id
+
     ElMessage.success('工作流执行已启动')
     executeVisible.value = false
+
+    // 获取工作流详情用于状态显示
+    const workflowRes = await getWorkflowApi(currentWorkflow.value.id)
+    statusNodes.value = workflowRes.data.nodes || []
+    statusEdges.value = workflowRes.data.edges || []
+
+    // 打开状态监控窗口
+    openStatusStream(executionId)
   } catch (error) {
-    ElMessage.error('执行失败')
+    ElMessage.error('执行失败: ' + (error.message || error))
   }
+}
+
+// 打开状态监控
+const openStatusStream = (executionId) => {
+  currentExecutionId.value = executionId
+  executionStatus.value = 'pending'
+  nodeStatuses.value = {}
+  statusVisible.value = true
+
+  // 关闭已有的连接
+  if (statusEventSource) {
+    statusEventSource.close()
+  }
+
+  // 创建 SSE 连接
+  const apiUrl = import.meta.env.VITE_API_URL || '/api'
+  statusEventSource = new EventSource(`${apiUrl}/workflow-executions/${executionId}/stream`)
+
+  statusEventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+
+      if (data.type === 'nodes') {
+        // 更新节点状态
+        data.nodes.forEach(node => {
+          nodeStatuses.value[node.node_id] = node.status
+        })
+      } else if (data.type === 'status') {
+        // 更新总体状态
+        executionStatus.value = data.status
+      } else if (data.type === 'complete') {
+        // 执行完成
+        executionStatus.value = data.status
+        if (statusEventSource) {
+          statusEventSource.close()
+          statusEventSource = null
+        }
+      }
+    } catch (error) {
+      console.error('解析状态数据失败:', error)
+    }
+  }
+
+  statusEventSource.onerror = (error) => {
+    console.error('状态流连接错误:', error)
+    if (statusEventSource) {
+      statusEventSource.close()
+      statusEventSource = null
+    }
+  }
+}
+
+// 关闭状态监控
+const closeStatusStream = () => {
+  if (statusEventSource) {
+    statusEventSource.close()
+    statusEventSource = null
+  }
+  statusVisible.value = false
+}
+
+// 取消工作流执行
+const handleCancelWorkflow = async () => {
+  try {
+    await ElMessageBox.confirm('确定要取消执行吗？', '提示', {
+      type: 'warning'
+    })
+
+    await cancelWorkflowExecution(currentExecutionId.value)
+    ElMessage.success('执行已取消')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('取消失败')
+    }
+  }
+}
+
+// 获取状态类型
+const getStatusType = (status) => {
+  const types = {
+    pending: 'info',
+    running: '',
+    success: 'success',
+    failed: 'danger',
+    cancelled: 'warning'
+  }
+  return types[status] || 'info'
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const texts = {
+    pending: '等待中',
+    running: '执行中',
+    success: '执行成功',
+    failed: '执行失败',
+    cancelled: '已取消'
+  }
+  return texts[status] || '未知状态'
 }
 
 // 启用/禁用工作流

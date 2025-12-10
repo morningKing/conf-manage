@@ -1,13 +1,14 @@
 """
 工作流管理API
 """
-from flask import request, jsonify
+from flask import request, jsonify, Response, stream_with_context
 from models import db
 from models.workflow import Workflow, WorkflowNode, WorkflowEdge, WorkflowExecution, WorkflowNodeExecution
 from models.script import Script
 from models.execution import Execution
 from datetime import datetime
 import json
+import time
 from . import api_bp
 
 
@@ -215,7 +216,8 @@ def execute_workflow(workflow_id):
         # 异步执行工作流
         from threading import Thread
         from services.workflow_executor import execute_workflow_async
-        thread = Thread(target=lambda: execute_workflow_async(execution.id))
+        execution_id = execution.id  # 先获取ID,避免在线程中访问ORM对象
+        thread = Thread(target=lambda: execute_workflow_async(execution_id))
         thread.start()
 
         return jsonify({
@@ -321,3 +323,82 @@ def cancel_workflow_execution(execution_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/workflow-executions/<int:execution_id>/stream', methods=['GET'])
+def stream_workflow_execution(execution_id):
+    """实时流式传输工作流执行状态 (Server-Sent Events)"""
+    def generate():
+        execution = WorkflowExecution.query.get(execution_id)
+        if not execution:
+            yield f"data: {json.dumps({'error': '执行记录不存在'})}\n\n"
+            return
+
+        # 持续推送状态更新
+        last_status = None
+        node_statuses = {}
+
+        while True:
+            db.session.refresh(execution)
+
+            # 获取所有节点执行状态
+            node_executions = WorkflowNodeExecution.query.filter_by(
+                workflow_execution_id=execution_id
+            ).all()
+
+            # 检查节点状态是否有变化
+            current_node_statuses = {}
+            for ne in node_executions:
+                current_node_statuses[ne.node_id] = {
+                    'node_id': ne.node_id,
+                    'status': ne.status,
+                    'start_time': ne.start_time.isoformat() if ne.start_time else None,
+                    'end_time': ne.end_time.isoformat() if ne.end_time else None,
+                    'error': ne.error,
+                    'output': ne.output
+                }
+
+            # 如果节点状态有变化，推送更新
+            if current_node_statuses != node_statuses:
+                node_statuses = current_node_statuses
+                yield f"data: {json.dumps({'type': 'nodes', 'nodes': list(node_statuses.values())})}\n\n"
+
+            # 推送总体状态
+            current_status = {
+                'type': 'status',
+                'status': execution.status,
+                'start_time': execution.start_time.isoformat() if execution.start_time else None,
+                'end_time': execution.end_time.isoformat() if execution.end_time else None,
+                'error': execution.error
+            }
+
+            if current_status != last_status:
+                last_status = current_status
+                yield f"data: {json.dumps(current_status)}\n\n"
+
+            # 如果执行完成，发送最终状态并结束
+            if execution.status in ['success', 'failed', 'cancelled']:
+                # 发送最终节点状态
+                yield f"data: {json.dumps({'type': 'nodes', 'nodes': list(node_statuses.values())})}\n\n"
+
+                # 发送完成信息
+                completion_data = {
+                    'type': 'complete',
+                    'status': execution.status,
+                    'error': execution.error or '',
+                    'end_time': execution.end_time.isoformat() if execution.end_time else None
+                }
+                yield f"data: {json.dumps(completion_data)}\n\n"
+                break
+
+            time.sleep(0.5)  # 每0.5秒检查一次
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+

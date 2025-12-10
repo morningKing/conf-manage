@@ -20,6 +20,9 @@ export const getExecution = (id) => request.get(`/executions/${id}`)
 export const getExecutionLogs = (id) => request.get(`/executions/${id}/logs`)
 export const deleteExecution = (id) => request.delete(`/executions/${id}`)
 export const cancelExecution = (id) => request.post(`/executions/${id}/cancel`)
+export const getExecutionFiles = (id) => request.get(`/executions/${id}/files`)
+export const getExecutionFile = (id, filePath, download = false) => `/api/executions/${id}/files/${filePath}?download=${download}`
+export const previewExecutionFile = (id, filePath) => request.get(`/executions/${id}/files/${filePath}`)
 
 // 定时任务
 export const getSchedules = () => request.get('/schedules')
@@ -60,4 +63,14 @@ export const getTags = () => request.get('/tags')
 export const createTag = (data) => request.post('/tags', data)
 export const updateTag = (id, data) => request.put(`/tags/${id}`, data)
 export const deleteTag = (id) => request.delete(`/tags/${id}`)
+
+// 工作流管理
+export const getWorkflows = () => request.get('/workflows')
+export const getWorkflow = (id) => request.get(`/workflows/${id}`)
+export const createWorkflow = (data) => request.post('/workflows', data)
+export const updateWorkflow = (id, data) => request.put(`/workflows/${id}`, data)
+export const deleteWorkflow = (id) => request.delete(`/workflows/${id}`)
+export const executeWorkflow = (id, params) => request.post(`/workflows/${id}/execute`, { params })
+export const toggleWorkflow = (id) => request.post(`/workflows/${id}/toggle`)
+export const cancelWorkflowExecution = (id) => request.post(`/workflow-executions/${id}/cancel`)
 
