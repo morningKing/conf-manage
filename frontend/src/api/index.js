@@ -24,6 +24,10 @@ export const getExecutionFiles = (id) => request.get(`/executions/${id}/files`)
 export const getExecutionFile = (id, filePath, download = false) => `/api/executions/${id}/files/${filePath}?download=${download}`
 export const previewExecutionFile = (id, filePath) => request.get(`/executions/${id}/files/${filePath}`)
 
+// 批量管理
+export const batchManageExecutions = (data) => request.post('/executions/batch', data)
+export const getExecutionsStatistics = () => request.get('/executions/statistics')
+
 // 定时任务
 export const getSchedules = () => request.get('/schedules')
 export const getSchedule = (id) => request.get(`/schedules/${id}`)

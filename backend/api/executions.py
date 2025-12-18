@@ -266,6 +266,345 @@ def delete_execution(execution_id):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
+@api_bp.route('/executions/batch', methods=['POST'])
+def batch_manage_executions():
+    """批量管理执行记录"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'code': 1, 'message': '请求数据不能为空'}), 400
+
+        action = data.get('action')
+        execution_ids = data.get('execution_ids', [])
+
+        if not action:
+            return jsonify({'code': 1, 'message': '操作类型不能为空'}), 400
+
+        if not execution_ids:
+            return jsonify({'code': 1, 'message': '执行ID列表不能为空'}), 400
+
+        if not isinstance(execution_ids, list):
+            return jsonify({'code': 1, 'message': '执行ID必须是数组格式'}), 400
+
+        # 验证ID是否存在
+        executions = Execution.query.filter(Execution.id.in_(execution_ids)).all()
+        found_ids = [exec.id for exec in executions]
+        missing_ids = [eid for eid in execution_ids if eid not in found_ids]
+
+        if missing_ids:
+            return jsonify({
+                'code': 1,
+                'message': f'以下执行记录不存在: {missing_ids}'
+            }), 404
+
+        result = {
+            'action': action,
+            'total': len(execution_ids),
+            'success': 0,
+            'failed': 0,
+            'details': []
+        }
+
+        if action == 'delete':
+            # 批量删除
+            from config import Config
+            import shutil
+
+            for execution in executions:
+                try:
+                    # 删除日志文件
+                    if execution.log_file and os.path.exists(execution.log_file):
+                        os.remove(execution.log_file)
+
+                    # 删除执行空间
+                    execution_space = Config.get_execution_space(execution.id)
+                    if os.path.exists(execution_space):
+                        shutil.rmtree(execution_space)
+
+                    db.session.delete(execution)
+                    result['success'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'success',
+                        'message': '删除成功'
+                    })
+
+                except Exception as e:
+                    result['failed'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'failed',
+                        'message': str(e)
+                    })
+
+            if result['success'] > 0:
+                db.session.commit()
+
+        elif action == 'cancel':
+            # 批量取消
+            import signal
+            import psutil
+
+            for execution in executions:
+                if execution.status != 'running':
+                    result['failed'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'failed',
+                        'message': f'只能取消正在运行的执行，当前状态: {execution.status}'
+                    })
+                    continue
+
+                try:
+                    if execution.pid:
+                        # 终止进程
+                        try:
+                            parent = psutil.Process(execution.pid)
+                            children = parent.children(recursive=True)
+
+                            for child in children:
+                                try:
+                                    child.terminate()
+                                except psutil.NoSuchProcess:
+                                    pass
+
+                            gone, alive = psutil.wait_procs(children, timeout=3)
+
+                            for p in alive:
+                                try:
+                                    p.kill()
+                                except psutil.NoSuchProcess:
+                                    pass
+
+                            parent.terminate()
+                            parent.wait(timeout=3)
+
+                        except psutil.NoSuchProcess:
+                            pass
+                        except psutil.TimeoutExpired:
+                            try:
+                                parent.kill()
+                            except:
+                                pass
+
+                    # 更新状态
+                    execution.status = 'failed'
+                    execution.stage = 'cancelled'
+                    execution.progress = 100
+                    execution.error = '执行已被批量取消'
+                    execution.end_time = datetime.utcnow()
+
+                    result['success'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'success',
+                        'message': '取消成功'
+                    })
+
+                except Exception as e:
+                    result['failed'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'failed',
+                        'message': str(e)
+                    })
+
+            if result['success'] > 0:
+                db.session.commit()
+
+        elif action == 'retry':
+            # 批量重试
+            for execution in executions:
+                if execution.status not in ['failed', 'cancelled']:
+                    result['failed'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'failed',
+                        'message': f'只能重试失败或取消的执行，当前状态: {execution.status}'
+                    })
+                    continue
+
+                try:
+                    # 创建新的执行记录
+                    original_params = {}
+                    if execution.params:
+                        try:
+                            original_params = json.loads(execution.params)
+                        except json.JSONDecodeError:
+                            original_params = {}
+
+                    new_execution = Execution(
+                        script_id=execution.script_id,
+                        environment_id=execution.environment_id,
+                        status='pending',
+                        params=json.dumps(original_params) if original_params else None
+                    )
+                    db.session.add(new_execution)
+                    db.session.flush()
+
+                    # 复制执行空间的文件（如果有）
+                    from config import Config
+                    old_space = Config.get_execution_space(execution.id)
+                    new_space = Config.ensure_execution_space(new_execution.id)
+
+                    if os.path.exists(old_space):
+                        import shutil
+                        for item in os.listdir(old_space):
+                            s = os.path.join(old_space, item)
+                            d = os.path.join(new_space, item)
+                            if os.path.isdir(s):
+                                shutil.copytree(s, d)
+                            else:
+                                shutil.copy2(s, d)
+
+                    # 异步执行
+                    from threading import Thread
+                    from flask import current_app
+                    app = current_app._get_current_object()
+
+                    def run_script_with_context():
+                        with app.app_context():
+                            execute_script(new_execution.id)
+
+                    thread = Thread(target=run_script_with_context)
+                    thread.start()
+
+                    result['success'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'success',
+                        'message': f'重试成功，新执行ID: {new_execution.id}'
+                    })
+
+                except Exception as e:
+                    result['failed'] += 1
+                    result['details'].append({
+                        'id': execution.id,
+                        'status': 'failed',
+                        'message': str(e)
+                    })
+
+            if result['success'] > 0:
+                db.session.commit()
+
+        else:
+            return jsonify({
+                'code': 1,
+                'message': f'不支持的操作类型: {action}'
+            }), 400
+
+        return jsonify({
+            'code': 0,
+            'data': result,
+            'message': f'批量{action}操作完成: 成功{result["success"]}个，失败{result["failed"]}个'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/executions/statistics', methods=['GET'])
+def get_executions_statistics():
+    """获取执行记录统计信息"""
+    try:
+        # 基本统计
+        total_executions = Execution.query.count()
+        success_executions = Execution.query.filter_by(status='success').count()
+        failed_executions = Execution.query.filter_by(status='failed').count()
+        running_executions = Execution.query.filter_by(status='running').count()
+        pending_executions = Execution.query.filter_by(status='pending').count()
+
+        # 按脚本统计
+        from sqlalchemy import case
+        script_stats = db.session.query(
+            Script.name,
+            db.func.count(Execution.id).label('total'),
+            db.func.sum(
+                case(
+                    (Execution.status == 'success', 1),
+                    else_=0
+                )
+            ).label('success'),
+            db.func.sum(
+                case(
+                    (Execution.status == 'failed', 1),
+                    else_=0
+                )
+            ).label('failed')
+        ).join(Execution, Script.id == Execution.script_id).group_by(Script.name).all()
+
+        # 按日期统计（最近7天）
+        from datetime import datetime, timedelta
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+
+        daily_stats = db.session.query(
+            db.func.date(Execution.created_at).label('date'),
+            db.func.count(Execution.id).label('total'),
+            db.func.sum(
+                case(
+                    (Execution.status == 'success', 1),
+                    else_=0
+                )
+            ).label('success'),
+            db.func.sum(
+                case(
+                    (Execution.status == 'failed', 1),
+                    else_=0
+                )
+            ).label('failed')
+        ).filter(Execution.created_at >= seven_days_ago).group_by(db.func.date(Execution.created_at)).all()
+
+        # 按状态统计
+        status_stats = db.session.query(
+            Execution.status,
+            db.func.count(Execution.id).label('count')
+        ).group_by(Execution.status).all()
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'summary': {
+                    'total': total_executions,
+                    'success': success_executions,
+                    'failed': failed_executions,
+                    'running': running_executions,
+                    'pending': pending_executions,
+                    'success_rate': round(success_executions / max(1, total_executions) * 100, 2)
+                },
+                'by_script': [
+                    {
+                        'script_name': stat.name,
+                        'total': stat.total,
+                        'success': stat.success or 0,
+                        'failed': stat.failed or 0,
+                        'success_rate': round((stat.success or 0) / max(1, stat.total) * 100, 2)
+                    }
+                    for stat in script_stats
+                ],
+                'by_date': [
+                    {
+                        'date': stat.date.isoformat() if hasattr(stat.date, 'isoformat') else str(stat.date),
+                        'total': stat.total,
+                        'success': stat.success or 0,
+                        'failed': stat.failed or 0
+                    }
+                    for stat in daily_stats
+                ],
+                'by_status': [
+                    {
+                        'status': stat.status,
+                        'count': stat.count
+                    }
+                    for stat in status_stats
+                ]
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
 @api_bp.route('/executions/<int:execution_id>/cancel', methods=['POST'])
 def cancel_execution(execution_id):
     """中断执行"""
