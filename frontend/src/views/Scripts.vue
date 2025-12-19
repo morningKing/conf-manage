@@ -383,8 +383,62 @@
         <pre>{{ logError }}</pre>
       </div>
 
+      <!-- 执行空间文件列表 -->
+      <div v-if="logStatus === 'success' || logStatus === 'failed'" class="files-section">
+        <el-divider>执行空间文件</el-divider>
+        <div v-if="filesLoading" style="text-align: center; padding: 20px;">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span style="margin-left: 8px;">加载文件列表中...</span>
+        </div>
+        <div v-else-if="executionFiles.length === 0" class="files-empty">
+          执行空间中没有文件
+        </div>
+        <el-table v-else :data="executionFiles" stripe max-height="300">
+          <el-table-column prop="name" label="文件名" min-width="200" />
+          <el-table-column prop="path" label="路径" min-width="200" show-overflow-tooltip />
+          <el-table-column label="大小" width="120">
+            <template #default="{ row }">
+              {{ formatFileSize(row.size) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="modified_time" label="修改时间" width="180">
+            <template #default="{ row }">
+              {{ new Date(row.modified_time).toLocaleString('zh-CN') }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button size="small" @click="handleFilePreview(row)" v-if="row.is_text">
+                预览
+              </el-button>
+              <el-button size="small" type="primary" @click="handleFileDownload(row)">
+                下载
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
       <template #footer>
         <el-button @click="closeLogStream">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 文件预览对话框 -->
+    <el-dialog
+      v-model="filePreviewVisible"
+      :title="`预览: ${selectedFile?.name || ''}`"
+      width="80%"
+    >
+      <div class="file-preview-container">
+        <pre v-if="filePreviewType === 'text'">{{ filePreviewContent }}</pre>
+        <div v-else style="color: #909399; text-align: center; padding: 40px;">
+          {{ filePreviewContent }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="filePreviewVisible = false">关闭</el-button>
+        <el-button type="primary" @click="handleFileDownload(selectedFile)">下载</el-button>
       </template>
     </el-dialog>
 
@@ -497,7 +551,10 @@ import {
   cancelExecution,
   getCategories,
   getTags,
-  toggleScriptFavorite
+  toggleScriptFavorite,
+  getExecutionFiles,
+  getExecutionFile,
+  previewExecutionFile
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -505,7 +562,7 @@ import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
-import { Plus, Search, Star } from '@element-plus/icons-vue'
+import { Plus, Search, Star, Loading } from '@element-plus/icons-vue'
 
 const scripts = ref([])
 const environments = ref([])
@@ -555,6 +612,14 @@ const logStage = ref('pending')
 const currentExecutionId = ref(null)
 const logContainer = ref(null)
 let eventSource = null
+
+// 执行文件相关
+const executionFiles = ref([])
+const filesLoading = ref(false)
+const selectedFile = ref(null)
+const filePreviewVisible = ref(false)
+const filePreviewContent = ref('')
+const filePreviewType = ref('text')
 
 // 根据当前脚本类型过滤环境（用于创建/编辑脚本）
 const filteredEnvironments = computed(() => {
@@ -799,6 +864,8 @@ const openLogStream = (executionId) => {
         // 关闭连接
         eventSource.close()
         eventSource = null
+        // 加载执行文件列表
+        loadExecutionFiles()
       } else if (data.error) {
         ElMessage.error(data.error)
         eventSource.close()
@@ -819,12 +886,57 @@ const openLogStream = (executionId) => {
   }
 }
 
+const loadExecutionFiles = async () => {
+  if (!currentExecutionId.value) return
+
+  filesLoading.value = true
+  try {
+    const res = await getExecutionFiles(currentExecutionId.value)
+    executionFiles.value = res.data.files || []
+  } catch (error) {
+    console.error('加载执行文件失败:', error)
+  } finally {
+    filesLoading.value = false
+  }
+}
+
+const formatFileSize = (size) => {
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB'
+  return (size / (1024 * 1024)).toFixed(2) + ' MB'
+}
+
+const handleFilePreview = async (file) => {
+  selectedFile.value = file
+
+  if (file.is_text) {
+    try {
+      const res = await previewExecutionFile(currentExecutionId.value, file.path)
+      filePreviewContent.value = res.data.content
+      filePreviewType.value = res.data.type
+      filePreviewVisible.value = true
+    } catch (error) {
+      ElMessage.error('预览文件失败: ' + error.message)
+    }
+  } else {
+    // 二进制文件直接下载
+    handleFileDownload(file)
+  }
+}
+
+const handleFileDownload = (file) => {
+  const url = getExecutionFile(currentExecutionId.value, file.path, true)
+  window.open(url, '_blank')
+}
+
 const closeLogStream = () => {
   if (eventSource) {
     eventSource.close()
     eventSource = null
   }
   logVisible.value = false
+  // 清空文件列表
+  executionFiles.value = []
 }
 
 const getStatusType = (status) => {
@@ -1016,5 +1128,34 @@ onMounted(() => {
   font-size: 13px;
   margin: 0;
   overflow-x: auto;
+}
+
+.files-section {
+  margin-top: 16px;
+}
+
+.files-empty {
+  color: #909399;
+  text-align: center;
+  padding: 40px;
+  font-style: italic;
+}
+
+.file-preview-container {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 4px;
+  max-height: 600px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.file-preview-container pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 </style>
