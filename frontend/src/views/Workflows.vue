@@ -118,6 +118,25 @@
         </div>
       </div>
 
+      <!-- 整体进度条 -->
+      <div class="workflow-progress">
+        <div class="progress-info">
+          <span class="progress-label">整体进度</span>
+          <span class="progress-text">{{ workflowProgress }}%</span>
+        </div>
+        <el-progress
+          :percentage="workflowProgress"
+          :status="progressStatus"
+          :stroke-width="20"
+        />
+        <div class="node-stats">
+          <span>总节点: {{ totalNodes }}</span>
+          <span>已完成: {{ completedNodes }}</span>
+          <span>执行中: {{ runningNodes }}</span>
+          <span>等待中: {{ pendingNodes }}</span>
+        </div>
+      </div>
+
       <el-divider />
 
       <!-- 工作流图显示，节点状态实时更新 -->
@@ -524,6 +543,38 @@ const getStatusText = (status) => {
   return texts[status] || '未知状态'
 }
 
+// 计算工作流整体进度
+const totalNodes = computed(() => statusNodes.value.length)
+
+const completedNodes = computed(() => {
+  return Object.values(nodeStatuses.value).filter(
+    status => status === 'success' || status === 'failed' || status === 'skipped'
+  ).length
+})
+
+const runningNodes = computed(() => {
+  return Object.values(nodeStatuses.value).filter(
+    status => status === 'running'
+  ).length
+})
+
+const pendingNodes = computed(() => {
+  return Object.values(nodeStatuses.value).filter(
+    status => status === 'pending' || !status
+  ).length
+})
+
+const workflowProgress = computed(() => {
+  if (totalNodes.value === 0) return 0
+  return Math.round((completedNodes.value / totalNodes.value) * 100)
+})
+
+const progressStatus = computed(() => {
+  if (executionStatus.value === 'success') return 'success'
+  if (executionStatus.value === 'failed') return 'exception'
+  return undefined
+})
+
 // 启用/禁用工作流
 const toggleWorkflow = async (workflow) => {
   try {
@@ -604,6 +655,57 @@ onMounted(() => {
   margin-bottom: 12px;
   min-height: 40px;
   line-height: 1.5;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.workflow-progress {
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.progress-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #409eff;
+}
+
+.node-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.node-stats span {
+  padding: 4px 12px;
+  background: white;
+  border-radius: 4px;
+}
+
+.workflow-status-container {
+  min-height: 400px;
 }
 </style>
 

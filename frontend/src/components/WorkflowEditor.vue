@@ -1,6 +1,6 @@
 <template>
   <div class="workflow-editor">
-    <div class="editor-toolbar">
+    <div v-if="!readonly" class="editor-toolbar">
       <el-space>
         <el-button :icon="Plus" @click="addScriptNode" type="primary">添加脚本节点</el-button>
         <el-button :icon="Clock" @click="addDelayNode">添加延迟节点</el-button>
@@ -21,6 +21,9 @@
         :default-viewport="{ zoom: 1 }"
         :min-zoom="0.2"
         :max-zoom="4"
+        :nodes-draggable="!readonly"
+        :nodes-connectable="!readonly"
+        :elements-selectable="!readonly"
       >
         <Background pattern-color="#aaa" :gap="16" />
         <Controls />
@@ -29,6 +32,8 @@
           <ScriptNode
             :data="nodeProps.data"
             :id="nodeProps.id"
+            :status="nodeStatuses[nodeProps.id]"
+            :readonly="readonly"
             @delete="deleteNode"
             @edit="editNode"
           />
@@ -38,6 +43,8 @@
           <DelayNode
             :data="nodeProps.data"
             :id="nodeProps.id"
+            :status="nodeStatuses[nodeProps.id]"
+            :readonly="readonly"
             @delete="deleteNode"
             @edit="editNode"
           />
@@ -116,6 +123,14 @@ const props = defineProps({
   scripts: {
     type: Array,
     default: () => []
+  },
+  nodeStatuses: {
+    type: Object,
+    default: () => ({})
+  },
+  readonly: {
+    type: Boolean,
+    default: false
   }
 })
 
