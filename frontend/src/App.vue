@@ -55,6 +55,14 @@
             <el-icon><Setting /></el-icon>
             <template #title>全局变量</template>
           </el-menu-item>
+          <el-menu-item index="/ai-script-writer">
+            <el-icon><MagicStick /></el-icon>
+            <template #title>AI编写脚本</template>
+          </el-menu-item>
+          <el-menu-item index="/ai-settings">
+            <el-icon><Tools /></el-icon>
+            <template #title>AI配置</template>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -139,7 +147,8 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Document, VideoPlay, Clock, Menu, CollectionTag, Setting, Folder, Share,
-  Sunny, Moon, Search, FullScreen, OfficeBuilding, Expand, Fold, Loading
+  Sunny, Moon, Search, FullScreen, OfficeBuilding, Expand, Fold, Loading,
+  MagicStick, Tools
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

@@ -13,9 +13,11 @@ from .category import Category, Tag, script_tags
 from .workflow import Workflow, WorkflowNode, WorkflowEdge, WorkflowExecution, WorkflowNodeExecution
 from .workflow_template import WorkflowTemplate
 from .global_variable import GlobalVariable
+from .ai_config import AIConfig
 
 __all__ = [
     'db', 'Script', 'ScriptVersion', 'Execution', 'Schedule', 'Environment',
     'Category', 'Tag', 'script_tags', 'Workflow', 'WorkflowNode', 'WorkflowEdge',
-    'WorkflowExecution', 'WorkflowNodeExecution', 'WorkflowTemplate', 'GlobalVariable'
+    'WorkflowExecution', 'WorkflowNodeExecution', 'WorkflowTemplate', 'GlobalVariable',
+    'AIConfig'
 ]

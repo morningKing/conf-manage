@@ -49,6 +49,16 @@ const routes = [
     path: '/global-variables',
     name: 'GlobalVariables',
     component: () => import('../views/GlobalVariables.vue')
+  },
+  {
+    path: '/ai-settings',
+    name: 'AISettings',
+    component: () => import('../views/AISettings.vue')
+  },
+  {
+    path: '/ai-script-writer',
+    name: 'AIScriptWriter',
+    component: () => import('../views/AIScriptWriter.vue')
   }
 ]
 

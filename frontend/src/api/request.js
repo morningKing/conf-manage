@@ -19,15 +19,12 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    const res = response.data
-    if (res.code !== 0) {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
-    }
-    return res
+    // 直接返回响应数据
+    return response.data
   },
   error => {
-    ElMessage.error(error.message || '网络错误')
+    const message = error.response?.data?.error || error.message || '网络错误'
+    ElMessage.error(message)
     return Promise.reject(error)
   }
 )
