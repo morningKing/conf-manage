@@ -5,10 +5,11 @@ import json
 import requests
 import tempfile
 import os
+import subprocess
+import sys
 from flask import request, jsonify, stream_with_context, Response
 from . import api_bp
 from models import AIConfig, db, Execution
-from services.script_executor import execute_script
 from datetime import datetime
 
 
@@ -364,9 +365,6 @@ def preview_execute_script():
 
         try:
             # 准备环境变量
-            import subprocess
-            import sys
-
             env = os.environ.copy()
             env.update(params)
 
