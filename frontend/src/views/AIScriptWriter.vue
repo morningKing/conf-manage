@@ -322,10 +322,8 @@ const previewExecute = async () => {
       ElMessage.warning('执行完成，但有错误')
     }
 
-    // 加载生成的文件（如果有）
-    if (response.temp_dir) {
-      await loadExecutionFiles(response.id, response.temp_dir)
-    }
+    // 预览执行暂不支持文件查看（因为是临时目录）
+    // 如需查看生成的文件，请保存脚本后在脚本管理页面执行
   } catch (error) {
     executionLog.value = 'Error: ' + (error.response?.data?.error || error.message || '执行失败')
     ElMessage.error(error.response?.data?.error || error.message || '执行失败')
