@@ -39,8 +39,18 @@ def execute_workflow_async(workflow_execution_id):
             workflow = execution.workflow
 
             # 获取所有节点和边
-            nodes = {n.node_id: n for n in WorkflowNode.query.filter_by(workflow_id=workflow.id).all()}
+            nodes_orm = WorkflowNode.query.filter_by(workflow_id=workflow.id).all()
             edges = WorkflowEdge.query.filter_by(workflow_id=workflow.id).all()
+
+            # 提取节点信息为简单字典，避免session detach问题
+            nodes = {}
+            for n in nodes_orm:
+                nodes[n.node_id] = {
+                    'node_id': n.node_id,
+                    'node_type': n.node_type,
+                    'script_id': n.script_id,
+                    'config': n.config
+                }
 
             # 构建依赖关系图
             graph = build_dependency_graph(nodes, edges)
@@ -51,13 +61,23 @@ def execute_workflow_async(workflow_execution_id):
             # 执行工作流
             success = execute_workflow_graph(execution, graph, nodes, params)
 
-            # 更新执行状态
-            execution.status = 'success' if success else 'failed'
-            execution.end_time = datetime.utcnow()
-            db.session.commit()
+            # 重新获取执行记录以确保更新生效（因为工作流执行过程中session可能被清理）
+            db.session.expire_all()
+            execution = WorkflowExecution.query.get(workflow_execution_id)
+
+            if execution:
+                # 更新执行状态
+                execution.status = 'success' if success else 'failed'
+                execution.end_time = datetime.utcnow()
+                db.session.commit()
+                logger.info(f"[工作流执行] 工作流状态已更新为{execution.status}")
+                sys.stdout.flush()
 
         except Exception as e:
             print(f'工作流执行失败: {str(e)}')
+            # 重新获取执行记录
+            db.session.expire_all()
+            execution = WorkflowExecution.query.get(workflow_execution_id)
             if execution:
                 execution.status = 'failed'
                 execution.error = str(e)
@@ -87,6 +107,9 @@ def build_dependency_graph(nodes, edges):
 
 def execute_workflow_graph(workflow_execution, graph, nodes, params):
     """执行工作流图"""
+    # 提取workflow_execution_id以避免session detach
+    workflow_execution_id = workflow_execution.id
+
     # 找到入口节点（没有依赖的节点）
     entry_nodes = [node_id for node_id, info in graph.items() if not info['deps']]
 
@@ -143,7 +166,7 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params):
                     logger.info(f"[工作流执行] 条件不满足，跳过节点 {node_id}")
                     sys.stdout.flush()
                     executed.add(node_id)
-                    create_node_execution(workflow_execution.id, node_id, 'skipped', '条件不满足')
+                    create_node_execution(workflow_execution_id, node_id, 'skipped', '条件不满足')
                     deps_ready = False
                     break
                 else:
@@ -158,13 +181,13 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params):
         # 执行节点
         logger.info(f"[工作流执行] 开始执行节点 {node_id}")
         sys.stdout.flush()
-        success, result = execute_node(workflow_execution, node, params, node_results)
+        success, result = execute_node(workflow_execution_id, node, params, node_results)
         logger.info(f"[工作流执行] 节点 {node_id} 执行完成，success={success}, result={result}")
         sys.stdout.flush()
         node_results[node_id] = result
         executed.add(node_id)
 
-        if not success and node.node_type == 'script':
+        if not success and node['node_type'] == 'script':
             # 脚本节点执行失败，终止工作流
             logger.info(f"[工作流执行] 脚本节点 {node_id} 失败，终止工作流")
             sys.stdout.flush()
@@ -189,21 +212,18 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params):
     return True
 
 
-def execute_node(workflow_execution, node, params, node_results):
+def execute_node(workflow_execution_id, node_dict, params, node_results):
     """执行单个节点"""
     node_execution = None
     try:
-        logger.info(f"[execute_node] 准备创建节点执行记录: node_id={node.node_id}")
+        # node_dict 是一个简单字典，包含: node_id, node_type, script_id, config
+        node_id = node_dict['node_id']
+        node_type = node_dict['node_type']
+        script_id = node_dict.get('script_id')
+        node_config = node_dict.get('config')
+
+        logger.info(f"[execute_node] 准备创建节点执行记录: node_id={node_id}")
         sys.stdout.flush()
-
-        # 保存workflow_execution_id，因为session可能被清理
-        workflow_execution_id = workflow_execution.id
-
-        # 保存节点信息，因为node对象可能会从session detach
-        node_id = node.node_id
-        node_type = node.node_type
-        script_id = node.script_id if node.node_type == 'script' else None
-        node_config = node.config
 
         # 创建节点执行记录
         node_execution = WorkflowNodeExecution(
@@ -268,7 +288,7 @@ def execute_node(workflow_execution, node, params, node_results):
         return True, result
 
     except Exception as e:
-        logger.error(f'[execute_node] 节点执行失败 [{node.node_id}]: {str(e)}')
+        logger.error(f'[execute_node] 节点执行失败 [{node_dict.get("node_id", "unknown")}]: {str(e)}')
         import traceback
         logger.error(f'[execute_node] 异常堆栈:\n{traceback.format_exc()}')
         sys.stdout.flush()
