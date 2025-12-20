@@ -101,6 +101,19 @@
 
         <!-- 右侧：预览执行区域 -->
         <div class="right-panel">
+          <!-- 执行参数 -->
+          <div class="params-section">
+            <div class="params-header">执行参数（可选）</div>
+            <div class="params-input">
+              <el-input
+                v-model="executionParams"
+                type="textarea"
+                :rows="3"
+                placeholder="输入参数（JSON格式）&#10;例如: {&#10;  &quot;PARAM_NAME&quot;: &quot;value&quot;,&#10;  &quot;HOST&quot;: &quot;localhost&quot;&#10;}"
+              />
+            </div>
+          </div>
+
           <!-- 执行日志 -->
           <div class="preview-section">
             <div class="preview-header">
@@ -189,6 +202,7 @@ const generatedScript = ref('')
 const generating = ref(false)
 const executing = ref(false)
 const executionLog = ref('')
+const executionParams = ref('')  // 执行参数
 const executionFiles = ref([])
 const explanation = ref('')
 const filePreviewVisible = ref(false)
@@ -272,60 +286,73 @@ const explainScript = async () => {
 
 // 预览执行
 const previewExecute = async () => {
-  ElMessage.info('预览执行功能正在开发中，请先保存脚本后在脚本管理页面执行')
-  return
-
-  // TODO: 实现预览执行功能
-  /*
   executing.value = true
   executionLog.value = ''
   executionFiles.value = []
 
   try {
-    // 创建临时脚本执行
-    const response = await request.post('/scripts/preview', {
-      content: generatedScript.value
-    })
-
-    const executionId = response.data.id
-
-    // 监听执行日志
-    const eventSource = new EventSource(`/api/executions/${executionId}/stream`)
-
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-
-      if (data.status) {
-        if (data.status === 'running' && data.output) {
-          executionLog.value = data.output
-        } else if (data.status === 'success' || data.status === 'failed') {
-          executionLog.value = data.output || ''
-          eventSource.close()
-          executing.value = false
-
-          // 加载生成的文件
-          loadExecutionFiles(executionId)
-        }
+    // 解析参数
+    let params = {}
+    if (executionParams.value.trim()) {
+      try {
+        params = JSON.parse(executionParams.value)
+      } catch (e) {
+        ElMessage.error('参数格式错误，请输入有效的JSON格式')
+        executing.value = false
+        return
       }
     }
 
-    eventSource.onerror = () => {
-      eventSource.close()
-      executing.value = false
-      ElMessage.error('执行监听失败')
+    // 创建临时脚本执行
+    const response = await request.post('/ai/preview-execute', {
+      code: generatedScript.value,
+      params: params
+    })
+
+    // 显示执行结果
+    executionLog.value = response.output || ''
+
+    if (response.error) {
+      executionLog.value += '\n\n--- Error ---\n' + response.error
+    }
+
+    if (response.status === 'success') {
+      ElMessage.success('执行成功')
+    } else {
+      ElMessage.warning('执行完成，但有错误')
+    }
+
+    // 加载生成的文件（如果有）
+    if (response.temp_dir) {
+      await loadExecutionFiles(response.id, response.temp_dir)
     }
   } catch (error) {
+    executionLog.value = 'Error: ' + (error.response?.data?.error || error.message || '执行失败')
+    ElMessage.error(error.response?.data?.error || error.message || '执行失败')
+  } finally {
     executing.value = false
-    ElMessage.error(error.response?.data?.error || '执行失败')
   }
-  */
 }
 
 // 加载执行空间的文件
-const loadExecutionFiles = async (executionId) => {
+const loadExecutionFiles = async (executionId, tempDir) => {
   try {
     const response = await request.get(`/executions/${executionId}/files`)
-    executionFiles.value = response.data.files || []
+
+    // 将文件列表转换为树结构
+    const files = response.files || []
+    const fileTree = []
+
+    files.forEach(file => {
+      fileTree.push({
+        name: file.name,
+        path: file.path,
+        type: 'file',
+        executionId: executionId
+      })
+    })
+
+    executionFiles.value = fileTree
   } catch (error) {
     console.error('加载文件失败:', error)
   }
@@ -333,13 +360,13 @@ const loadExecutionFiles = async (executionId) => {
 
 // 处理文件点击
 const handleFileClick = async (data) => {
-  if (data.type === 'file') {
+  if (data.type === 'file' && data.executionId) {
     try {
-      const response = await request.get(`/files/${data.path}`)
-      currentFileContent.value = response.data.content
+      const response = await request.get(`/executions/${data.executionId}/files/${encodeURIComponent(data.path)}/preview`)
+      currentFileContent.value = response.content || ''
       filePreviewVisible.value = true
     } catch (error) {
-      ElMessage.error('读取文件失败')
+      ElMessage.error('读取文件失败: ' + (error.message || '未知错误'))
     }
   }
 }
@@ -379,7 +406,7 @@ const confirmSave = async () => {
     const scriptData = {
       name: saveForm.value.name,
       description: saveForm.value.description,
-      content: generatedScript.value,
+      code: generatedScript.value,  // 使用 code 字段
       type: 'python'  // 固定为 Python 类型
     }
 
@@ -448,6 +475,29 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 15px;
+}
+
+.params-section {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.params-header {
+  padding: 10px 15px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #dcdfe6;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.params-input {
+  padding: 10px;
+}
+
+.params-input .el-textarea__inner {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
 }
 
 .prompt-section {

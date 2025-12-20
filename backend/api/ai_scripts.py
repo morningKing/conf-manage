@@ -3,9 +3,13 @@ AI脚本生成API
 """
 import json
 import requests
+import tempfile
+import os
 from flask import request, jsonify, stream_with_context, Response
 from . import api_bp
-from models import AIConfig
+from models import AIConfig, db, Execution
+from services.script_executor import execute_script
+from datetime import datetime
 
 
 def get_active_ai_config():
@@ -321,4 +325,92 @@ Use Chinese (中文) for the explanation."""
         })
 
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/ai/preview-execute', methods=['POST'])
+def preview_execute_script():
+    """预览执行AI生成的脚本"""
+    try:
+        data = request.json
+        script_code = data.get('code')
+        params = data.get('params', {})
+
+        if not script_code:
+            return jsonify({'error': 'Script code is required'}), 400
+
+        # 创建临时执行记录
+        execution = Execution(
+            script_id=None,  # 临时脚本没有script_id
+            status='pending',
+            params=json.dumps(params) if params else None,
+            start_time=datetime.utcnow()
+        )
+        db.session.add(execution)
+        db.session.commit()
+
+        # 创建临时脚本文件
+        temp_dir = tempfile.mkdtemp(prefix='ai_preview_')
+        temp_script_path = os.path.join(temp_dir, 'temp_script.py')
+
+        with open(temp_script_path, 'w', encoding='utf-8') as f:
+            f.write(script_code)
+
+        # 更新执行状态
+        execution.status = 'running'
+        execution.stage = 'running'
+        execution.progress = 50
+        db.session.commit()
+
+        try:
+            # 准备环境变量
+            import subprocess
+            import sys
+
+            env = os.environ.copy()
+            env.update(params)
+
+            # 执行脚本
+            process = subprocess.Popen(
+                [sys.executable, temp_script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=temp_dir,
+                env=env,
+                text=True
+            )
+
+            stdout, stderr = process.communicate(timeout=300)  # 5分钟超时
+
+            # 更新执行状态
+            execution.status = 'success' if process.returncode == 0 else 'failed'
+            execution.output = stdout
+            execution.error = stderr if stderr else None
+            execution.end_time = datetime.utcnow()
+            execution.progress = 100
+            execution.stage = 'completed'
+            db.session.commit()
+
+            return jsonify({
+                'id': execution.id,
+                'status': execution.status,
+                'output': stdout,
+                'error': stderr,
+                'temp_dir': temp_dir
+            })
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            execution.status = 'failed'
+            execution.error = 'Execution timeout (5 minutes)'
+            execution.end_time = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'error': 'Execution timeout'}), 500
+
+    except Exception as e:
+        if 'execution' in locals():
+            execution.status = 'failed'
+            execution.error = str(e)
+            execution.end_time = datetime.utcnow()
+            db.session.commit()
         return jsonify({'error': str(e)}), 500

@@ -22,7 +22,19 @@
       "Bash(git log:*)",
       "Bash(git push)",
       "Bash(npm --version:*)",
-      "Bash(env)"
+      "Bash(env)",
+      "Bash(pip3:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "Bash(./start-backend.sh)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(for port in 5173 5174 5175 5176)",
+      "Bash(do lsof -ti:$port)",
+      "Bash(done)",
+      "Bash(netstat:*)",
+      "Bash(pgrep:*)",
+      "Bash(tail:*)"
     ],
     "deny": [],
     "ask": []
