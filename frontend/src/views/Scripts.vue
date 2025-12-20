@@ -264,62 +264,264 @@
 
         <el-form-item label="上传文件">
           <FileUpload v-model="uploadFiles" />
-          <el-alert
-            type="info"
-            :closable="false"
-            style="margin-top: 10px;"
-          >
-            <template #title>
-              <div style="font-size: 13px; line-height: 1.6;">
-                <strong>文件访问说明：</strong>
-                <div style="margin-top: 8px;">
-                  <div style="margin-bottom: 10px;">
-                    <strong style="color: #409eff;">1. 获取执行时上传的文件：</strong>
-                    <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                      <code style="color: #303133;">
-                        import os, json<br>
-                        files = json.loads(os.environ.get('FILES', '[]'))<br>
-                        # files 是文件名列表，如 ['test.txt', 'data.csv']<br>
-                        # 文件在当前工作目录，可直接用文件名打开<br>
-                        # 示例: with open(files[0], 'r') as f: ...
-                      </code>
-                    </div>
-                    <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                      <code style="color: #303133;">
-                        const fs = require('fs');<br>
-                        const files = JSON.parse(process.env.FILES || '[]');<br>
-                        // files 是文件名列表，如 ['test.txt', 'data.csv']<br>
-                        // 文件在当前工作目录，可直接用文件名读取<br>
-                        // 示例: const data = fs.readFileSync(files[0], 'utf8');
-                      </code>
-                    </div>
-                  </div>
-                  <div>
-                    <strong style="color: #409eff;">2. 访问文件管理中的公共文件：</strong>
-                    <div v-if="currentScript?.type === 'python'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                      <code style="color: #303133;">
-                        import os<br>
-                        # 获取项目根目录<br>
-                        base_dir = os.path.dirname(os.path.dirname(os.getcwd()))<br>
-                        upload_dir = os.path.join(base_dir, 'data', 'uploads')<br>
-                        file_path = os.path.join(upload_dir, 'your_file.txt')
-                      </code>
-                    </div>
-                    <div v-else-if="currentScript?.type === 'javascript'" style="background: #f5f7fa; padding: 8px; border-radius: 4px; margin-top: 5px;">
-                      <code style="color: #303133;">
-                        const path = require('path');<br>
-                        // 获取项目根目录<br>
-                        const baseDir = path.dirname(path.dirname(process.cwd()));<br>
-                        const uploadDir = path.join(baseDir, 'data', 'uploads');<br>
-                        const filePath = path.join(uploadDir, 'your_file.txt');
-                      </code>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </el-alert>
         </el-form-item>
+
+        <!-- 使用指南 -->
+        <el-collapse style="margin-top: 15px;">
+          <el-collapse-item title="📖 脚本编写使用指南" name="guide">
+            <div class="script-guide">
+              <!-- Python 脚本指南 -->
+              <div v-if="currentScript?.type === 'python'">
+                <h4>一、参数传递</h4>
+                <p class="guide-desc">所有参数通过环境变量传递，使用 <code>os.environ.get()</code> 获取</p>
+                <pre class="code-example">import os
+
+# 获取参数（带默认值）
+param1 = os.environ.get('PARAM_NAME', 'default_value')
+host = os.environ.get('HOST', 'localhost')
+port = int(os.environ.get('PORT', '8080'))</pre>
+
+                <h4>二、文件访问</h4>
+                <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
+                <pre class="code-example">import os
+import json
+
+# 获取上传的文件列表
+files_json = os.environ.get('FILES', '[]')
+files = json.loads(files_json)  # ['file1.txt', 'file2.csv']
+
+# 读取文件（使用文件名即可，无需路径）
+for filename in files:
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+        print(f'读取文件: {filename}')
+
+# 写入新文件到执行空间
+with open('output.txt', 'w') as f:
+    f.write('处理结果...')</pre>
+
+                <h4>三、工作流中获取上一步输出</h4>
+                <p class="guide-desc">在工作流中，可以通过环境变量访问前置节点的执行结果</p>
+                <pre class="code-example">import os
+import json
+
+# 假设前置节点ID为 node_1
+# 获取节点执行状态
+node_1_status = os.environ.get('NODE_node_1_STATUS')
+
+# 获取节点输出（JSON格式）
+node_1_output = os.environ.get('NODE_node_1_OUTPUT', '{}')
+result = json.loads(node_1_output)
+
+# 使用前置节点的结果
+if node_1_status == 'success':
+    data = result.get('data')
+    print(f'上一步处理了 {data} 条记录')</pre>
+
+                <h4>四、完整示例</h4>
+                <p class="guide-desc">CSV文件处理脚本示例</p>
+                <pre class="code-example">#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CSV数据处理脚本
+"""
+import os
+import json
+import sys
+import csv
+
+def main():
+    try:
+        # 1. 获取参数
+        output_file = os.environ.get('OUTPUT_FILE', 'result.csv')
+        delimiter = os.environ.get('DELIMITER', ',')
+
+        # 2. 获取上传的文件
+        files_json = os.environ.get('FILES', '[]')
+        files = json.loads(files_json)
+
+        if not files:
+            print('错误: 未上传文件', file=sys.stderr)
+            sys.exit(1)
+
+        # 3. 处理CSV文件
+        input_file = files[0]
+        print(f'开始处理文件: {input_file}')
+
+        rows = []
+        with open(input_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f, delimiter=delimiter)
+            for row in reader:
+                # 数据处理逻辑
+                rows.append(row)
+
+        print(f'共读取 {len(rows)} 行数据')
+
+        # 4. 输出结果
+        with open(output_file, 'w', encoding='utf-8') as f:
+            if rows:
+                writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+                writer.writeheader()
+                writer.writerows(rows)
+
+        print(f'处理完成，结果保存到: {output_file}')
+
+    except Exception as e:
+        print(f'错误: {str(e)}', file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()</pre>
+              </div>
+
+              <!-- JavaScript 脚本指南 -->
+              <div v-else-if="currentScript?.type === 'javascript'">
+                <h4>一、参数传递</h4>
+                <p class="guide-desc">所有参数通过环境变量传递，使用 <code>process.env</code> 获取</p>
+                <pre class="code-example">// 获取参数（带默认值）
+const param1 = process.env.PARAM_NAME || 'default_value';
+const host = process.env.HOST || 'localhost';
+const port = parseInt(process.env.PORT || '8080');</pre>
+
+                <h4>二、文件访问</h4>
+                <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
+                <pre class="code-example">const fs = require('fs');
+
+// 获取上传的文件列表
+const filesJson = process.env.FILES || '[]';
+const files = JSON.parse(filesJson);  // ['file1.txt', 'file2.csv']
+
+// 读取文件（使用文件名即可，无需路径）
+files.forEach(filename => {
+    const content = fs.readFileSync(filename, 'utf8');
+    console.log(`读取文件: ${filename}`);
+});
+
+// 写入新文件到执行空间
+fs.writeFileSync('output.txt', '处理结果...');</pre>
+
+                <h4>三、工作流中获取上一步输出</h4>
+                <p class="guide-desc">在工作流中，可以通过环境变量访问前置节点的执行结果</p>
+                <pre class="code-example">// 假设前置节点ID为 node_1
+// 获取节点执行状态
+const node1Status = process.env.NODE_node_1_STATUS;
+
+// 获取节点输出（JSON格式）
+const node1Output = process.env.NODE_node_1_OUTPUT || '{}';
+const result = JSON.parse(node1Output);
+
+// 使用前置节点的结果
+if (node1Status === 'success') {
+    const data = result.data;
+    console.log(`上一步处理了 ${data} 条记录`);
+}</pre>
+
+                <h4>四、完整示例</h4>
+                <p class="guide-desc">JSON文件处理脚本示例</p>
+                <pre class="code-example">#!/usr/bin/env node
+/**
+ * JSON数据处理脚本
+ */
+const fs = require('fs');
+
+function main() {
+    try {
+        // 1. 获取参数
+        const outputFile = process.env.OUTPUT_FILE || 'result.json';
+
+        // 2. 获取上传的文件
+        const filesJson = process.env.FILES || '[]';
+        const files = JSON.parse(filesJson);
+
+        if (files.length === 0) {
+            console.error('错误: 未上传文件');
+            process.exit(1);
+        }
+
+        // 3. 处理JSON文件
+        const inputFile = files[0];
+        console.log(`开始处理文件: ${inputFile}`);
+
+        const content = fs.readFileSync(inputFile, 'utf8');
+        const data = JSON.parse(content);
+
+        // 数据处理逻辑
+        console.log(`共读取 ${data.length} 条数据`);
+
+        // 4. 输出结果
+        fs.writeFileSync(outputFile, JSON.stringify(data, null, 2));
+        console.log(`处理完成，结果保存到: ${outputFile}`);
+
+    } catch (error) {
+        console.error(`错误: ${error.message}`);
+        process.exit(1);
+    }
+}
+
+main();</pre>
+              </div>
+
+              <!-- Bash 脚本指南 -->
+              <div v-else>
+                <h4>一、参数传递</h4>
+                <p class="guide-desc">所有参数通过环境变量传递</p>
+                <pre class="code-example">#!/bin/bash
+
+# 获取参数（带默认值）
+PARAM_NAME=${PARAM_NAME:-"default_value"}
+HOST=${HOST:-"localhost"}
+PORT=${PORT:-"8080"}</pre>
+
+                <h4>二、文件访问</h4>
+                <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
+                <pre class="code-example">#!/bin/bash
+
+# 获取上传的文件列表（需要 jq 工具解析JSON）
+FILES_JSON=${FILES:-"[]"}
+
+# 如果有文件，遍历处理
+if [ "$FILES_JSON" != "[]" ]; then
+    echo "处理上传的文件..."
+    # 示例：读取第一个文件
+    # first_file=$(echo $FILES_JSON | jq -r '.[0]')
+    # cat "$first_file"
+fi</pre>
+
+                <h4>三、完整示例</h4>
+                <p class="guide-desc">文本文件处理脚本示例</p>
+                <pre class="code-example">#!/bin/bash
+set -e
+
+# 获取参数
+OUTPUT_FILE=${OUTPUT_FILE:-"output.txt"}
+
+# 获取上传的文件
+FILES_JSON=${FILES:-"[]"}
+
+echo "开始处理..."
+
+# 创建输出文件
+touch "$OUTPUT_FILE"
+
+# 处理逻辑
+echo "处理完成" > "$OUTPUT_FILE"
+
+echo "结果已保存到: $OUTPUT_FILE"</pre>
+              </div>
+
+              <div class="guide-tips">
+                <h4>💡 重要提示</h4>
+                <ul>
+                  <li>执行空间是<strong>独立的临时目录</strong>，每次执行都会创建新的空间</li>
+                  <li>上传的文件和生成的文件都在<strong>执行空间</strong>中，执行完成后可在日志弹窗中查看和下载</li>
+                  <li>参数名和工作流节点ID是<strong>大小写敏感</strong>的</li>
+                  <li>工作流节点输出格式：<code>NODE_{节点ID}_{属性}</code>，属性包括 STATUS、OUTPUT 等</li>
+                  <li>建议使用 <code>try-except</code> 或 <code>try-catch</code> 进行<strong>错误处理</strong></li>
+                </ul>
+              </div>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
       </el-form>
       <template #footer>
         <el-button @click="executeVisible = false">取消</el-button>
@@ -1157,5 +1359,128 @@ onMounted(() => {
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+/* 使用指南样式 */
+.script-guide {
+  padding: 10px 0;
+}
+
+.script-guide h4 {
+  color: #409eff;
+  font-size: 15px;
+  margin: 20px 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #409eff;
+}
+
+.script-guide h4:first-child {
+  margin-top: 0;
+}
+
+.guide-desc {
+  color: #606266;
+  font-size: 13px;
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.guide-desc code {
+  background: #f5f7fa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #e83e8c;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.code-example {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 12px 15px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 10px 0;
+  border-left: 3px solid #409eff;
+}
+
+.guide-tips {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.guide-tips h4 {
+  color: #fa8c16;
+  font-size: 14px;
+  margin: 0 0 10px 0;
+  border: none;
+  padding: 0;
+}
+
+.guide-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.guide-tips li {
+  color: #595959;
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 8px;
+}
+
+.guide-tips li:last-child {
+  margin-bottom: 0;
+}
+
+.guide-tips code {
+  background: #fffbe6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #d4380d;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.guide-tips strong {
+  color: #262626;
+}
+
+/* 深色模式下的使用指南样式 */
+.dark-mode .guide-desc {
+  color: #b3b3b3;
+}
+
+.dark-mode .guide-desc code {
+  background: #2a2a2a;
+  color: #f78fb3;
+}
+
+.dark-mode .guide-tips {
+  background: #2c2416;
+  border-color: #594214;
+}
+
+.dark-mode .guide-tips h4 {
+  color: #ffa940;
+}
+
+.dark-mode .guide-tips li {
+  color: #d9d9d9;
+}
+
+.dark-mode .guide-tips code {
+  background: #3d2f1f;
+  color: #ff7a45;
+}
+
+.dark-mode .guide-tips strong {
+  color: #f0f0f0;
 }
 </style>
