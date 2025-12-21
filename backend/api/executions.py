@@ -2,7 +2,7 @@
 执行记录API
 """
 from flask import request, jsonify, Response, stream_with_context
-from werkzeug.utils import secure_filename
+from utils import safe_filename
 from . import api_bp
 from models import db, Execution, Script
 from services.executor import execute_script
@@ -47,7 +47,7 @@ def execute_script_api(script_id):
             for file_key in request.files:
                 file = request.files[file_key]
                 if file and file.filename:
-                    filename = secure_filename(file.filename)
+                    filename = safe_filename(file.filename)
                     # 直接保存到执行空间,使用原始文件名
                     filepath = os.path.join(execution_space, filename)
                     file.save(filepath)

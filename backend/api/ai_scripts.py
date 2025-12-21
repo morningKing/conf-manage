@@ -373,14 +373,14 @@ def preview_execute_script():
         # 保存上传的文件到临时目录
         uploaded_file_paths = []
         if uploaded_files:
+            from utils import safe_filename
             for file in uploaded_files:
                 if file.filename:
                     # 使用安全的文件名
-                    from werkzeug.utils import secure_filename
-                    safe_filename = secure_filename(file.filename)
-                    file_path = os.path.join(temp_dir, safe_filename)
+                    safe_name = safe_filename(file.filename)
+                    file_path = os.path.join(temp_dir, safe_name)
                     file.save(file_path)
-                    uploaded_file_paths.append(safe_filename)
+                    uploaded_file_paths.append(safe_name)
                     logger.info(f"[preview-execute] Saved file: {file_path}, size: {os.path.getsize(file_path)}")
 
         logger.info(f"[preview-execute] Uploaded file paths: {uploaded_file_paths}")

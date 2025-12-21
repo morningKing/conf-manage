@@ -2,7 +2,7 @@
 文件管理API
 """
 from flask import request, jsonify, send_file, send_from_directory
-from werkzeug.utils import secure_filename
+from utils import safe_filename
 from . import api_bp
 import os
 from config import Config
@@ -56,7 +56,7 @@ def upload_file():
             return jsonify({'code': 1, 'message': '文件名为空'}), 400
 
         path = request.form.get('path', '')
-        filename = secure_filename(file.filename)
+        filename = safe_filename(file.filename)
 
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         target_dir = os.path.join(base_dir, path)
@@ -317,7 +317,7 @@ def create_folder():
         if not folder_name:
             return jsonify({'code': 1, 'message': '文件夹名称不能为空'}), 400
 
-        folder_name = secure_filename(folder_name)
+        folder_name = safe_filename(folder_name)
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         target_path = os.path.join(base_dir, path, folder_name)
 

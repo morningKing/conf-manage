@@ -445,7 +445,7 @@ def upload_workflow_execution_file(execution_id):
     try:
         from config import Config
         from flask import request
-        from werkzeug.utils import secure_filename
+        from utils import safe_filename
 
         execution = WorkflowExecution.query.get_or_404(execution_id)
         workflow_space = Config.ensure_workflow_execution_space(execution_id)
@@ -459,7 +459,7 @@ def upload_workflow_execution_file(execution_id):
             return jsonify({'code': 1, 'message': '文件名为空'}), 400
 
         # 安全的文件名
-        filename = secure_filename(file.filename)
+        filename = safe_filename(file.filename)
         file_path = os.path.join(workflow_space, filename)
 
         # 保存文件
