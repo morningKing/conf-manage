@@ -218,6 +218,107 @@ with open('data/uploads/shared_data.json', 'r') as f:
 3. 检查脚本代码和依赖配置
 4. 修复后重新执行
 
+### 4. 区分执行环境（工作流 vs 单脚本）
+
+脚本可以通过检查环境变量来判断自己是在工作流中执行还是单独执行。
+
+#### Python 示例
+
+```python
+import os
+
+# 检查是否在工作流中执行
+workflow_space = os.environ.get('WORKFLOW_SPACE')
+
+if workflow_space:
+    print(f"在工作流中执行，共享空间: {workflow_space}")
+    # 工作流执行逻辑
+    # 所有节点共享同一个工作流空间，可以通过文件交换数据
+    with open(os.path.join(workflow_space, 'shared_data.json'), 'w') as f:
+        f.write('{"status": "completed"}')
+else:
+    print("单独执行")
+    # 单脚本执行逻辑
+    # 每次执行都有独立的执行空间
+```
+
+#### JavaScript 示例
+
+```javascript
+// 检查是否在工作流中执行
+const workflowSpace = process.env.WORKFLOW_SPACE;
+
+if (workflowSpace) {
+    console.log(`在工作流中执行，共享空间: ${workflowSpace}`);
+    // 工作流执行逻辑
+    const fs = require('fs');
+    const path = require('path');
+    fs.writeFileSync(
+        path.join(workflowSpace, 'shared_data.json'),
+        JSON.stringify({status: 'completed'})
+    );
+} else {
+    console.log('单独执行');
+    // 单脚本执行逻辑
+}
+```
+
+#### 工作目录说明
+
+- **单脚本执行**: 脚本在独立的执行空间中运行 (`execution_spaces/execution_<id>`)
+  - 每次执行都有独立的工作目录
+  - 上传的文件保存在该执行空间中
+
+- **工作流执行**: 脚本在共享的工作流空间中运行 (`workflow_execution_spaces/workflow_execution_<id>`)
+  - 工作流中的所有节点共享同一个工作流空间
+  - 节点之间可以通过读写文件来传递数据
+  - `WORKFLOW_SPACE` 环境变量包含工作流空间的绝对路径
+
+#### 实际应用场景
+
+**场景1: 条件执行**
+```python
+import os
+
+workflow_space = os.environ.get('WORKFLOW_SPACE')
+
+if workflow_space:
+    # 在工作流中，读取前一个节点的输出
+    import json
+    with open(os.path.join(workflow_space, 'previous_result.json'), 'r') as f:
+        prev_result = json.load(f)
+
+    if prev_result.get('status') == 'success':
+        print("继续执行")
+    else:
+        print("跳过执行")
+        exit(0)
+else:
+    # 单独执行，直接处理
+    print("开始处理...")
+```
+
+**场景2: 日志记录**
+```python
+import os
+from datetime import datetime
+
+def log_message(msg):
+    workflow_space = os.environ.get('WORKFLOW_SPACE')
+
+    if workflow_space:
+        # 工作流执行：追加到共享日志
+        log_file = os.path.join(workflow_space, 'workflow.log')
+        with open(log_file, 'a') as f:
+            f.write(f"[{datetime.now()}] {msg}\n")
+    else:
+        # 单独执行：直接打印
+        print(f"[{datetime.now()}] {msg}")
+
+log_message("脚本开始执行")
+```
+
+
 ## 注意事项
 
 1. **脚本超时**: 默认脚本执行超时时间为300秒(5分钟),超时会被强制终止
