@@ -20,6 +20,7 @@ class Workflow(db.Model):
 
     # 关系
     nodes = db.relationship('WorkflowNode', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
+    edges = db.relationship('WorkflowEdge', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
     executions = db.relationship('WorkflowExecution', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
 
     def to_dict(self):
@@ -84,9 +85,6 @@ class WorkflowEdge(db.Model):
     target_node_id = db.Column(db.String(50), nullable=False)  # 目标节点ID
     condition = db.Column(db.Text)  # JSON格式的条件配置
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # 关系
-    workflow = db.relationship('Workflow', backref='edges')
 
     def to_dict(self):
         """转换为字典"""

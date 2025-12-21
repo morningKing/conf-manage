@@ -178,16 +178,31 @@ def update_workflow(workflow_id):
 @api_bp.route('/workflows/<int:workflow_id>', methods=['DELETE'])
 def delete_workflow(workflow_id):
     """删除工作流"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
+        logger.info(f'[delete_workflow] 开始删除工作流 ID: {workflow_id}')
         workflow = Workflow.query.get_or_404(workflow_id)
+
+        logger.info(f'[delete_workflow] 工作流名称: {workflow.name}')
+        logger.info(f'[delete_workflow] 节点数量: {workflow.nodes.count()}')
+        logger.info(f'[delete_workflow] 边数量: {workflow.edges.count()}')
+        logger.info(f'[delete_workflow] 执行记录数量: {workflow.executions.count()}')
+
         db.session.delete(workflow)
         db.session.commit()
+
+        logger.info(f'[delete_workflow] 工作流删除成功 ID: {workflow_id}')
 
         return jsonify({
             'code': 0,
             'message': '工作流删除成功'
         })
     except Exception as e:
+        logger.error(f'[delete_workflow] 删除失败: {str(e)}')
+        import traceback
+        logger.error(f'[delete_workflow] 异常堆栈:\n{traceback.format_exc()}')
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
 
