@@ -25,6 +25,9 @@ class Config:
     # 执行空间根路径（每次执行独立的工作目录）
     EXECUTION_SPACES_DIR = os.path.join(BASE_DIR, 'execution_spaces')
 
+    # 工作流执行空间根路径（每次工作流执行的共享工作目录）
+    WORKFLOW_EXECUTION_SPACES_DIR = os.path.join(BASE_DIR, 'workflow_execution_spaces')
+
     # 日志存储路径
     LOGS_DIR = os.path.join(BASE_DIR, 'logs')
 
@@ -57,6 +60,7 @@ class Config:
         os.makedirs(Config.SCRIPTS_DIR, exist_ok=True)
         os.makedirs(Config.WORKSPACES_DIR, exist_ok=True)
         os.makedirs(Config.EXECUTION_SPACES_DIR, exist_ok=True)
+        os.makedirs(Config.WORKFLOW_EXECUTION_SPACES_DIR, exist_ok=True)
         os.makedirs(Config.LOGS_DIR, exist_ok=True)
         os.makedirs(Config.DATA_DIR, exist_ok=True)
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
@@ -82,5 +86,17 @@ class Config:
     def ensure_execution_space(execution_id):
         """确保执行空间存在"""
         space_path = Config.get_execution_space(execution_id)
+        os.makedirs(space_path, exist_ok=True)
+        return space_path
+
+    @staticmethod
+    def get_workflow_execution_space(workflow_execution_id):
+        """获取工作流执行空间路径"""
+        return os.path.join(Config.WORKFLOW_EXECUTION_SPACES_DIR, f'workflow_execution_{workflow_execution_id}')
+
+    @staticmethod
+    def ensure_workflow_execution_space(workflow_execution_id):
+        """确保工作流执行空间存在"""
+        space_path = Config.get_workflow_execution_space(workflow_execution_id)
         os.makedirs(space_path, exist_ok=True)
         return space_path

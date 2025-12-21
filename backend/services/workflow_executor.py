@@ -35,6 +35,12 @@ def execute_workflow_async(workflow_execution_id):
             execution.start_time = datetime.utcnow()
             db.session.commit()
 
+            # 创建工作流执行的共享工作空间
+            from config import Config
+            workflow_space = Config.ensure_workflow_execution_space(workflow_execution_id)
+            logger.info(f"[工作流执行] 工作流执行空间: {workflow_space}")
+            sys.stdout.flush()
+
             # 获取工作流定义
             workflow = execution.workflow
 
@@ -58,8 +64,8 @@ def execute_workflow_async(workflow_execution_id):
             # 获取执行参数
             params = json.loads(execution.params) if execution.params else {}
 
-            # 执行工作流
-            success = execute_workflow_graph(execution, graph, nodes, params)
+            # 执行工作流（传递工作流执行空间）
+            success = execute_workflow_graph(execution, graph, nodes, params, workflow_space)
 
             # 重新获取执行记录以确保更新生效（因为工作流执行过程中session可能被清理）
             db.session.expire_all()
@@ -105,7 +111,7 @@ def build_dependency_graph(nodes, edges):
     return graph
 
 
-def execute_workflow_graph(workflow_execution, graph, nodes, params):
+def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_space):
     """执行工作流图"""
     # 提取workflow_execution_id以避免session detach
     workflow_execution_id = workflow_execution.id
@@ -181,7 +187,7 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params):
         # 执行节点
         logger.info(f"[工作流执行] 开始执行节点 {node_id}")
         sys.stdout.flush()
-        success, result = execute_node(workflow_execution_id, node, params, node_results)
+        success, result = execute_node(workflow_execution_id, node, params, node_results, workflow_space)
         logger.info(f"[工作流执行] 节点 {node_id} 执行完成，success={success}, result={result}")
         sys.stdout.flush()
         node_results[node_id] = result
@@ -212,7 +218,7 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params):
     return True
 
 
-def execute_node(workflow_execution_id, node_dict, params, node_results):
+def execute_node(workflow_execution_id, node_dict, params, node_results, workflow_space):
     """执行单个节点"""
     node_execution = None
     try:
@@ -223,6 +229,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results):
         node_config = node_dict.get('config')
 
         logger.info(f"[execute_node] 准备创建节点执行记录: node_id={node_id}")
+        logger.info(f"[execute_node] 工作流执行空间: {workflow_space}")
         sys.stdout.flush()
 
         # 创建节点执行记录
@@ -254,7 +261,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results):
             # 执行脚本节点
             logger.info(f"[execute_node] 调用execute_script_node")
             sys.stdout.flush()
-            result = execute_script_node(script_id, params, node_execution)
+            result = execute_script_node(script_id, params, node_execution, workflow_space)
             logger.info(f"[execute_node] execute_script_node返回: {result}")
             sys.stdout.flush()
 
@@ -309,16 +316,20 @@ def execute_node(workflow_execution_id, node_dict, params, node_results):
         return False, None
 
 
-def execute_script_node(script_id, params, node_execution):
+def execute_script_node(script_id, params, node_execution, workflow_space):
     """执行脚本节点"""
     if not script_id:
         raise Exception('脚本节点未关联脚本')
+
+    # 将工作流执行空间路径添加到参数中
+    enhanced_params = params.copy() if params else {}
+    enhanced_params['WORKFLOW_SPACE'] = workflow_space
 
     # 创建脚本执行记录
     script_execution = Execution(
         script_id=script_id,
         status='pending',
-        params=json.dumps(params) if params else None
+        params=json.dumps(enhanced_params) if enhanced_params else None
     )
     db.session.add(script_execution)
     db.session.commit()
