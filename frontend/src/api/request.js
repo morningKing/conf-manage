@@ -2,7 +2,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const request = axios.create({
-  baseURL: import.meta.env.PROD ? 'http://localhost:5000/api' : '/api',
+  baseURL: '/api',  // 始终使用相对路径，通过代理服务器访问API
   timeout: 30000
 })
 

@@ -90,28 +90,57 @@ def execute_script_api(script_id):
 
 @api_bp.route('/executions', methods=['GET'])
 def get_executions():
-    """获取执行历史列表"""
+    """获取执行历史列表（包括脚本执行和工作流执行）"""
     try:
+        from models.workflow import WorkflowExecution
+
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         script_id = request.args.get('script_id', type=int)
+        exec_type = request.args.get('type', '')  # 'script', 'workflow', 或空字符串表示全部
 
-        query = Execution.query
-        if script_id:
-            query = query.filter_by(script_id=script_id)
+        # 获取脚本执行记录
+        script_executions = []
+        if exec_type != 'workflow':
+            query = Execution.query
+            if script_id:
+                query = query.filter_by(script_id=script_id)
 
-        pagination = query.order_by(Execution.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+            for execution in query.all():
+                item = execution.to_dict()
+                item['execution_type'] = 'script'
+                item['type_name'] = '脚本执行'
+                script_executions.append(item)
+
+        # 获取工作流执行记录
+        workflow_executions = []
+        if exec_type != 'script':
+            for wf_execution in WorkflowExecution.query.all():
+                item = wf_execution.to_dict()
+                item['execution_type'] = 'workflow'
+                item['type_name'] = '工作流执行'
+                # 添加工作流名称作为 script_name，保持前端兼容
+                item['script_name'] = item.get('workflow', {}).get('name', '未知工作流')
+                workflow_executions.append(item)
+
+        # 合并并按创建时间排序
+        all_executions = script_executions + workflow_executions
+        all_executions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        # 手动分页
+        total = len(all_executions)
+        start = (page - 1) * per_page
+        end = start + per_page
+        items = all_executions[start:end]
 
         return jsonify({
             'code': 0,
             'data': {
-                'items': [execution.to_dict() for execution in pagination.items],
-                'total': pagination.total,
+                'items': items,
+                'total': total,
                 'page': page,
                 'per_page': per_page,
-                'pages': pagination.pages
+                'pages': (total + per_page - 1) // per_page
             }
         })
     except Exception as e:

@@ -594,3 +594,30 @@ def is_text_file(filepath):
     _, ext = os.path.splitext(filepath)
     return ext.lower() in text_extensions
 
+
+@api_bp.route('/workflow-executions/<int:execution_id>', methods=['DELETE'])
+def delete_workflow_execution(execution_id):
+    """删除工作流执行记录"""
+    try:
+        from config import Config
+        import shutil
+
+        execution = WorkflowExecution.query.get_or_404(execution_id)
+
+        # 删除工作流执行空间
+        workflow_space = Config.get_workflow_execution_space(execution_id)
+        if os.path.exists(workflow_space):
+            shutil.rmtree(workflow_space)
+            print(f"删除工作流执行 {execution_id} 的执行空间: {workflow_space}")
+
+        db.session.delete(execution)
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': '工作流执行记录已删除'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+

@@ -5,6 +5,7 @@ import os
 import subprocess
 import json
 import shutil
+import threading
 from datetime import datetime
 from models import db, Execution, Script, Environment, GlobalVariable
 from config import Config
@@ -19,6 +20,26 @@ def get_global_variables_dict():
     except Exception as e:
         print(f'获取全局变量失败: {str(e)}')
         return {}
+
+
+def stream_output_to_file(pipe, log_file_path):
+    """
+    实时读取进程输出并写入日志文件
+    这个函数在单独的线程中运行，确保日志实时刷新到磁盘
+    """
+    try:
+        with open(log_file_path, 'a', encoding='utf-8', buffering=1) as log_f:
+            for line in iter(pipe.readline, b''):
+                if line:
+                    decoded_line = line.decode('utf-8', errors='replace')
+                    log_f.write(decoded_line)
+                    log_f.flush()  # 立即刷新到磁盘
+                    os.fsync(log_f.fileno())  # 强制操作系统写入磁盘
+    except Exception as e:
+        print(f"流式输出线程错误: {e}")
+    finally:
+        pipe.close()
+
 
 
 def execute_script(execution_id, custom_cwd=None):
@@ -189,25 +210,41 @@ def execute_script(execution_id, custom_cwd=None):
             execution.progress = 50
             db.session.commit()
 
-            with open(log_file, 'w', encoding='utf-8') as log_f:
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=log_f,
-                    stderr=subprocess.STDOUT,
-                    env=env,
-                    cwd=working_dir  # 在工作目录中执行
-                )
+            # 创建空的日志文件
+            with open(log_file, 'w', encoding='utf-8') as f:
+                pass  # 只是创建文件
 
-                # 保存进程ID
-                execution.pid = process.pid
-                db.session.commit()
+            # 使用 PIPE 捕获输出，通过线程实时写入日志文件
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env=env,
+                cwd=working_dir,  # 在工作目录中执行
+                bufsize=0  # 无缓冲
+            )
 
-                # 等待执行完成（带超时）
-                try:
-                    process.wait(timeout=Config.EXECUTION_TIMEOUT)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    raise Exception('脚本执行超时')
+            # 保存进程ID
+            execution.pid = process.pid
+            db.session.commit()
+
+            # 启动线程实时读取输出并写入日志文件
+            output_thread = threading.Thread(
+                target=stream_output_to_file,
+                args=(process.stdout, log_file),
+                daemon=True
+            )
+            output_thread.start()
+
+            # 等待执行完成（带超时）
+            try:
+                process.wait(timeout=Config.EXECUTION_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                raise Exception('脚本执行超时')
+
+            # 等待输出线程完成
+            output_thread.join(timeout=5)
 
             # 完成阶段
             execution.stage = 'finishing'

@@ -77,4 +77,5 @@ export const deleteWorkflow = (id) => request.delete(`/workflows/${id}`)
 export const executeWorkflow = (id, params) => request.post(`/workflows/${id}/execute`, { params })
 export const toggleWorkflow = (id) => request.post(`/workflows/${id}/toggle`)
 export const cancelWorkflowExecution = (id) => request.post(`/workflow-executions/${id}/cancel`)
+export const deleteWorkflowExecution = (id) => request.delete(`/workflow-executions/${id}`)
 

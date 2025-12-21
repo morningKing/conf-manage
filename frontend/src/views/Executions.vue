@@ -72,7 +72,14 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="script_name" label="脚本名称" width="200" />
+        <el-table-column prop="type_name" label="类型" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.execution_type === 'workflow' ? 'warning' : 'primary'" size="small">
+              {{ row.type_name || '脚本执行' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="script_name" label="名称" width="200" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag
@@ -200,7 +207,8 @@
     >
       <ExecutionFiles
         v-if="filesVisible && currentExecution"
-        :execution-id="currentExecution.id"
+        :execution-id="currentExecution.workflow_execution_id ? undefined : currentExecution.id"
+        :workflow-execution-id="currentExecution.workflow_execution_id"
       />
       <template #footer>
         <el-button @click="filesVisible = false">关闭</el-button>
@@ -318,7 +326,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Delete, VideoPause, RefreshRight, Close, DataLine } from '@element-plus/icons-vue'
-import { getExecutions, getExecutionLogs, deleteExecution, cancelExecution, batchManageExecutions, getExecutionsStatistics } from '../api'
+import { getExecutions, getExecutionLogs, deleteExecution, deleteWorkflowExecution, cancelExecution, batchManageExecutions, getExecutionsStatistics } from '../api'
 import ExecutionFiles from '../components/ExecutionFiles.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
 
@@ -352,6 +360,12 @@ const loadExecutions = async () => {
 
 const handleViewLogs = async (row) => {
   try {
+    // 如果是工作流执行，提示用户
+    if (row.execution_type === 'workflow') {
+      ElMessage.info('工作流执行日志请在"工作流管理"页面中查看')
+      return
+    }
+
     currentExecution.value = row
     const res = await getExecutionLogs(row.id)
     logs.value = res.data.logs || '暂无日志'
@@ -363,8 +377,13 @@ const handleViewLogs = async (row) => {
 }
 
 const handleViewFiles = (row) => {
-  // 打开文件浏览对话框
-  currentExecution.value = row
+  // 如果是工作流执行
+  if (row.execution_type === 'workflow') {
+    // 工作流执行使用 workflow_execution_id
+    currentExecution.value = { ...row, workflow_execution_id: row.id }
+  } else {
+    currentExecution.value = row
+  }
   filesVisible.value = true
 }
 
@@ -393,7 +412,14 @@ const handleDelete = async (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await deleteExecution(row.id)
+
+    // 根据执行类型调用不同的删除API
+    if (row.execution_type === 'workflow') {
+      await deleteWorkflowExecution(row.id)
+    } else {
+      await deleteExecution(row.id)
+    }
+
     ElMessage.success('删除成功')
     loadExecutions()
   } catch (error) {
