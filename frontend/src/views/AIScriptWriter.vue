@@ -311,24 +311,29 @@ const previewExecute = async () => {
       }
     }
 
-    // 使用FormData上传代码、参数和文件
-    const formData = new FormData()
-    formData.append('code', generatedScript.value)
-    formData.append('params', JSON.stringify(params))
+    let response
 
-    // 添加上传的文件
+    // 检查是否有文件上传
     if (uploadedFiles.value && uploadedFiles.value.length > 0) {
-      uploadedFiles.value.forEach((file, index) => {
+      // 有文件：使用FormData格式
+      const formData = new FormData()
+      formData.append('code', generatedScript.value)
+      formData.append('params', JSON.stringify(params))
+
+      // 添加上传的文件
+      uploadedFiles.value.forEach((file) => {
         formData.append('files', file)
       })
-    }
 
-    // 创建临时脚本执行
-    const response = await request.post('/ai/preview-execute', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+      // 不设置Content-Type，让浏览器自动设置（包含boundary）
+      response = await request.post('/ai/preview-execute', formData)
+    } else {
+      // 无文件：使用JSON格式
+      response = await request.post('/ai/preview-execute', {
+        code: generatedScript.value,
+        params: params
+      })
+    }
 
     // 显示执行结果
     executionLog.value = response.output || ''

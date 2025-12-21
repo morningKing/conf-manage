@@ -333,10 +333,14 @@ def preview_execute_script():
     """预览执行AI生成的脚本（不创建数据库记录）"""
     try:
         # 支持两种格式：JSON和FormData（用于文件上传）
+        logger.info(f"[preview-execute] Content-Type: {request.content_type}")
+        logger.info(f"[preview-execute] Has files: {bool(request.files)}")
+
         if request.content_type and 'multipart/form-data' in request.content_type:
             # FormData格式（带文件上传）
             script_code = request.form.get('code')
             params_str = request.form.get('params', '{}')
+            logger.info(f"[preview-execute] FormData mode, params_str: {params_str}")
             try:
                 params = json.loads(params_str) if params_str else {}
             except json.JSONDecodeError:
@@ -344,8 +348,12 @@ def preview_execute_script():
 
             # 获取上传的文件
             uploaded_files = request.files.getlist('files')
+            logger.info(f"[preview-execute] Uploaded files count: {len(uploaded_files)}")
+            for f in uploaded_files:
+                logger.info(f"[preview-execute] File: {f.filename}")
         else:
             # JSON格式（兼容旧版本）
+            logger.info(f"[preview-execute] JSON mode")
             data = request.json
             script_code = data.get('code')
             params = data.get('params', {})
@@ -356,6 +364,7 @@ def preview_execute_script():
 
         # 创建临时脚本文件
         temp_dir = tempfile.mkdtemp(prefix='ai_preview_')
+        logger.info(f"[preview-execute] Temp dir: {temp_dir}")
         temp_script_path = os.path.join(temp_dir, 'temp_script.py')
 
         with open(temp_script_path, 'w', encoding='utf-8') as f:
@@ -372,6 +381,9 @@ def preview_execute_script():
                     file_path = os.path.join(temp_dir, safe_filename)
                     file.save(file_path)
                     uploaded_file_paths.append(safe_filename)
+                    logger.info(f"[preview-execute] Saved file: {file_path}, size: {os.path.getsize(file_path)}")
+
+        logger.info(f"[preview-execute] Uploaded file paths: {uploaded_file_paths}")
 
         try:
             # 准备环境变量
@@ -381,6 +393,7 @@ def preview_execute_script():
             # 添加文件列表到环境变量，方便脚本获取
             if uploaded_file_paths:
                 env['UPLOADED_FILES'] = ','.join(uploaded_file_paths)
+                logger.info(f"[preview-execute] Set UPLOADED_FILES env: {env['UPLOADED_FILES']}")
 
             # 执行脚本
             process = subprocess.Popen(
