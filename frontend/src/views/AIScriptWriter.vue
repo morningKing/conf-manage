@@ -260,13 +260,26 @@ const improveScript = async () => {
 
   generating.value = true
   try {
+    console.log('[improveScript] 发送改进请求, 原脚本长度:', generatedScript.value.length)
+
     const response = await request.post('/ai/improve-script', {
       script: generatedScript.value,
       request: improvementRequest
     })
 
+    console.log('[improveScript] 收到改进后的脚本, 长度:', response.script?.length || 0)
+
+    const oldScript = generatedScript.value
     generatedScript.value = response.script || ''
-    ElMessage.success('脚本改进成功')
+
+    // 检查脚本是否真的改变了
+    if (oldScript === generatedScript.value) {
+      ElMessage.warning('脚本未发生变化，可能AI认为当前脚本已经足够好')
+    } else {
+      ElMessage.success('脚本改进成功！代码已更新，可以预览执行查看效果')
+      // 清空之前的执行日志，提示用户重新执行
+      executionLog.value = ''
+    }
   } catch (error) {
     console.error('改进失败:', error)
     ElMessage.error(error.response?.data?.error || error.message || '改进失败')
@@ -299,6 +312,9 @@ const previewExecute = async () => {
   executionFiles.value = []
 
   try {
+    console.log('[previewExecute] 开始执行脚本, 脚本长度:', generatedScript.value.length)
+    console.log('[previewExecute] 脚本前100字符:', generatedScript.value.substring(0, 100))
+
     // 解析参数
     let params = {}
     if (executionParams.value.trim()) {
@@ -315,6 +331,7 @@ const previewExecute = async () => {
 
     // 检查是否有文件上传
     if (uploadedFiles.value && uploadedFiles.value.length > 0) {
+      console.log('[previewExecute] 使用FormData格式, 文件数量:', uploadedFiles.value.length)
       // 有文件：使用FormData格式
       const formData = new FormData()
       formData.append('code', generatedScript.value)
@@ -323,17 +340,21 @@ const previewExecute = async () => {
       // 添加上传的文件
       uploadedFiles.value.forEach((file) => {
         formData.append('files', file)
+        console.log('[previewExecute] 添加文件:', file.name)
       })
 
       // 不设置Content-Type，让浏览器自动设置（包含boundary）
       response = await request.post('/ai/preview-execute', formData)
     } else {
+      console.log('[previewExecute] 使用JSON格式')
       // 无文件：使用JSON格式
       response = await request.post('/ai/preview-execute', {
         code: generatedScript.value,
         params: params
       })
     }
+
+    console.log('[previewExecute] 执行完成, 状态:', response.status)
 
     // 显示执行结果
     executionLog.value = response.output || ''
@@ -351,6 +372,7 @@ const previewExecute = async () => {
     // 预览执行暂不支持文件查看（因为是临时目录）
     // 如需查看生成的文件，请保存脚本后在脚本管理页面执行
   } catch (error) {
+    console.error('[previewExecute] 执行失败:', error)
     executionLog.value = 'Error: ' + (error.response?.data?.error || error.message || '执行失败')
     ElMessage.error(error.response?.data?.error || error.message || '执行失败')
   } finally {
