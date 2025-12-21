@@ -114,6 +114,12 @@
             </div>
           </div>
 
+          <!-- 文件上传 -->
+          <div class="files-upload-section">
+            <div class="params-header">上传文件（可选）</div>
+            <FileUpload v-model="uploadedFiles" />
+          </div>
+
           <!-- 执行日志 -->
           <div class="preview-section">
             <div class="preview-header">
@@ -194,6 +200,7 @@ import { ElMessage } from 'element-plus'
 import { Document, Folder } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { useRouter } from 'vue-router'
+import FileUpload from '@/components/FileUpload.vue'
 
 const router = useRouter()
 
@@ -203,6 +210,7 @@ const generating = ref(false)
 const executing = ref(false)
 const executionLog = ref('')
 const executionParams = ref('')  // 执行参数
+const uploadedFiles = ref([])  // 上传的文件
 const executionFiles = ref([])
 const explanation = ref('')
 const filePreviewVisible = ref(false)
@@ -303,10 +311,23 @@ const previewExecute = async () => {
       }
     }
 
+    // 使用FormData上传代码、参数和文件
+    const formData = new FormData()
+    formData.append('code', generatedScript.value)
+    formData.append('params', JSON.stringify(params))
+
+    // 添加上传的文件
+    if (uploadedFiles.value && uploadedFiles.value.length > 0) {
+      uploadedFiles.value.forEach((file, index) => {
+        formData.append('files', file)
+      })
+    }
+
     // 创建临时脚本执行
-    const response = await request.post('/ai/preview-execute', {
-      code: generatedScript.value,
-      params: params
+    const response = await request.post('/ai/preview-execute', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
 
     // 显示执行结果
@@ -479,6 +500,20 @@ onMounted(() => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
+}
+
+.files-upload-section {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.files-upload-section .params-header {
+  padding: 10px 15px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #dcdfe6;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .params-header {

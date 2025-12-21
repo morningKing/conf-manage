@@ -332,9 +332,24 @@ Use Chinese (中文) for the explanation."""
 def preview_execute_script():
     """预览执行AI生成的脚本（不创建数据库记录）"""
     try:
-        data = request.json
-        script_code = data.get('code')
-        params = data.get('params', {})
+        # 支持两种格式：JSON和FormData（用于文件上传）
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # FormData格式（带文件上传）
+            script_code = request.form.get('code')
+            params_str = request.form.get('params', '{}')
+            try:
+                params = json.loads(params_str) if params_str else {}
+            except json.JSONDecodeError:
+                return jsonify({'error': 'Invalid params JSON format'}), 400
+
+            # 获取上传的文件
+            uploaded_files = request.files.getlist('files')
+        else:
+            # JSON格式（兼容旧版本）
+            data = request.json
+            script_code = data.get('code')
+            params = data.get('params', {})
+            uploaded_files = []
 
         if not script_code:
             return jsonify({'error': 'Script code is required'}), 400
@@ -346,10 +361,26 @@ def preview_execute_script():
         with open(temp_script_path, 'w', encoding='utf-8') as f:
             f.write(script_code)
 
+        # 保存上传的文件到临时目录
+        uploaded_file_paths = []
+        if uploaded_files:
+            for file in uploaded_files:
+                if file.filename:
+                    # 使用安全的文件名
+                    from werkzeug.utils import secure_filename
+                    safe_filename = secure_filename(file.filename)
+                    file_path = os.path.join(temp_dir, safe_filename)
+                    file.save(file_path)
+                    uploaded_file_paths.append(safe_filename)
+
         try:
             # 准备环境变量
             env = os.environ.copy()
             env.update(params)
+
+            # 添加文件列表到环境变量，方便脚本获取
+            if uploaded_file_paths:
+                env['UPLOADED_FILES'] = ','.join(uploaded_file_paths)
 
             # 执行脚本
             process = subprocess.Popen(
@@ -371,6 +402,7 @@ def preview_execute_script():
                 'output': stdout,
                 'error': stderr if stderr else None,
                 'temp_dir': temp_dir,
+                'uploaded_files': uploaded_file_paths,
                 'return_code': process.returncode
             })
 
