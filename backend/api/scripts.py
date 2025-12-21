@@ -214,6 +214,33 @@ def delete_script(script_id):
     try:
         script = Script.query.get_or_404(script_id)
 
+        # 检查是否有工作流正在使用此脚本
+        from models.workflow import WorkflowNode
+        workflow_nodes = WorkflowNode.query.filter_by(script_id=script_id).all()
+
+        if workflow_nodes:
+            # 获取使用此脚本的工作流列表
+            workflow_names = []
+            for node in workflow_nodes:
+                if node.workflow and node.workflow.name not in workflow_names:
+                    workflow_names.append(node.workflow.name)
+
+            return jsonify({
+                'code': 1,
+                'message': f'无法删除脚本：以下工作流正在使用此脚本：{", ".join(workflow_names)}'
+            }), 400
+
+        # 检查是否有定时任务正在使用此脚本
+        from models.schedule import Schedule
+        schedules = Schedule.query.filter_by(script_id=script_id, enabled=True).all()
+
+        if schedules:
+            schedule_names = [s.name for s in schedules]
+            return jsonify({
+                'code': 1,
+                'message': f'无法删除脚本：以下定时任务正在使用此脚本：{", ".join(schedule_names)}'
+            }), 400
+
         # 删除脚本工作目录
         workspace_path = Config.get_script_workspace(script_id)
         if os.path.exists(workspace_path):

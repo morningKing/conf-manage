@@ -21,8 +21,13 @@ def get_global_variables_dict():
         return {}
 
 
-def execute_script(execution_id):
-    """执行脚本"""
+def execute_script(execution_id, custom_cwd=None):
+    """执行脚本
+
+    Args:
+        execution_id: 执行记录ID
+        custom_cwd: 自定义工作目录（可选，用于工作流节点在共享空间中执行）
+    """
     try:
         # 在新线程中，需要移除旧的会话并创建新的会话
         db.session.remove()
@@ -50,12 +55,16 @@ def execute_script(execution_id):
         # 解析参数
         params = {}
         uploaded_files = []
+        workflow_space = None  # 工作流执行空间（如果有）
         if execution.params:
             try:
                 params = json.loads(execution.params)
                 # 提取上传的文件信息
                 if 'uploaded_files' in params:
                     uploaded_files = params.pop('uploaded_files')
+                # 提取工作流空间路径（如果是工作流节点执行）
+                if 'WORKFLOW_SPACE' in params:
+                    workflow_space = params.pop('WORKFLOW_SPACE')
             except:
                 pass
 
@@ -63,22 +72,30 @@ def execute_script(execution_id):
         execution_space = Config.ensure_execution_space(execution_id)
         print(f"执行 {execution_id} 的执行空间: {execution_space}")
 
+        # 确定工作目录：优先使用自定义目录，其次使用工作流空间，最后使用执行空间
+        working_dir = custom_cwd or workflow_space or execution_space
+        if working_dir != execution_space:
+            print(f"使用自定义工作目录: {working_dir}")
+            # 确保自定义工作目录存在
+            os.makedirs(working_dir, exist_ok=True)
+
         # 准备文件列表（文件已在执行空间中，无需复制）
         execution_files = []
         for file_info in uploaded_files:
             filename = file_info['original_name']
-            file_path = os.path.join(execution_space, filename)
+            # 对于工作流节点，文件在工作流空间中；对于普通执行，文件在执行空间中
+            file_path = os.path.join(working_dir, filename)
             if os.path.exists(file_path):
                 execution_files.append({
                     'name': filename,
                     'path': file_path
                 })
-                print(f"执行空间中的文件: {filename}")
+                print(f"工作目录中的文件: {filename}")
 
-        # 创建临时脚本文件（放在执行空间中）
+        # 创建临时脚本文件（放在工作目录中）
         script_ext = '.py' if script.type == 'python' else '.js'
         script_filename = f'script_{execution_id}{script_ext}'
-        script_file = os.path.join(execution_space, script_filename)
+        script_file = os.path.join(working_dir, script_filename)
         with open(script_file, 'w', encoding='utf-8') as f:
             f.write(script.code)
 
@@ -167,7 +184,7 @@ def execute_script(execution_id):
             else:
                 raise Exception(f'不支持的脚本类型: {script.type}')
 
-            # 执行脚本（在执行空间中执行）
+            # 执行脚本（在工作目录中执行）
             execution.stage = 'running'
             execution.progress = 50
             db.session.commit()
@@ -178,7 +195,7 @@ def execute_script(execution_id):
                     stdout=log_f,
                     stderr=subprocess.STDOUT,
                     env=env,
-                    cwd=execution_space  # 在执行空间中执行
+                    cwd=working_dir  # 在工作目录中执行
                 )
 
                 # 保存进程ID
@@ -220,8 +237,8 @@ def execute_script(execution_id):
             execution.error = str(e)
 
         finally:
-            # 脚本文件保留在执行空间中，供后续查看
-            # 删除执行记录时会一并删除整个执行空间
+            # 脚本文件保留在工作目录中，供后续查看
+            # 对于普通执行，文件在执行空间；对于工作流节点，文件在工作流空间
 
             # 更新结束时间
             execution.end_time = datetime.utcnow()

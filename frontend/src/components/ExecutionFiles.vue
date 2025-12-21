@@ -3,7 +3,7 @@
     <div class="files-header">
       <div class="header-info">
         <el-icon><Folder /></el-icon>
-        <span class="space-id">执行空间 #{{ executionId }}</span>
+        <span class="space-id">{{ spaceTitle }}</span>
         <el-tag v-if="fileData" size="small" type="info">
           {{ fileData.files.length }} 个文件
         </el-tag>
@@ -105,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Folder, Refresh, Document, Files } from '@element-plus/icons-vue'
 import request from '../api/request'
@@ -113,7 +113,11 @@ import request from '../api/request'
 const props = defineProps({
   executionId: {
     type: Number,
-    required: true
+    required: false
+  },
+  workflowExecutionId: {
+    type: Number,
+    required: false
   }
 })
 
@@ -124,6 +128,26 @@ const previewLoading = ref(false)
 const currentFile = ref(null)
 const fileContent = ref('')
 const previewType = ref('text')
+
+// 计算标题
+const spaceTitle = computed(() => {
+  if (props.workflowExecutionId) {
+    return `工作流执行空间 #${props.workflowExecutionId}`
+  } else if (props.executionId) {
+    return `执行空间 #${props.executionId}`
+  }
+  return '执行空间'
+})
+
+// 计算API路径
+const apiPath = computed(() => {
+  if (props.workflowExecutionId) {
+    return `/workflow-executions/${props.workflowExecutionId}`
+  } else if (props.executionId) {
+    return `/executions/${props.executionId}`
+  }
+  return null
+})
 
 const canPreview = (filename) => {
   const ext = filename.toLowerCase().split('.').pop()
@@ -146,9 +170,14 @@ const isImageFile = (filename) => {
 }
 
 const loadFiles = async () => {
+  if (!apiPath.value) {
+    ElMessage.error('未指定执行空间ID')
+    return
+  }
+
   loading.value = true
   try {
-    const res = await request.get(`/executions/${props.executionId}/files`)
+    const res = await request.get(`${apiPath.value}/files`)
     fileData.value = res.data
   } catch (error) {
     console.error('Load files error:', error)
@@ -159,6 +188,11 @@ const loadFiles = async () => {
 }
 
 const previewFile = async (file) => {
+  if (!apiPath.value) {
+    ElMessage.error('未指定执行空间ID')
+    return
+  }
+
   currentFile.value = file
   previewVisible.value = true
   previewLoading.value = true
@@ -169,12 +203,12 @@ const previewFile = async (file) => {
     if (isImageFile(file.path)) {
       // 图片文件 - 直接使用下载URL作为图片源
       const apiUrl = import.meta.env.VITE_API_URL || '/api'
-      fileContent.value = `${apiUrl}/executions/${props.executionId}/files/${encodeURIComponent(file.path)}`
+      fileContent.value = `${apiUrl}${apiPath.value}/files/${encodeURIComponent(file.path)}`
       previewType.value = 'image'
     } else {
       // 文本文件
       const res = await request.get(
-        `/executions/${props.executionId}/files/${encodeURIComponent(file.path)}`
+        `${apiPath.value}/files/${encodeURIComponent(file.path)}`
       )
       fileContent.value = res.data.content
       previewType.value = 'text'
@@ -187,8 +221,13 @@ const previewFile = async (file) => {
 }
 
 const downloadFile = (file) => {
+  if (!apiPath.value) {
+    ElMessage.error('未指定执行空间ID')
+    return
+  }
+
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
-  const url = `${apiUrl}/executions/${props.executionId}/files/${encodeURIComponent(file.path)}?download=true`
+  const url = `${apiUrl}${apiPath.value}/files/${encodeURIComponent(file.path)}?download=true`
   window.open(url, '_blank')
 }
 
@@ -212,8 +251,18 @@ const formatTime = (isoString) => {
   })
 }
 
+// 监听props变化，重新加载文件
+watch(() => [props.executionId, props.workflowExecutionId], () => {
+  if (apiPath.value) {
+    loadFiles()
+  }
+})
+
 onMounted(() => {
-  loadFiles()
+  // 只有在有有效的apiPath时才加载文件
+  if (apiPath.value) {
+    loadFiles()
+  }
 })
 
 defineExpose({

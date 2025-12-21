@@ -340,8 +340,8 @@ def execute_script_node(script_id, params, node_execution, workflow_space):
     node_execution.execution_id = script_execution_id
     db.session.commit()
 
-    # 执行脚本
-    execute_script(script_execution_id)
+    # 执行脚本（在工作流空间中执行）
+    execute_script(script_execution_id, custom_cwd=workflow_space)
 
     # 重新查询执行记录以获取最新状态（因为execute_script可能在不同的session中更新）
     db.session.expire_all()

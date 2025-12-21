@@ -9,6 +9,7 @@ from models.execution import Execution
 from datetime import datetime
 import json
 import time
+import os
 from . import api_bp
 
 
@@ -354,7 +355,12 @@ def stream_workflow_execution(execution_id):
         node_statuses = {}
 
         while True:
-            db.session.refresh(execution)
+            # 刷新会话以获取最新数据
+            db.session.expire_all()
+            execution = WorkflowExecution.query.get(execution_id)
+            if not execution:
+                yield f"data: {json.dumps({'error': '执行记录丢失'})}\n\n"
+                break
 
             # 获取所有节点执行状态
             node_executions = WorkflowNodeExecution.query.filter_by(
@@ -364,7 +370,7 @@ def stream_workflow_execution(execution_id):
             # 检查节点状态是否有变化
             current_node_statuses = {}
             for ne in node_executions:
-                current_node_statuses[ne.node_id] = {
+                node_data = {
                     'node_id': ne.node_id,
                     'status': ne.status,
                     'start_time': ne.start_time.isoformat() if ne.start_time else None,
@@ -372,6 +378,21 @@ def stream_workflow_execution(execution_id):
                     'error': ne.error,
                     'output': ne.output
                 }
+
+                # 如果有关联的脚本执行记录，获取详细日志
+                if ne.execution_id:
+                    script_execution = Execution.query.get(ne.execution_id)
+                    if script_execution:
+                        node_data['execution'] = {
+                            'id': script_execution.id,
+                            'status': script_execution.status,
+                            'output': script_execution.output or '',
+                            'error': script_execution.error or '',
+                            'progress': script_execution.progress or 0,
+                            'stage': script_execution.stage or 'pending'
+                        }
+
+                current_node_statuses[ne.node_id] = node_data
 
             # 如果节点状态有变化，推送更新
             if current_node_statuses != node_statuses:
@@ -416,4 +437,160 @@ def stream_workflow_execution(execution_id):
             'X-Accel-Buffering': 'no'
         }
     )
+
+
+@api_bp.route('/workflow-executions/<int:execution_id>/upload', methods=['POST'])
+def upload_workflow_execution_file(execution_id):
+    """上传文件到工作流执行空间"""
+    try:
+        from config import Config
+        from flask import request
+        from werkzeug.utils import secure_filename
+
+        execution = WorkflowExecution.query.get_or_404(execution_id)
+        workflow_space = Config.ensure_workflow_execution_space(execution_id)
+
+        # 检查是否有文件
+        if 'file' not in request.files:
+            return jsonify({'code': 1, 'message': '没有文件'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'code': 1, 'message': '文件名为空'}), 400
+
+        # 安全的文件名
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(workflow_space, filename)
+
+        # 保存文件
+        file.save(file_path)
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'filename': filename,
+                'path': file_path,
+                'size': os.path.getsize(file_path)
+            },
+            'message': '文件上传成功'
+        })
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/workflow-executions/<int:execution_id>/files', methods=['GET'])
+def get_workflow_execution_files(execution_id):
+    """获取工作流执行空间的文件列表"""
+    try:
+        from config import Config
+        from datetime import datetime
+
+        execution = WorkflowExecution.query.get_or_404(execution_id)
+        workflow_space = Config.get_workflow_execution_space(execution_id)
+
+        if not os.path.exists(workflow_space):
+            return jsonify({
+                'code': 0,
+                'data': {
+                    'files': [],
+                    'total_size': 0,
+                    'space_path': workflow_space
+                }
+            })
+
+        # 递归获取所有文件
+        files = []
+        total_size = 0
+
+        for root, dirs, filenames in os.walk(workflow_space):
+            for filename in filenames:
+                filepath = os.path.join(root, filename)
+                rel_path = os.path.relpath(filepath, workflow_space)
+                stat = os.stat(filepath)
+
+                files.append({
+                    'name': filename,
+                    'path': rel_path,
+                    'size': stat.st_size,
+                    'modified_time': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    'is_text': is_text_file(filepath)
+                })
+                total_size += stat.st_size
+
+        # 按路径排序
+        files.sort(key=lambda x: x['path'])
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'files': files,
+                'total_size': total_size,
+                'space_path': workflow_space,
+                'workflow_execution_id': execution_id
+            }
+        })
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/workflow-executions/<int:execution_id>/files/<path:file_path>', methods=['GET'])
+def get_workflow_execution_file(execution_id, file_path):
+    """获取工作流执行空间中的文件（预览或下载）"""
+    try:
+        from config import Config
+        from flask import send_file
+
+        execution = WorkflowExecution.query.get_or_404(execution_id)
+        workflow_space = Config.get_workflow_execution_space(execution_id)
+
+        # 安全检查：防止路径遍历攻击
+        safe_path = os.path.normpath(file_path)
+        if safe_path.startswith('..') or os.path.isabs(safe_path):
+            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
+
+        full_path = os.path.join(workflow_space, safe_path)
+
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        # 检查是否请求下载
+        download = request.args.get('download', 'false').lower() == 'true'
+
+        if download:
+            # 下载文件
+            return send_file(
+                full_path,
+                as_attachment=True,
+                download_name=os.path.basename(file_path)
+            )
+        else:
+            # 预览文件
+            # 判断是否为文本文件
+            if is_text_file(full_path):
+                with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                return jsonify({
+                    'code': 0,
+                    'data': {
+                        'content': content,
+                        'type': 'text',
+                        'path': file_path
+                    }
+                })
+            else:
+                # 非文本文件，返回二进制数据或提示下载
+                return send_file(full_path)
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+def is_text_file(filepath):
+    """判断是否为文本文件"""
+    text_extensions = [
+        '.txt', '.log', '.py', '.js', '.json', '.xml', '.html', '.css',
+        '.yaml', '.yml', '.ini', '.conf', '.sh', '.bat', '.csv', '.md',
+        '.sql', '.java', '.c', '.cpp', '.h', '.hpp', '.go', '.rs'
+    ]
+    _, ext = os.path.splitext(filepath)
+    return ext.lower() in text_extensions
 

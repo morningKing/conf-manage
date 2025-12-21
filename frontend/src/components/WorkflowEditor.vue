@@ -32,7 +32,7 @@
           <ScriptNode
             :data="nodeProps.data"
             :id="nodeProps.id"
-            :status="nodeStatuses[nodeProps.id]"
+            :status="nodeStatuses[nodeProps.id]?.status"
             :readonly="readonly"
             @delete="deleteNode"
             @edit="editNode"
@@ -43,7 +43,7 @@
           <DelayNode
             :data="nodeProps.data"
             :id="nodeProps.id"
-            :status="nodeStatuses[nodeProps.id]"
+            :status="nodeStatuses[nodeProps.id]?.status"
             :readonly="readonly"
             @delete="deleteNode"
             @edit="editNode"

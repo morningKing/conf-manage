@@ -101,6 +101,43 @@ npm run dev
 
 前端应用将运行在 http://localhost:5173
 
+## 数据库迁移
+
+当从旧版本升级时，需要迁移数据库数据。系统提供了完整的数据库迁移工具。
+
+### 快速迁移（推荐）
+
+```bash
+cd backend
+./quick_migrate.sh /path/to/old_database.db
+```
+
+### 手动迁移
+
+```bash
+cd backend
+
+# 1. 备份当前数据库
+cp ../data/database.db ../data/database_backup.db
+
+# 2. 执行迁移
+python migrate_database.py /path/to/old_database.db
+
+# 3. 验证迁移结果
+python view_database.py
+```
+
+### 测试迁移工具
+
+```bash
+cd backend
+python test_migration.py
+```
+
+详细说明请参考：
+- [数据库迁移详细文档](backend/DATABASE_MIGRATION.md)
+- [快速参考指南](backend/MIGRATION_QUICKSTART.md)
+
 ## API文档
 
 ### 脚本管理

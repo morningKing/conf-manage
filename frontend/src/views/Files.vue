@@ -124,17 +124,56 @@
             </el-select>
             <el-button
               :icon="Refresh"
-              @click="loadExecutions"
+              @click="refreshExecutionFiles"
               style="margin-left: 10px"
             >
-              刷新列表
+              刷新文件
             </el-button>
           </div>
 
           <div v-if="selectedExecution" style="margin-top: 20px">
-            <ExecutionFiles :execution-id="selectedExecution" />
+            <ExecutionFiles ref="executionFilesRef" :execution-id="selectedExecution" />
           </div>
           <el-empty v-else description="请选择一个执行记录查看文件" />
+        </el-tab-pane>
+
+        <!-- 工作流执行空间 -->
+        <el-tab-pane label="工作流执行空间" name="workflow">
+          <div class="tab-header">
+            <el-select
+              v-model="selectedWorkflowExecution"
+              placeholder="选择工作流执行记录"
+              filterable
+              @change="handleWorkflowExecutionChange"
+              style="width: 400px"
+            >
+              <el-option
+                v-for="exec in workflowExecutions"
+                :key="exec.id"
+                :label="`#${exec.id} - ${exec.workflow?.name || '未知工作流'} (${formatExecutionTime(exec.created_at)})`"
+                :value="exec.id"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span>#{{ exec.id }} - {{ exec.workflow?.name || '未知工作流' }}</span>
+                  <el-tag :type="getStatusType(exec.status)" size="small" style="margin-left: 10px">
+                    {{ getStatusText(exec.status) }}
+                  </el-tag>
+                </div>
+              </el-option>
+            </el-select>
+            <el-button
+              :icon="Refresh"
+              @click="refreshWorkflowExecutionFiles"
+              style="margin-left: 10px"
+            >
+              刷新文件
+            </el-button>
+          </div>
+
+          <div v-if="selectedWorkflowExecution" style="margin-top: 20px">
+            <ExecutionFiles ref="workflowExecutionFilesRef" :workflow-execution-id="selectedWorkflowExecution" />
+          </div>
+          <el-empty v-else description="请选择一个工作流执行记录查看文件" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -264,6 +303,12 @@ const folderName = ref('')
 // 执行空间相关
 const executions = ref([])
 const selectedExecution = ref(null)
+const executionFilesRef = ref(null)
+
+// 工作流执行空间相关
+const workflowExecutions = ref([])
+const selectedWorkflowExecution = ref(null)
+const workflowExecutionFilesRef = ref(null)
 
 // Excel预览相关
 const previewVisible = ref(false)
@@ -300,14 +345,48 @@ const loadExecutions = async () => {
   }
 }
 
+const loadWorkflowExecutions = async () => {
+  try {
+    const res = await request.get('/workflow-executions', {
+      params: { page: 1, per_page: 100 }
+    })
+    workflowExecutions.value = res.data.items
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('加载工作流执行列表失败')
+  }
+}
+
 const handleTabChange = (tab) => {
   if (tab === 'execution') {
     loadExecutions()
+  } else if (tab === 'workflow') {
+    loadWorkflowExecutions()
   }
 }
 
 const handleExecutionChange = () => {
   // 执行空间改变时，ExecutionFiles 组件会自动重新加载
+}
+
+const refreshExecutionFiles = () => {
+  if (executionFilesRef.value && selectedExecution.value) {
+    executionFilesRef.value.loadFiles()
+  } else if (!selectedExecution.value) {
+    ElMessage.warning('请先选择一个执行记录')
+  }
+}
+
+const handleWorkflowExecutionChange = () => {
+  // 工作流执行空间改变时，ExecutionFiles 组件会自动重新加载
+}
+
+const refreshWorkflowExecutionFiles = () => {
+  if (workflowExecutionFilesRef.value && selectedWorkflowExecution.value) {
+    workflowExecutionFilesRef.value.loadFiles()
+  } else if (!selectedWorkflowExecution.value) {
+    ElMessage.warning('请先选择一个工作流执行记录')
+  }
 }
 
 const navigateTo = (path) => {

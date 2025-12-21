@@ -85,6 +85,7 @@ data/
 logs/
 workspaces/
 execution_spaces/
+workflow_execution_spaces/
 scripts/
 uploads/
 
