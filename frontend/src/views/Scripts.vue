@@ -241,6 +241,7 @@
 
         <el-form-item label="脚本参数" v-if="currentScript?.parameters">
           <ExecutionParams
+            :key="`exec-params-${currentScript.id}-${executeVisible}`"
             :parameters="currentScript.parameters"
             v-model="executeParamsObj"
           />

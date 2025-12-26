@@ -75,7 +75,9 @@ const initParams = () => {
       params.value = props.parameters || []
     }
 
-    // 初始化参数值（使用默认值）
+    // 初始化参数值
+    // 优先级：default_value > 空字符串
+    // 注意：不使用之前记录的参数值，确保每次初始化时都是干净的状态
     const values = {}
     params.value.forEach(param => {
       if (param.default_value) {
@@ -108,7 +110,7 @@ const emitChange = () => {
 // 监听参数定义变化
 watch(() => props.parameters, () => {
   initParams()
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 onMounted(() => {
   initParams()
