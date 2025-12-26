@@ -133,8 +133,13 @@ class SchedulerManager:
 
                 print(f'[定时任务] 创建执行记录成功, 执行ID: {execution.id}')
 
-                # 异步执行脚本
-                thread = Thread(target=execute_script, args=(execution.id,))
+                # 异步执行脚本（在应用上下文中执行）
+                def run_script_with_context():
+                    """在应用上下文中执行脚本"""
+                    with self.app.app_context():
+                        execute_script(execution.id)
+
+                thread = Thread(target=run_script_with_context)
                 thread.daemon = True
                 thread.start()
                 print(f'[定时任务] 脚本执行线程已启动')
