@@ -53,6 +53,8 @@ def create_app(config_class=Config):
     # 创建数据库表
     with app.app_context():
         db.create_all()
+        # 设置调度器的应用实例
+        scheduler_manager.set_app(app)
         # 重新加载定时任务
         scheduler_manager.reload_schedules()
 

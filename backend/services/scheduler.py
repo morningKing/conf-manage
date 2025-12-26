@@ -16,7 +16,12 @@ class SchedulerManager:
             jobstores={'default': MemoryJobStore()},
             timezone='Asia/Shanghai'
         )
+        self.app = None  # 保存应用实例
         self.scheduler.start()
+
+    def set_app(self, app):
+        """设置 Flask 应用实例"""
+        self.app = app
 
     def add_job(self, schedule):
         """添加定时任务"""
@@ -83,14 +88,17 @@ class SchedulerManager:
         from models import db, Schedule, Execution
         from services.executor import execute_script
         from threading import Thread
-        from flask import current_app
+
+        print(f'[定时任务] 准备执行任务 {schedule_id}')
+        
+        # 如果没有应用实例，无法执行
+        if not self.app:
+            print(f'[定时任务] 错误: 应用未初始化，无法执行任务 {schedule_id}')
+            return
 
         def run_task_in_context():
             """在应用上下文中执行任务"""
             try:
-                # 移除旧的会话，创建新的会话
-                db.session.remove()
-
                 # 获取任务配置
                 schedule = Schedule.query.get(schedule_id)
                 if not schedule:
@@ -135,17 +143,21 @@ class SchedulerManager:
                 print(f'[定时任务] 执行定时任务 {schedule_id} 失败: {str(e)}')
                 import traceback
                 traceback.print_exc()
+            finally:
+                # 清理数据库会话
+                try:
+                    db.session.remove()
+                except Exception as cleanup_error:
+                    pass  # 忽略清理错误
 
         # 在应用上下文中执行任务
         try:
-            # 获取当前应用上下文或创建新的
-            with current_app.app_context():
+            with self.app.app_context():
                 run_task_in_context()
-        except RuntimeError:
-            # 如果没有应用上下文，这表示调度器在启动时就开始运行了
-            # 这是正常的情况，任务会在后台执行
-            print(f'[定时任务] 在无应用上下文的情况下执行任务 {schedule_id}')
-            run_task_in_context()
+        except Exception as e:
+            print(f'[定时任务] 在应用上下文中执行任务失败: {str(e)}')
+            import traceback
+            traceback.print_exc()
 
     def reload_schedules(self):
         """重新加载所有定时任务"""
