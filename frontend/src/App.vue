@@ -18,51 +18,91 @@
           :background-color="isDark ? '#1f1f1f' : '#304156'"
           :text-color="isDark ? '#b3b3b3' : '#bfcbd9'"
           :active-text-color="isDark ? '#409EFF' : '#409EFF'"
+          :unique-opened="false"
         >
-          <el-menu-item index="/scripts">
-            <el-icon><Document /></el-icon>
-            <template #title>脚本管理</template>
-          </el-menu-item>
-          <el-menu-item index="/executions">
-            <el-icon><VideoPlay /></el-icon>
-            <template #title>执行历史</template>
-          </el-menu-item>
-          <el-menu-item index="/schedules">
-            <el-icon><Clock /></el-icon>
-            <template #title>定时任务</template>
-          </el-menu-item>
-          <el-menu-item index="/categories">
-            <el-icon><Menu /></el-icon>
-            <template #title>分类管理</template>
-          </el-menu-item>
-          <el-menu-item index="/tags">
-            <el-icon><CollectionTag /></el-icon>
-            <template #title>标签管理</template>
-          </el-menu-item>
-          <el-menu-item index="/environments">
-            <el-icon><Setting /></el-icon>
-            <template #title>执行环境</template>
-          </el-menu-item>
-          <el-menu-item index="/files">
-            <el-icon><Folder /></el-icon>
-            <template #title>文件管理</template>
-          </el-menu-item>
-          <el-menu-item index="/workflows">
-            <el-icon><Share /></el-icon>
-            <template #title>工作流管理</template>
-          </el-menu-item>
-          <el-menu-item index="/global-variables">
-            <el-icon><Setting /></el-icon>
-            <template #title>全局变量</template>
-          </el-menu-item>
-          <el-menu-item index="/ai-script-writer">
-            <el-icon><MagicStick /></el-icon>
-            <template #title>AI编写脚本</template>
-          </el-menu-item>
-          <el-menu-item index="/ai-settings">
-            <el-icon><Tools /></el-icon>
-            <template #title>AI配置</template>
-          </el-menu-item>
+          <!-- 脚本中心 -->
+          <el-sub-menu index="scripts-center">
+            <template #title>
+              <el-icon><Document /></el-icon>
+              <span>脚本中心</span>
+            </template>
+            <el-menu-item index="/scripts">
+              <el-icon><Document /></el-icon>
+              <template #title>脚本管理</template>
+            </el-menu-item>
+            <el-menu-item index="/executions">
+              <el-icon><VideoPlay /></el-icon>
+              <template #title>执行历史</template>
+            </el-menu-item>
+            <el-menu-item index="/schedules">
+              <el-icon><Clock /></el-icon>
+              <template #title>定时任务</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 数据管理 -->
+          <el-sub-menu index="data-management">
+            <template #title>
+              <el-icon><Menu /></el-icon>
+              <span>数据管理</span>
+            </template>
+            <el-menu-item index="/categories">
+              <el-icon><Menu /></el-icon>
+              <template #title>分类管理</template>
+            </el-menu-item>
+            <el-menu-item index="/tags">
+              <el-icon><CollectionTag /></el-icon>
+              <template #title>标签管理</template>
+            </el-menu-item>
+            <el-menu-item index="/global-variables">
+              <el-icon><Setting /></el-icon>
+              <template #title>全局变量</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 工作流 -->
+          <el-sub-menu index="workflow">
+            <template #title>
+              <el-icon><Share /></el-icon>
+              <span>工作流</span>
+            </template>
+            <el-menu-item index="/workflows">
+              <el-icon><Share /></el-icon>
+              <template #title>工作流管理</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 资源管理 -->
+          <el-sub-menu index="resource-management">
+            <template #title>
+              <el-icon><Folder /></el-icon>
+              <span>资源管理</span>
+            </template>
+            <el-menu-item index="/files">
+              <el-icon><Folder /></el-icon>
+              <template #title>文件管理</template>
+            </el-menu-item>
+            <el-menu-item index="/environments">
+              <el-icon><Setting /></el-icon>
+              <template #title>执行环境</template>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- AI助手 -->
+          <el-sub-menu index="ai-assistant">
+            <template #title>
+              <el-icon><MagicStick /></el-icon>
+              <span>AI助手</span>
+            </template>
+            <el-menu-item index="/ai-script-writer">
+              <el-icon><MagicStick /></el-icon>
+              <template #title>AI编写脚本</template>
+            </el-menu-item>
+            <el-menu-item index="/ai-settings">
+              <el-icon><Tools /></el-icon>
+              <template #title>AI配置</template>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 
@@ -580,6 +620,26 @@ router.afterEach(() => {
 
 .sidebar-transition {
   overflow: hidden;
+}
+
+/* 子菜单样式 */
+.el-sub-menu .el-menu-item {
+  min-width: 0;
+  padding-left: 50px !important;
+}
+
+/* 收起状态下的子菜单弹出层 */
+.el-menu--collapse .el-sub-menu__title span {
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+  display: inline-block;
+}
+
+/* 深色模式下的子菜单 */
+.dark-mode .el-sub-menu__title:hover {
+  background-color: rgba(64, 158, 255, 0.1) !important;
 }
 
 .logo {
