@@ -9,6 +9,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class Config:
     """应用配置类"""
 
+    # 基础路径
+    BASE_DIR = BASE_DIR
+
     # Flask配置
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
@@ -33,6 +36,12 @@ class Config:
 
     # 数据文件路径
     DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+    # 数据库文件路径
+    DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'database.db')
+
+    # 备份文件路径
+    BACKUPS_DIR = os.path.join(BASE_DIR, 'backups')
 
     # 支持的脚本类型
     SUPPORTED_SCRIPT_TYPES = ['python', 'javascript']
@@ -64,6 +73,7 @@ class Config:
         os.makedirs(Config.LOGS_DIR, exist_ok=True)
         os.makedirs(Config.DATA_DIR, exist_ok=True)
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+        os.makedirs(Config.BACKUPS_DIR, exist_ok=True)
 
     @staticmethod
     def get_script_workspace(script_id):

@@ -38,6 +38,10 @@
               <el-icon><Clock /></el-icon>
               <template #title>定时任务</template>
             </el-menu-item>
+            <el-menu-item index="/webhooks">
+              <el-icon><Link /></el-icon>
+              <template #title>Webhook</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 数据管理 -->
@@ -85,6 +89,10 @@
             <el-menu-item index="/environments">
               <el-icon><Setting /></el-icon>
               <template #title>执行环境</template>
+            </el-menu-item>
+            <el-menu-item index="/backup">
+              <el-icon><FolderOpened /></el-icon>
+              <template #title>备份管理</template>
             </el-menu-item>
           </el-sub-menu>
 
@@ -445,7 +453,7 @@ import { useRouter } from 'vue-router'
 import {
   Document, VideoPlay, Clock, Menu, CollectionTag, Setting, Folder, Share,
   Sunny, Moon, Search, FullScreen, OfficeBuilding, Expand, Fold, Loading,
-  MagicStick, Tools, QuestionFilled
+  MagicStick, Tools, QuestionFilled, Link, FolderOpened
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

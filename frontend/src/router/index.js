@@ -21,6 +21,16 @@ const routes = [
     component: () => import('../views/Schedules.vue')
   },
   {
+    path: '/webhooks',
+    name: 'Webhooks',
+    component: () => import('../views/Webhooks.vue')
+  },
+  {
+    path: '/backup',
+    name: 'Backup',
+    component: () => import('../views/Backup.vue')
+  },
+  {
     path: '/files',
     name: 'Files',
     component: () => import('../views/Files.vue')
