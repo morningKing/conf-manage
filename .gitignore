@@ -59,6 +59,7 @@ instance/
 .DS_Store
 *.sublime-project
 *.sublime-workspace
+.claude/settings.local.json
 
 # Node
 node_modules/
@@ -120,6 +121,7 @@ Desktop.ini
 # Backup files
 *.backup
 backup/
+backups/
 
 # Security
 *.key
