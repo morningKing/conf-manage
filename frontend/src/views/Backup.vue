@@ -207,7 +207,7 @@ const loadBackups = async () => {
   try {
     loading.value = true
     const data = await getBackupList()
-    backups.value = data.items || []
+    backups.value = data.data.items || []
   } catch (error) {
     ElMessage.error('加载备份列表失败: ' + error.message)
   } finally {
@@ -229,8 +229,8 @@ const showCreateBackupDialog = () => {
 const createBackup = async () => {
   try {
     creating.value = true
-    const data = await createSystemBackup(backupForm.value)
-    ElMessage.success(data.message || '系统备份成功')
+    const result = await createSystemBackup(backupForm.value)
+    ElMessage.success(result.message || '系统备份成功')
     createBackupDialogVisible.value = false
     await loadBackups()
   } catch (error) {
@@ -244,8 +244,8 @@ const createBackup = async () => {
 const exportDb = async () => {
   try {
     exporting.value = true
-    const data = await exportDatabase()
-    ElMessage.success(data.message || '数据库导出成功')
+    const result = await exportDatabase()
+    ElMessage.success(result.message || '数据库导出成功')
     await loadBackups()
   } catch (error) {
     ElMessage.error('导出数据库失败: ' + error.message)
@@ -293,8 +293,8 @@ const showCleanDialog = () => {
 const cleanBackups = async () => {
   try {
     cleaning.value = true
-    const data = await cleanOldBackups(cleanForm.value.keep_days)
-    ElMessage.success(data.message || '清理成功')
+    const result = await cleanOldBackups(cleanForm.value.keep_days)
+    ElMessage.success(result.message || '清理成功')
     cleanDialogVisible.value = false
     await loadBackups()
   } catch (error) {
@@ -308,7 +308,8 @@ const cleanBackups = async () => {
 const loadDatabaseInfo = async () => {
   try {
     loadingDbInfo.value = true
-    databaseInfo.value = await getDatabaseInfo()
+    const result = await getDatabaseInfo()
+    databaseInfo.value = result.data
   } catch (error) {
     ElMessage.error('加载数据库信息失败: ' + error.message)
   } finally {

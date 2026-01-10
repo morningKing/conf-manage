@@ -56,7 +56,7 @@ class Config:
     EXECUTION_TIMEOUT = 300
 
     # 跨域配置
-    CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:3000']
+    CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:3000']
 
     # 文件上传配置
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
