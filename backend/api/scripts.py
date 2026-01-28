@@ -348,3 +348,129 @@ def toggle_favorite(script_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/<int:script_id>/versions/clean', methods=['DELETE'])
+def clean_script_versions(script_id):
+    """清理脚本版本历史"""
+    try:
+        script = Script.query.get_or_404(script_id)
+
+        # 获取请求数据
+        data = request.get_json() or {}
+        keep_latest = data.get('keep_latest', 5)  # 默认保留最新5个版本
+
+        # 获取所有版本，按版本号倒序
+        all_versions = script.versions.order_by(ScriptVersion.version.desc()).all()
+
+        # 总版本数
+        total_count = len(all_versions)
+
+        if total_count <= keep_latest:
+            return jsonify({
+                'code': 0,
+                'message': f'当前版本数量({total_count})未超过保留数量({keep_latest})，无需清理',
+                'data': {
+                    'deleted_count': 0,
+                    'kept_count': total_count
+                }
+            })
+
+        # 保留最新的N个版本
+        versions_to_keep = all_versions[:keep_latest]
+        versions_to_delete = all_versions[keep_latest:]
+
+        # 删除多余的版本
+        for version in versions_to_delete:
+            db.session.delete(version)
+
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': f'已清理 {len(versions_to_delete)} 个版本历史',
+            'data': {
+                'deleted_count': len(versions_to_delete),
+                'kept_count': keep_latest
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/<int:script_id>/executions/clean', methods=['DELETE'])
+def clean_script_executions(script_id):
+    """清理脚本执行历史"""
+    try:
+        script = Script.query.get_or_404(script_id)
+
+        # 获取请求数据
+        data = request.get_json() or {}
+
+        # 清理条件
+        keep_latest = data.get('keep_latest', 50)  # 默认保留最新50条
+        status = data.get('status')  # 按状态过滤：success, failed, cancelled
+        before_days = data.get('before_days')  # 清理N天前的记录
+
+        # 构建查询
+        from models.execution import Execution
+        query = Execution.query.filter_by(script_id=script_id)
+
+        # 按状态过滤
+        if status:
+            query = query.filter_by(status=status)
+
+        # 按时间过滤
+        if before_days:
+            from datetime import timedelta
+            cutoff_date = datetime.utcnow() - timedelta(days=before_days)
+            query = query.filter(Execution.created_at < cutoff_date)
+
+        # 获取所有符合条件的执行记录
+        all_executions = query.order_by(Execution.created_at.desc()).all()
+
+        # 总记录数
+        total_count = len(all_executions)
+
+        if total_count <= keep_latest:
+            return jsonify({
+                'code': 0,
+                'message': f'当前执行记录数量({total_count})未超过保留数量({keep_latest})，无需清理',
+                'data': {
+                    'deleted_count': 0,
+                    'kept_count': total_count
+                }
+            })
+
+        # 保留最新的N条记录
+        executions_to_keep = all_executions[:keep_latest]
+        executions_to_delete = all_executions[keep_latest:]
+
+        # 删除多余的执行记录
+        deleted_count = 0
+        for execution in executions_to_delete:
+            # 删除日志文件
+            if execution.log_file and os.path.exists(execution.log_file):
+                try:
+                    os.remove(execution.log_file)
+                    print(f"删除日志文件: {execution.log_file}")
+                except Exception as log_error:
+                    print(f"删除日志文件失败: {log_error}")
+
+            db.session.delete(execution)
+            deleted_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': f'已清理 {deleted_count} 条执行历史',
+            'data': {
+                'deleted_count': deleted_count,
+                'kept_count': keep_latest
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500

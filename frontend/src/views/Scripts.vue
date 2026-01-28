@@ -117,7 +117,7 @@
             {{ formatTime(row.updated_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="400" fixed="right">
+        <el-table-column label="操作" width="620" fixed="right">
           <template #default="{ row }">
             <el-button
               :type="row.is_favorite ? 'warning' : ''"
@@ -129,6 +129,18 @@
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button size="small" type="success" @click="handleExecute(row)">执行</el-button>
             <el-button size="small" type="info" @click="handleVersions(row)">版本</el-button>
+            <el-dropdown trigger="click" @command="(cmd) => cmd === 'versions' ? handleCleanHistory(row, 'versions') : handleCleanHistory(row, 'executions')">
+              <el-button size="small" type="warning">
+                清理
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="versions">清理版本</el-dropdown-item>
+                  <el-dropdown-item command="executions">清理执行</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -396,30 +408,36 @@
 
     <!-- 版本历史对话框 -->
     <el-dialog v-model="versionVisible" title="版本历史" width="80%">
-      <el-alert
-        v-if="compareVersions.length > 0"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 16px;"
-      >
-        已选择 {{ compareVersions.length }} 个版本用于对比
-        <el-button
-          v-if="compareVersions.length === 2"
-          type="primary"
-          size="small"
-          @click="showVersionDiff"
-          style="margin-left: 10px;"
+      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <el-alert
+          v-if="compareVersions.length > 0"
+          type="info"
+          :closable="false"
+          style="flex: 1; margin-right: 16px;"
         >
-          开始对比
+          已选择 {{ compareVersions.length }} 个版本用于对比
+          <el-button
+            v-if="compareVersions.length === 2"
+            type="primary"
+            size="small"
+            @click="showVersionDiff"
+            style="margin-left: 10px;"
+          >
+            开始对比
+          </el-button>
+          <el-button
+            size="small"
+            @click="compareVersions = []"
+            style="margin-left: 10px;"
+          >
+            清空选择
+          </el-button>
+        </el-alert>
+        <el-button type="warning" size="small" @click="handleCleanHistory(currentScript, 'versions')">
+          <el-icon><Delete /></el-icon>
+          清理版本历史
         </el-button>
-        <el-button
-          size="small"
-          @click="compareVersions = []"
-          style="margin-left: 10px;"
-        >
-          清空选择
-        </el-button>
-      </el-alert>
+      </div>
 
       <el-table
         :data="versions"
@@ -483,6 +501,56 @@
       />
       <template #footer>
         <el-button @click="diffVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 清理历史记录对话框 -->
+    <el-dialog
+      v-model="cleanHistoryVisible"
+      :title="cleanHistoryType === 'versions' ? '清理版本历史' : '清理执行历史'"
+      width="500px"
+    >
+      <el-form :model="cleanHistoryForm" label-width="120px">
+        <el-form-item label="保留最新数量">
+          <el-input-number
+            v-model="cleanHistoryForm.keep_latest"
+            :min="1"
+            :max="1000"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            保留最新的 {{ cleanHistoryForm.keep_latest }} 条记录，删除其余记录
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="cleanHistoryType === 'executions'" label="执行状态">
+          <el-select v-model="cleanHistoryForm.status" placeholder="全部状态" clearable style="width: 100%">
+            <el-option label="全部状态" :value="null" />
+            <el-option label="成功" value="success" />
+            <el-option label="失败" value="failed" />
+            <el-option label="已取消" value="cancelled" />
+          </el-select>
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            仅清理指定状态的执行记录
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="cleanHistoryType === 'executions'" label="清理天数">
+          <el-input-number
+            v-model="cleanHistoryForm.before_days"
+            :min="1"
+            :max="3650"
+            placeholder="可选"
+            style="width: 100%"
+          />
+          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
+            清理 {{ cleanHistoryForm.before_days || '所有' }} 天前的记录
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="cleanHistoryVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleCleanHistoryConfirm">确定清理</el-button>
       </template>
     </el-dialog>
 
@@ -791,7 +859,9 @@ import {
   toggleScriptFavorite,
   getExecutionFiles,
   getExecutionFile,
-  previewExecutionFile
+  previewExecutionFile,
+  cleanScriptVersions,
+  cleanScriptExecutions
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -799,7 +869,7 @@ import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
-import { Plus, Search, Star, Loading, Document } from '@element-plus/icons-vue'
+import { Plus, Search, Star, Loading, Document, ArrowDown, Delete } from '@element-plus/icons-vue'
 
 const scripts = ref([])
 const environments = ref([])
@@ -840,6 +910,15 @@ const compareVersions = ref([])  // 用于对比的版本列表
 const diffVisible = ref(false)  // 对比对话框显示状态
 const guideVisible = ref(false)  // 使用指南对话框显示状态
 const guideActiveTab = ref('python')  // 使用指南当前标签页
+
+// 清理历史记录相关
+const cleanHistoryVisible = ref(false)  // 清理历史对话框显示状态
+const cleanHistoryType = ref('versions')  // 清理类型：versions 或 executions
+const cleanHistoryForm = ref({
+  keep_latest: 5,  // 保留最新N条
+  status: '',  // 执行状态过滤（仅针对执行记录）
+  before_days: null  // 清理N天前的记录（仅针对执行记录）
+})
 
 // 实时日志相关
 const logVisible = ref(false)
@@ -1242,6 +1321,53 @@ const handleRollback = async (row) => {
     if (error !== 'cancel') {
       console.error(error)
     }
+  }
+}
+
+const handleCleanHistory = (row, type = 'versions') => {
+  currentScript.value = row
+  cleanHistoryType.value = type
+  cleanHistoryForm.value = {
+    keep_latest: type === 'versions' ? 5 : 50,
+    status: '',
+    before_days: null
+  }
+  cleanHistoryVisible.value = true
+}
+
+const handleCleanHistoryConfirm = async () => {
+  try {
+    const scriptId = currentScript.value.id
+    let result
+
+    if (cleanHistoryType.value === 'versions') {
+      result = await cleanScriptVersions(scriptId, {
+        keep_latest: cleanHistoryForm.value.keep_latest
+      })
+    } else {
+      const data = {
+        keep_latest: cleanHistoryForm.value.keep_latest
+      }
+      if (cleanHistoryForm.value.status) {
+        data.status = cleanHistoryForm.value.status
+      }
+      if (cleanHistoryForm.value.before_days) {
+        data.before_days = cleanHistoryForm.value.before_days
+      }
+      result = await cleanScriptExecutions(scriptId, data)
+    }
+
+    ElMessage.success(result.message || '清理成功')
+    cleanHistoryVisible.value = false
+
+    // 如果是清理版本历史，重新加载版本列表
+    if (cleanHistoryType.value === 'versions') {
+      const res = await getScriptVersions(scriptId)
+      versions.value = res.data
+    }
+  } catch (error) {
+    ElMessage.error('清理失败: ' + (error.message || error))
+    console.error(error)
   }
 }
 
