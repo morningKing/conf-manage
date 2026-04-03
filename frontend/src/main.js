@@ -5,6 +5,11 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 
+// 导入全局样式
+import './styles/theme/light.scss'
+import './styles/theme/dark.scss'
+import './styles/transitions.scss'
+
 const app = createApp(App)
 
 // 注册Element Plus图标
