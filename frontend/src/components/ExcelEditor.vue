@@ -392,6 +392,7 @@ defineExpose({
   flex: 1;
   min-height: 400px;
   background: #fff;
+  position: relative;
 }
 
 .status-bar {
@@ -404,5 +405,20 @@ defineExpose({
 
 .status-bar .error {
   color: #f56c6c;
+}
+</style>
+
+<style>
+/* 全局样式 - 提升 Univer 下拉菜单层级 */
+.univer-dropdown,
+.univer-popup,
+.univer-select-dropdown,
+.univer-color-picker-panel,
+.univer-context-menu,
+.univer-modal,
+[data-univer-dropdown],
+[role="listbox"],
+[role="menu"] {
+  z-index: 10000 !important;
 }
 </style>
