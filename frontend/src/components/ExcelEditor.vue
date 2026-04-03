@@ -115,26 +115,35 @@ const initUniver = (sheetsData) => {
       workbook = null
     }
 
-    // 创建 Univer 实例
-    univer = new Univer({
-      locale: LocaleType.ZH_CN,
-    })
+    // 等待 DOM 完全渲染后再初始化
+    setTimeout(() => {
+      try {
+        // 创建 Univer 实例
+        univer = new Univer({
+          locale: LocaleType.ZH_CN,
+        })
 
-    // 注册插件
-    univer.registerPlugin(UniverRenderEnginePlugin)
-    univer.registerPlugin(UniverFormulaEnginePlugin)
-    univer.registerPlugin(UniverUIPlugin, { container: containerRef.value })
-    univer.registerPlugin(UniverDocsPlugin)
-    univer.registerPlugin(UniverDocsUIPlugin)
-    univer.registerPlugin(UniverSheetsPlugin)
-    univer.registerPlugin(UniverSheetsUIPlugin)
-    univer.registerPlugin(UniverSheetsFormulaPlugin)
+        // 注册插件
+        univer.registerPlugin(UniverRenderEnginePlugin)
+        univer.registerPlugin(UniverFormulaEnginePlugin)
+        univer.registerPlugin(UniverUIPlugin, { container: containerRef.value })
+        univer.registerPlugin(UniverDocsPlugin)
+        univer.registerPlugin(UniverDocsUIPlugin)
+        univer.registerPlugin(UniverSheetsPlugin)
+        univer.registerPlugin(UniverSheetsUIPlugin)
+        univer.registerPlugin(UniverSheetsFormulaPlugin)
 
-    // 转换数据格式并创建工作簿
-    const workbookData = convertToUniverFormat(sheetsData)
-    workbook = univer.createUniverSheet(workbookData)
+        // 转换数据格式并创建工作簿
+        const workbookData = convertToUniverFormat(sheetsData)
+        workbook = univer.createUniverSheet(workbookData)
 
-    console.log('Univer initialized successfully')
+        console.log('Univer initialized successfully')
+      } catch (e) {
+        error.value = 'Excel编辑器初始化失败: ' + e.message
+        ElMessage.error('Excel编辑器初始化失败')
+        console.error('Univer init error:', e)
+      }
+    }, 100)
   } catch (e) {
     error.value = 'Excel编辑器初始化失败: ' + e.message
     ElMessage.error('Excel编辑器初始化失败')
