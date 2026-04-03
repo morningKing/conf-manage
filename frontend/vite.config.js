@@ -6,8 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
-      'jquery': resolve(__dirname, 'node_modules/jquery/dist/jquery.js')
+      '@': resolve(__dirname, 'src')
     }
   },
   optimizeDeps: {

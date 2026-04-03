@@ -15,17 +15,6 @@ import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'
 import 'luckysheet/dist/css/luckysheet.css'
 
-// 导入 jQuery 并挂载到全局 window（Luckysheet 依赖）
-import jquery from 'jquery'
-window.jQuery = window.$ = jquery
-
-// 导入 jQuery mousewheel 插件
-import 'jquery-mousewheel'
-
-// 导入 Luckysheet
-import luckysheet from 'luckysheet'
-window.luckysheet = luckysheet
-
 const app = createApp(App)
 
 // 注册Element Plus图标
