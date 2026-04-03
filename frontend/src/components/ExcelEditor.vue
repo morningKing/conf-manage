@@ -98,30 +98,11 @@ const loadExcel = async () => {
 
 // 初始化 Luckysheet
 const initLuckysheet = (data) => {
-  // 检查 Luckysheet 是否已加载
   if (!window.luckysheet) {
-    // 尝试动态加载
-    import('luckysheet').then((module) => {
-      // Vite会将UMD转换为ES模块，需要手动挂载到window
-      if (module && module.default) {
-        window.luckysheet = module.default
-      } else if (module) {
-        window.luckysheet = module
-      }
-      if (window.luckysheet) {
-        createLuckysheet(data)
-      } else {
-        error.value = 'Excel编辑器加载失败，请刷新页面重试'
-        ElMessage.error('Luckysheet 库未加载')
-      }
-    }).catch(err => {
-      error.value = 'Excel编辑器加载失败: ' + err.message
-      ElMessage.error('Luckysheet 库加载失败')
-      console.error('Luckysheet load error:', err)
-    })
+    error.value = 'Excel编辑器加载失败，请刷新页面重试'
+    ElMessage.error('Luckysheet 库未加载')
     return
   }
-
   createLuckysheet(data)
 }
 

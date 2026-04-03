@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src'),
+      'jquery': resolve(__dirname, 'node_modules/jquery/dist/jquery.js')
     }
   },
   optimizeDeps: {
-    include: ['luckysheet'],
-    exclude: ['jquery', 'jquery-mousewheel']
+    include: ['jquery', 'jquery-mousewheel', 'luckysheet']
   },
   server: {
     host: '0.0.0.0',

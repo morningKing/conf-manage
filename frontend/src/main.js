@@ -10,29 +10,21 @@ import './styles/theme/light.scss'
 import './styles/theme/dark.scss'
 import './styles/transitions.scss'
 
-// jQuery 和 mousewheel 已通过 CDN 在 index.html 中加载
-// 确保挂载到 window（某些模块可能需要）
-if (window.jQuery) {
-    window.$ = window.jQuery
-}
-
 // 导入 Luckysheet CSS
 import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'
 import 'luckysheet/dist/css/luckysheet.css'
 
-// 动态导入 Luckysheet 并挂载到 window
-import('luckysheet').then((module) => {
-  // Vite会将UMD转换为ES模块，需要手动挂载到window
-  if (module && module.default) {
-    window.luckysheet = module.default
-  } else if (module) {
-    window.luckysheet = module
-  }
-  console.log('Luckysheet loaded:', window.luckysheet ? 'success' : 'failed')
-}).catch(err => {
-  console.error('Failed to load Luckysheet:', err)
-})
+// 导入 jQuery 并挂载到全局 window（Luckysheet 依赖）
+import jquery from 'jquery'
+window.jQuery = window.$ = jquery
+
+// 导入 jQuery mousewheel 插件
+import 'jquery-mousewheel'
+
+// 导入 Luckysheet
+import luckysheet from 'luckysheet'
+window.luckysheet = luckysheet
 
 const app = createApp(App)
 
