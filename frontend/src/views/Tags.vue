@@ -51,18 +51,18 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="500px"
+      width="600px"
     >
       <el-form :model="form" label-width="100px">
         <el-form-item label="标签名称">
           <el-input v-model="form.name" placeholder="请输入标签名称" />
         </el-form-item>
         <el-form-item label="颜色">
-          <el-color-picker v-model="form.color" show-alpha />
-          <span style="margin-left: 10px; color: #909399;">{{ form.color }}</span>
-        </el-form-item>
-        <el-form-item label="预览">
-          <el-tag :color="form.color" effect="plain">{{ form.name || '标签预览' }}</el-tag>
+          <ColorPicker
+            v-model="form.color"
+            :preview-text="form.name || '标签'"
+            :show-alpha="false"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -78,6 +78,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTags, createTag, updateTag, deleteTag } from '../api'
 import { Plus } from '@element-plus/icons-vue'
+import ColorPicker from '../components/ColorPicker.vue'
 
 const tags = ref([])
 const dialogVisible = ref(false)
