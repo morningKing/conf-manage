@@ -14,6 +14,9 @@ import './styles/transitions.scss'
 import $ from 'jquery'
 window.$ = window.jQuery = $
 
+// 导入 jQuery mousewheel 插件（Luckysheet 依赖）
+import 'jquery-mousewheel'
+
 // 导入 Luckysheet CSS
 import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'
