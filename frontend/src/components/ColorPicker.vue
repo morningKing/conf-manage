@@ -13,7 +13,11 @@
           :title="color.name"
           @click="selectPreset(color.hex)"
         >
-          <el-icon v-if="selectedColor === color.hex" class="check-icon">
+          <el-icon
+            v-if="selectedColor === color.hex"
+            class="check-icon"
+            :style="{ color: getIconColor(color.hex) }"
+          >
             <Check />
           </el-icon>
         </div>
@@ -187,6 +191,13 @@ const rgbToHex = (r, g, b) => {
   }).join('').toUpperCase()
 }
 
+// 根据背景色亮度计算图标颜色（浅色背景用黑色图标，深色背景用白色图标）
+const getIconColor = (hex) => {
+  const rgbVal = hexToRgb(hex)
+  const luminance = (0.299 * rgbVal.r + 0.587 * rgbVal.g + 0.114 * rgbVal.b) / 255
+  return luminance > 0.5 ? '#000' : '#fff'
+}
+
 // 初始化RGB值
 rgb.value = hexToRgb(selectedColor.value)
 
@@ -291,9 +302,8 @@ watch(() => props.modelValue, (newVal) => {
 }
 
 .color-item .check-icon {
-  color: #fff;
   font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
 .custom-section {
