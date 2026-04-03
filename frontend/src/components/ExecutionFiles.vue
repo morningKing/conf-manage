@@ -48,10 +48,19 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180" align="center">
+        <el-table-column label="操作" width="220" align="center">
           <template #default="{ row }">
             <el-button
-              v-if="canPreview(row.path)"
+              v-if="isExcelFile(row.path)"
+              size="small"
+              type="success"
+              link
+              @click="openExcelEditor(row)"
+            >
+              Excel编辑
+            </el-button>
+            <el-button
+              v-if="canPreview(row.path) && !isExcelFile(row.path)"
               size="small"
               type="primary"
               link
@@ -101,6 +110,26 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- Excel 编辑对话框 -->
+    <el-dialog
+      v-model="excelVisible"
+      :title="`Excel 编辑 - ${currentExcelFile?.path || ''}`"
+      width="95%"
+      top="2vh"
+      destroy-on-close
+    >
+      <ExcelEditor
+        v-if="excelVisible && currentExcelFile && executionId"
+        :execution-id="executionId"
+        :file-path="currentExcelFile.path"
+        @saved="handleExcelSaved"
+        @error="handleExcelError"
+      />
+      <template #footer>
+        <el-button @click="excelVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -109,6 +138,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Folder, Refresh, Document, Files } from '@element-plus/icons-vue'
 import request from '../api/request'
+import ExcelEditor from './ExcelEditor.vue'
 
 const props = defineProps({
   executionId: {
@@ -128,6 +158,16 @@ const previewLoading = ref(false)
 const currentFile = ref(null)
 const fileContent = ref('')
 const previewType = ref('text')
+
+// Excel 编辑相关
+const excelVisible = ref(false)
+const currentExcelFile = ref(null)
+
+// 判断是否为 Excel 文件
+const isExcelFile = (filename) => {
+  const ext = filename.toLowerCase().split('.').pop()
+  return ['xlsx', 'xls'].includes(ext)
+}
 
 // 计算标题
 const spaceTitle = computed(() => {
@@ -249,6 +289,23 @@ const formatTime = (isoString) => {
     minute: '2-digit',
     second: '2-digit'
   })
+}
+
+// 打开 Excel 编辑器
+const openExcelEditor = (file) => {
+  currentExcelFile.value = file
+  excelVisible.value = true
+}
+
+// Excel 保存完成
+const handleExcelSaved = () => {
+  ElMessage.success('Excel 文件已保存')
+  loadFiles() // 刷新文件列表
+}
+
+// Excel 编辑错误
+const handleExcelError = (err) => {
+  console.error('Excel 编辑错误:', err)
 }
 
 // 监听props变化，重新加载文件
