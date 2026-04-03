@@ -15,10 +15,11 @@ from .workflow_template import WorkflowTemplate
 from .global_variable import GlobalVariable
 from .ai_config import AIConfig
 from .webhook import Webhook, WebhookLog
+from .selection_session import SelectionSession
 
 __all__ = [
     'db', 'Script', 'ScriptVersion', 'Execution', 'Schedule', 'Environment',
     'Category', 'Tag', 'script_tags', 'Workflow', 'WorkflowNode', 'WorkflowEdge',
     'WorkflowExecution', 'WorkflowNodeExecution', 'WorkflowTemplate', 'GlobalVariable',
-    'AIConfig', 'Webhook', 'WebhookLog'
+    'AIConfig', 'Webhook', 'WebhookLog', 'SelectionSession'
 ]
