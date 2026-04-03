@@ -28,7 +28,7 @@
       <!-- 选择会话面板 -->
       <SelectionPanel
         ref="selectionPanelRef"
-        @change="handleSelectionChange"
+        @change="handleSelectionPanelChange"
         @deleted="handleSelectionDeleted"
       />
 
@@ -685,8 +685,8 @@ const getProgressColor = (percentage) => {
   return '#f56c6c'
 }
 
-// 选择变化回调
-const handleSelectionChange = ({ count }) => {
+// SelectionPanel 选择变化回调
+const handleSelectionPanelChange = ({ count }) => {
   selectionCount.value = count
 }
 
