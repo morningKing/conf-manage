@@ -10,6 +10,10 @@ import './styles/theme/light.scss'
 import './styles/theme/dark.scss'
 import './styles/transitions.scss'
 
+// 导入 jQuery 并挂载到 window（Luckysheet 依赖）
+import $ from 'jquery'
+window.$ = window.jQuery = $
+
 // 导入 Luckysheet CSS
 import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'

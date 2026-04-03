@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['luckysheet']
+    include: ['jquery', 'luckysheet']
   },
   server: {
     port: 5173,
