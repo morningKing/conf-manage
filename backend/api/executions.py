@@ -954,12 +954,15 @@ def get_excel_file(execution_id, file_path):
         execution = Execution.query.get_or_404(execution_id)
         execution_space = Config.get_execution_space(execution_id)
 
-        # 安全检查
+        # 安全检查：使用 realpath 防止路径遍历攻击
         safe_path = os.path.normpath(file_path)
-        if safe_path.startswith('..') or os.path.isabs(safe_path):
-            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
-
         full_path = os.path.join(execution_space, safe_path)
+        real_path = os.path.realpath(full_path)
+        space_real = os.path.realpath(execution_space)
+
+        # 确保解析后的路径在执行空间内
+        if not real_path.startswith(space_real + os.sep) and real_path != space_real:
+            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
 
         if not os.path.exists(full_path) or not os.path.isfile(full_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
@@ -1005,12 +1008,15 @@ def save_excel_file(execution_id, file_path):
         execution = Execution.query.get_or_404(execution_id)
         execution_space = Config.get_execution_space(execution_id)
 
-        # 安全检查
+        # 安全检查：使用 realpath 防止路径遍历攻击
         safe_path = os.path.normpath(file_path)
-        if safe_path.startswith('..') or os.path.isabs(safe_path):
-            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
-
         full_path = os.path.join(execution_space, safe_path)
+        real_path = os.path.realpath(full_path)
+        space_real = os.path.realpath(execution_space)
+
+        # 确保解析后的路径在执行空间内
+        if not real_path.startswith(space_real + os.sep) and real_path != space_real:
+            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
 
         if not os.path.exists(full_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404

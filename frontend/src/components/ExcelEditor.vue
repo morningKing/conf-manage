@@ -98,13 +98,18 @@ const loadExcel = async () => {
 
 // 初始化 Luckysheet
 const initLuckysheet = (data) => {
+  // 检查 Luckysheet 是否已加载
+  if (!window.luckysheet) {
+    error.value = 'Excel编辑器加载失败，请刷新页面重试'
+    ElMessage.error('Luckysheet 库未加载')
+    return
+  }
+
   // 销毁现有实例
-  if (window.luckysheet) {
-    try {
-      window.luckysheet.destroy()
-    } catch (e) {
-      console.warn('Destroy luckysheet error:', e)
-    }
+  try {
+    window.luckysheet.destroy()
+  } catch (e) {
+    console.warn('Destroy luckysheet error:', e)
   }
 
   // 初始化配置
@@ -127,7 +132,13 @@ const initLuckysheet = (data) => {
   }
 
   // 创建实例
-  window.luckysheet.create(options)
+  try {
+    window.luckysheet.create(options)
+  } catch (e) {
+    error.value = 'Excel编辑器初始化失败: ' + e.message
+    ElMessage.error('Excel编辑器初始化失败')
+    console.error('Luckysheet create error:', e)
+  }
 }
 
 // 保存
