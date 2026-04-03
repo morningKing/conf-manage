@@ -81,3 +81,14 @@ export const toggleWorkflow = (id) => request.post(`/workflows/${id}/toggle`)
 export const cancelWorkflowExecution = (id) => request.post(`/workflow-executions/${id}/cancel`)
 export const deleteWorkflowExecution = (id) => request.delete(`/workflow-executions/${id}`)
 
+// 选择会话管理（批量操作支持1000条）
+export const createSelectionSession = () => request.post('/executions/selection/create')
+export const getSelectionSession = (sessionId) => request.get(`/executions/selection/${sessionId}`)
+export const addToSelection = (sessionId, executionIds) => request.post(`/executions/selection/${sessionId}/add`, { execution_ids: executionIds })
+export const removeFromSelection = (sessionId, executionIds) => request.post(`/executions/selection/${sessionId}/remove`, { execution_ids: executionIds })
+export const clearSelection = (sessionId) => request.post(`/executions/selection/${sessionId}/clear`)
+export const deleteSelectionBatch = (sessionId) => request.post(`/executions/selection/${sessionId}/delete`)
+
+// 重新执行
+export const reExecuteScript = (executionId) => request.post(`/executions/${executionId}/re-execute`)
+
