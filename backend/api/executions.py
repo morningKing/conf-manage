@@ -769,11 +769,12 @@ def get_execution_file(execution_id, file_path):
         from config import Config
         from flask import send_file
 
-        # 检查是否是Excel API请求（以/excel结尾）
-        if file_path.endswith('/excel'):
-            # 去掉/excel后缀，调用Excel API
-            actual_file_path = file_path[:-6]  # 去掉 '/excel'
-            return _get_excel_file_internal(execution_id, actual_file_path)
+        # 检查是否是Excel API请求（通过查询参数）
+        excel_param = request.args.get('excel', 'false').lower()
+        print(f"[DEBUG] Excel API check: excel={excel_param}, file_path={file_path}")
+        if excel_param == 'true':
+            print(f"[DEBUG] Calling Excel API for: {file_path}")
+            return _get_excel_file_internal(execution_id, file_path)
 
         execution = Execution.query.get_or_404(execution_id)
         execution_space = Config.get_execution_space(execution_id)
@@ -1008,10 +1009,14 @@ def get_excel_file(execution_id, file_path):
     return _get_excel_file_internal(execution_id, file_path)
 
 
-@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['POST'])
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>', methods=['POST'])
 def save_excel_file(execution_id, file_path):
-    """保存 Excel 文件（从 Luckysheet 格式）"""
+    """保存 Excel 文件（从 Luckysheet 格式）- 使用 ?excel=true 查询参数"""
     try:
+        # 检查是否是Excel API请求
+        if request.args.get('excel', 'false').lower() != 'true':
+            return jsonify({'code': 1, 'message': '不支持的请求'}), 400
+
         import shutil
         from config import Config
         from utils.excel_converter import luckysheet_to_excel
