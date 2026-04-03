@@ -10,12 +10,11 @@ import './styles/theme/light.scss'
 import './styles/theme/dark.scss'
 import './styles/transitions.scss'
 
-// 导入 jQuery 并挂载到 window（Luckysheet 依赖）
-import $ from 'jquery'
-window.$ = window.jQuery = $
-
-// 导入 jQuery mousewheel 插件（Luckysheet 依赖）
-import 'jquery-mousewheel'
+// jQuery 和 mousewheel 已通过 CDN 在 index.html 中加载
+// 确保挂载到 window（某些模块可能需要）
+if (window.jQuery) {
+    window.$ = window.jQuery
+}
 
 // 导入 Luckysheet CSS
 import 'luckysheet/dist/plugins/css/pluginsCss.css'
