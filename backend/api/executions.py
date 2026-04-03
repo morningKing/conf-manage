@@ -868,3 +868,78 @@ def is_text_file(filepath):
     ext = os.path.splitext(filepath)[1].lower()
     return ext in text_extensions
 
+
+@api_bp.route('/executions/<int:execution_id>/re-execute', methods=['POST'])
+def re_execute_script(execution_id):
+    """重新执行脚本（支持所有非运行状态）"""
+    try:
+        import shutil
+        from threading import Thread
+        from flask import current_app
+        from config import Config
+
+        execution = Execution.query.get_or_404(execution_id)
+
+        # 检查状态（running状态不能重新执行）
+        if execution.status == 'running':
+            return jsonify({
+                'code': 1,
+                'message': '正在运行的执行不能重新执行，请先中断'
+            }), 400
+
+        # 获取原执行参数
+        original_params = {}
+        if execution.params:
+            try:
+                original_params = json.loads(execution.params)
+            except json.JSONDecodeError:
+                original_params = {}
+
+        # 创建新执行记录
+        new_execution = Execution(
+            script_id=execution.script_id,
+            environment_id=execution.environment_id,
+            status='pending',
+            params=json.dumps(original_params) if original_params else None
+        )
+        db.session.add(new_execution)
+        db.session.flush()  # 获取新execution.id
+
+        # 复制执行空间的文件（如果有）
+        old_space = Config.get_execution_space(execution.id)
+        new_space = Config.ensure_execution_space(new_execution.id)
+
+        if os.path.exists(old_space):
+            for item in os.listdir(old_space):
+                src = os.path.join(old_space, item)
+                dst = os.path.join(new_space, item)
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy2(src, dst)
+
+        # 异步执行脚本
+        app = current_app._get_current_object()
+
+        def run_script_with_context():
+            with app.app_context():
+                execute_script(new_execution.id)
+
+        thread = Thread(target=run_script_with_context)
+        thread.start()
+
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'data': {
+                'new_execution_id': new_execution.id,
+                'original_execution_id': execution.id,
+                'script_name': execution.script.name if execution.script else None
+            },
+            'message': '已创建新执行记录并启动执行'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
