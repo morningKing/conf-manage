@@ -943,3 +943,112 @@ def re_execute_script(execution_id):
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
 
+
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['GET'])
+def get_excel_file(execution_id, file_path):
+    """获取 Excel 文件内容（Luckysheet 格式）"""
+    try:
+        from config import Config
+        from utils.excel_converter import excel_to_luckysheet, get_excel_info
+
+        execution = Execution.query.get_or_404(execution_id)
+        execution_space = Config.get_execution_space(execution_id)
+
+        # 安全检查
+        safe_path = os.path.normpath(file_path)
+        if safe_path.startswith('..') or os.path.isabs(safe_path):
+            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
+
+        full_path = os.path.join(execution_space, safe_path)
+
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        # 检查文件类型
+        ext = os.path.splitext(full_path)[1].lower()
+        if ext not in ['.xlsx', '.xls']:
+            return jsonify({'code': 1, 'message': '不是有效的 Excel 文件'}), 400
+
+        # 转换为 Luckysheet 格式
+        try:
+            grid_data = excel_to_luckysheet(full_path)
+            info = get_excel_info(full_path)
+
+            return jsonify({
+                'code': 0,
+                'data': {
+                    'gridData': grid_data,
+                    'filename': info.get('filename', os.path.basename(full_path)),
+                    'sheets': info.get('sheets', []),
+                    'sheet_count': info.get('sheet_count', 0),
+                    'size': info.get('size', 0)
+                }
+            })
+        except Exception as e:
+            return jsonify({
+                'code': 1,
+                'message': f'Excel 文件解析失败: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['POST'])
+def save_excel_file(execution_id, file_path):
+    """保存 Excel 文件（从 Luckysheet 格式）"""
+    try:
+        import shutil
+        from config import Config
+        from utils.excel_converter import luckysheet_to_excel
+
+        execution = Execution.query.get_or_404(execution_id)
+        execution_space = Config.get_execution_space(execution_id)
+
+        # 安全检查
+        safe_path = os.path.normpath(file_path)
+        if safe_path.startswith('..') or os.path.isabs(safe_path):
+            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
+
+        full_path = os.path.join(execution_space, safe_path)
+
+        if not os.path.exists(full_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        # 获取 Luckysheet 数据
+        data = request.get_json()
+        grid_data = data.get('gridData', [])
+
+        if not grid_data:
+            return jsonify({'code': 1, 'message': '无数据'}), 400
+
+        # 备份原文件
+        backup_path = full_path + '.bak'
+        if os.path.exists(full_path):
+            shutil.copy2(full_path, backup_path)
+
+        # 保存
+        try:
+            luckysheet_to_excel(grid_data, full_path)
+
+            # 删除备份
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+
+            return jsonify({
+                'code': 0,
+                'message': '保存成功'
+            })
+        except Exception as e:
+            # 恢复备份
+            if os.path.exists(backup_path):
+                shutil.move(backup_path, full_path)
+
+            return jsonify({
+                'code': 1,
+                'message': f'保存失败: {str(e)}'
+            }), 500
+
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
