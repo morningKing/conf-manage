@@ -71,7 +71,7 @@ class Config:
     SUPPORTED_SCRIPT_TYPES = ['python', 'javascript']
 
     # Python解释器路径
-    PYTHON_EXECUTABLE = 'python3'
+    PYTHON_EXECUTABLE = 'python'
 
     # Node.js执行器路径
     NODE_EXECUTABLE = 'node'

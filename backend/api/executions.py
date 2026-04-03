@@ -64,6 +64,17 @@ def execute_script_api(script_id):
             execution.params = json.dumps(params)
             db.session.commit()
 
+        # 先准备好返回数据，避免线程启动后懒加载冲突
+        execution_data = {
+            'id': execution.id,
+            'script_id': execution.script_id,
+            'script_name': script.name,
+            'environment_id': execution.environment_id,
+            'status': execution.status,
+            'params': execution.params,
+            'created_at': execution.created_at.isoformat() if execution.created_at else None
+        }
+
         # 异步执行脚本
         from threading import Thread
         from flask import current_app
@@ -80,7 +91,7 @@ def execute_script_api(script_id):
 
         return jsonify({
             'code': 0,
-            'data': execution.to_dict(),
+            'data': execution_data,
             'message': '脚本执行已启动'
         })
     except Exception as e:
