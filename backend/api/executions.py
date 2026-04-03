@@ -769,6 +769,12 @@ def get_execution_file(execution_id, file_path):
         from config import Config
         from flask import send_file
 
+        # 检查是否是Excel API请求（以/excel结尾）
+        if file_path.endswith('/excel'):
+            # 去掉/excel后缀，调用Excel API
+            actual_file_path = file_path[:-6]  # 去掉 '/excel'
+            return _get_excel_file_internal(execution_id, actual_file_path)
+
         execution = Execution.query.get_or_404(execution_id)
         execution_space = Config.get_execution_space(execution_id)
 
@@ -944,9 +950,8 @@ def re_execute_script(execution_id):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
-@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['GET'])
-def get_excel_file(execution_id, file_path):
-    """获取 Excel 文件内容（Luckysheet 格式）"""
+def _get_excel_file_internal(execution_id, file_path):
+    """内部函数：获取 Excel 文件内容（Luckysheet 格式）"""
     try:
         from config import Config
         from utils.excel_converter import excel_to_luckysheet, get_excel_info
@@ -995,6 +1000,12 @@ def get_excel_file(execution_id, file_path):
 
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['GET'])
+def get_excel_file(execution_id, file_path):
+    """获取 Excel 文件内容（Luckysheet 格式）"""
+    return _get_excel_file_internal(execution_id, file_path)
 
 
 @api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['POST'])
