@@ -3,6 +3,14 @@
 """
 import os
 
+# 环境变量支持（便于部署切换）
+DB_TYPE = os.environ.get('DB_TYPE', 'postgresql')
+DB_HOST = os.environ.get('DB_HOST', 'localhost')
+DB_PORT = os.environ.get('DB_PORT', '5432')
+DB_USER = os.environ.get('DB_USER', 'postgres')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', 'jay123')
+DB_NAME = os.environ.get('DB_NAME', 'confmanage')
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -16,8 +24,24 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
     # 数据库配置
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "data", "database.db")}'
+    # PostgreSQL配置（默认）
+    if DB_TYPE == 'sqlite':
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "data", "database.db")}'
+    else:
+        SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # PostgreSQL连接池配置
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'max_overflow': 20,
+        'pool_recycle': 300,
+        'pool_pre_ping': True
+    }
+
+    # SQLite路径保留（供迁移脚本使用）
+    SQLITE_DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'database.db')
+    SQLITE_DATABASE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
 
     # 脚本存储路径
     SCRIPTS_DIR = os.path.join(BASE_DIR, 'scripts')
