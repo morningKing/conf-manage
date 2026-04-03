@@ -10,6 +10,18 @@ import './styles/theme/light.scss'
 import './styles/theme/dark.scss'
 import './styles/transitions.scss'
 
+// 导入 Luckysheet CSS
+import 'luckysheet/dist/plugins/css/pluginsCss.css'
+import 'luckysheet/dist/plugins/plugins.css'
+import 'luckysheet/dist/css/luckysheet.css'
+
+// 动态导入 Luckysheet UMD 模块
+import('luckysheet/dist/luckysheet.umd.js').then(() => {
+  console.log('Luckysheet loaded successfully')
+}).catch(err => {
+  console.error('Failed to load Luckysheet:', err)
+})
+
 const app = createApp(App)
 
 // 注册Element Plus图标
