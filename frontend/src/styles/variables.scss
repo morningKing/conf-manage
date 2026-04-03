@@ -1,0 +1,42 @@
+// 全局样式变量
+// ================================
+
+// 颜色
+$primary-color: #409EFF;
+$success-color: #67C23A;
+$warning-color: #E6A23C;
+$danger-color: #F56C6C;
+$info-color: #909399;
+
+// 布局
+$sidebar-width: 220px;
+$sidebar-collapsed-width: 64px;
+$header-height: 60px;
+$footer-height: 48px;
+
+// 圆角
+$border-radius-base: 8px;
+$border-radius-small: 4px;
+$border-radius-large: 12px;
+
+// 阴影
+$box-shadow-base: 0 2px 12px rgba(0, 0, 0, 0.08);
+$box-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.04);
+$box-shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+// 过渡
+$transition-duration: 0.3s;
+$transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+
+// 断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1920px;
+
+// Z-index 层级
+$z-index-sidebar: 100;
+$z-index-header: 99;
+$z-index-modal: 1000;
+$z-index-toast: 2000;

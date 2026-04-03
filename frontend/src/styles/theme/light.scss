@@ -1,0 +1,42 @@
+// 浅色主题变量
+:root {
+  // 背景色
+  --bg-color: #f5f7f9;
+  --bg-color-secondary: #ffffff;
+  --bg-color-hover: #f0f2f5;
+
+  // 侧边栏
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #606266;
+  --sidebar-active-text: #409EFF;
+  --sidebar-hover-bg: rgba(64, 158, 255, 0.08);
+
+  // 头部
+  --header-bg: #ffffff;
+  --header-text: #303133;
+
+  // 卡片
+  --card-bg: #ffffff;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --card-border: 1px solid #ebeef5;
+
+  // 表格
+  --table-header-bg: #f5f7fa;
+  --table-row-hover: #f5f7fa;
+  --table-border: #ebeef5;
+
+  // 文字
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #c0c4cc;
+
+  // 边框
+  --border-color: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-lighter: #ebeef5;
+
+  // 其他
+  --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-base: 0 2px 12px rgba(0, 0, 0, 0.08);
+}

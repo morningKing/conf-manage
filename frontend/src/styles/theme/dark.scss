@@ -1,0 +1,42 @@
+// 深色主题变量
+html.dark {
+  // 背景色
+  --bg-color: #1a1a1a;
+  --bg-color-secondary: #252525;
+  --bg-color-hover: #2a2a2a;
+
+  // 侧边栏
+  --sidebar-bg: #252525;
+  --sidebar-text: #a3a3a3;
+  --sidebar-active-text: #409EFF;
+  --sidebar-hover-bg: rgba(64, 158, 255, 0.15);
+
+  // 头部
+  --header-bg: #252525;
+  --header-text: #e5e5e5;
+
+  // 卡片
+  --card-bg: #252525;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --card-border: 1px solid #333;
+
+  // 表格
+  --table-header-bg: #2a2a2a;
+  --table-row-hover: #2a2a2a;
+  --table-border: #333;
+
+  // 文字
+  --text-primary: #e5e5e5;
+  --text-regular: #a3a3a3;
+  --text-secondary: #737373;
+  --text-placeholder: #525252;
+
+  // 边框
+  --border-color: #333;
+  --border-color-light: #404040;
+  --border-color-lighter: #525252;
+
+  // 其他
+  --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-base: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
