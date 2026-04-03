@@ -47,7 +47,6 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { DocumentChecked, Download, Refresh, FullScreen } from '@element-plus/icons-vue'
 import { getExcelFile, saveExcelFile } from '../api'
-import { loadLuckysheet } from '../composables/useLuckysheet.js'
 
 const props = defineProps({
   executionId: {
@@ -98,22 +97,14 @@ const loadExcel = async () => {
 }
 
 // 初始化 Luckysheet
-const initLuckysheet = async (data) => {
-  try {
-    // 使用 wrapper 加载所有依赖
-    await loadLuckysheet()
-
-    if (window.luckysheet) {
-      createLuckysheet(data)
-    } else {
-      error.value = 'Luckysheet 加载失败'
-      ElMessage.error('Luckysheet 加载失败')
-    }
-  } catch (e) {
-    error.value = 'Excel编辑器加载失败: ' + e.message
-    ElMessage.error('Excel编辑器加载失败')
-    console.error('Load error:', e)
+const initLuckysheet = (data) => {
+  // Luckysheet 已通过 index.html 的 script 标签加载
+  if (!window.luckysheet) {
+    error.value = 'Excel编辑器加载失败，请刷新页面重试'
+    ElMessage.error('Luckysheet 库未加载')
+    return
   }
+  createLuckysheet(data)
 }
 
 // 创建 Luckysheet 实例

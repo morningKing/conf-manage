@@ -10,10 +10,8 @@ import './styles/theme/light.scss'
 import './styles/theme/dark.scss'
 import './styles/transitions.scss'
 
-// 导入 Luckysheet CSS
-import 'luckysheet/dist/plugins/css/pluginsCss.css'
-import 'luckysheet/dist/plugins/plugins.css'
-import 'luckysheet/dist/css/luckysheet.css'
+// jQuery 和 Luckysheet 已通过 index.html 中的 script 标签加载
+// window.$, window.jQuery, window.luckysheet 已可用
 
 const app = createApp(App)
 
