@@ -42,7 +42,6 @@ import { getExcelFile, saveExcelFile } from '../api'
 
 // Univer 相关
 import { Univer, LocaleType } from '@univerjs/core'
-import { defaultTheme } from '@univerjs/design'
 import { UniverDocsPlugin } from '@univerjs/docs'
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui'
 import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula'
@@ -118,7 +117,6 @@ const initUniver = (sheetsData) => {
 
     // 创建 Univer 实例
     univer = new Univer({
-      theme: defaultTheme,
       locale: LocaleType.ZH_CN,
     })
 
