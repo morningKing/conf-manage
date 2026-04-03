@@ -41,7 +41,7 @@ import { DocumentChecked, Download, Refresh } from '@element-plus/icons-vue'
 import { getExcelFile, saveExcelFile } from '../api'
 
 // Univer 相关
-import { Univer, LocaleType } from '@univerjs/core'
+import { Univer, LocaleType, merge } from '@univerjs/core'
 import { UniverDocsPlugin } from '@univerjs/docs'
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui'
 import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula'
@@ -50,6 +50,12 @@ import { UniverSheetsPlugin } from '@univerjs/sheets'
 import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula'
 import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui'
 import { UniverUIPlugin } from '@univerjs/ui'
+
+// 导入语言包
+import SheetsZhCN from '@univerjs/sheets-ui/lib/es/locale/zh-CN.js'
+import SheetsFormulaZhCN from '@univerjs/sheets-formula/lib/es/locale/zh-CN.js'
+import UIZhCN from '@univerjs/ui/lib/es/locale/zh-CN.js'
+import DocsUIZhCN from '@univerjs/docs-ui/lib/es/locale/zh-CN.js'
 
 import '@univerjs/design/lib/index.css'
 import '@univerjs/ui/lib/index.css'
@@ -118,9 +124,21 @@ const initUniver = (sheetsData) => {
     // 等待 DOM 完全渲染后再初始化
     setTimeout(() => {
       try {
+        // 合并语言包
+        const locales = {
+          [LocaleType.ZH_CN]: merge(
+            {},
+            UIZhCN,
+            DocsUIZhCN,
+            SheetsZhCN,
+            SheetsFormulaZhCN
+          )
+        }
+
         // 创建 Univer 实例
         univer = new Univer({
           locale: LocaleType.ZH_CN,
+          locales,
         })
 
         // 注册插件
