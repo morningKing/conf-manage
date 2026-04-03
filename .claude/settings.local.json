@@ -34,7 +34,22 @@
       "Bash(done)",
       "Bash(netstat:*)",
       "Bash(pgrep:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(DB_TYPE=sqlite python -c \"from config import Config; print\\('SQLALCHEMY_DATABASE_URI:', Config.SQLALCHEMY_DATABASE_URI\\)\")",
+      "Bash(psql --version)",
+      "Read(//c/Program Files/**)",
+      "Bash(E:/Program Files/PostgreSQL/18/bin/psql.exe:*)",
+      "Bash(net start:*)",
+      "Bash(sc query:*)",
+      "Bash(PGPASSWORD=jay123 \"/e/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -c \"SELECT 1;\")",
+      "Bash(PGPASSWORD=jay123 /e/Program Files/PostgreSQL/18/bin/psql.exe:*)",
+      "Bash(DB_TYPE=postgresql DB_PASSWORD=jay123 python migrate_to_postgres.py)",
+      "Bash(DB_TYPE=postgresql DB_PASSWORD=jay123 timeout 5 python app.py)",
+      "Bash(DB_TYPE=postgresql DB_PASSWORD=jay123 timeout 5 python backend/app.py)",
+      "Bash(DB_TYPE=sqlite python:*)",
+      "Bash(DB_TYPE=sqlite timeout 5 python app.py)"
     ],
     "deny": [],
     "ask": []
