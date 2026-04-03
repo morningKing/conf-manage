@@ -119,7 +119,7 @@
       top="2vh"
       destroy-on-close
       append-to-body
-      class="excel-dialog"
+      :z-index="2000"
     >
       <ExcelEditor
         v-if="excelVisible && currentExcelFile && executionId"
@@ -416,10 +416,5 @@ defineExpose({
 
 .preview-content::-webkit-scrollbar-thumb:hover {
   background: #555;
-}
-
-/* Excel 编辑弹窗层级 - 低于 Univer 下拉菜单 */
-.excel-dialog {
-  z-index: 100 !important;
 }
 </style>

@@ -409,7 +409,7 @@ defineExpose({
 </style>
 
 <style>
-/* 全局样式 - 提升 Univer 下拉菜单层级 */
+/* 全局样式 - 提升 Univer 下拉菜单层级，高于 Element Plus 弹窗 */
 .univer-dropdown,
 .univer-popup,
 .univer-select-dropdown,
@@ -419,6 +419,6 @@ defineExpose({
 [data-univer-dropdown],
 [role="listbox"],
 [role="menu"] {
-  z-index: 10000 !important;
+  z-index: 2100 !important;
 }
 </style>
