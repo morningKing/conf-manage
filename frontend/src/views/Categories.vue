@@ -59,8 +59,11 @@
           <el-input v-model="form.description" type="textarea" rows="3" placeholder="请输入分类描述" />
         </el-form-item>
         <el-form-item label="颜色">
-          <el-color-picker v-model="form.color" show-alpha />
-          <span style="margin-left: 10px; color: #909399;">{{ form.color }}</span>
+          <ColorPicker
+            v-model="form.color"
+            :preview-text="form.name || '分类'"
+            :show-alpha="false"
+          />
         </el-form-item>
         <el-form-item label="图标">
           <el-input v-model="form.icon" placeholder="图标名称（可选）" />
@@ -82,6 +85,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api'
 import { Plus } from '@element-plus/icons-vue'
+import ColorPicker from '../components/ColorPicker.vue'
 
 const categories = ref([])
 const dialogVisible = ref(false)
