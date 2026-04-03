@@ -25,6 +25,13 @@
         </div>
       </template>
 
+      <!-- 选择会话面板 -->
+      <SelectionPanel
+        ref="selectionPanelRef"
+        @change="handleSelectionChange"
+        @deleted="handleSelectionDeleted"
+      />
+
       <!-- 批量操作栏 -->
       <div v-if="selectedExecutions.length > 0" class="batch-actions">
         <el-divider content-position="left">批量操作</el-divider>
@@ -123,7 +130,7 @@
             {{ getDuration(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'running'"
@@ -132,6 +139,14 @@
               @click="handleCancel(row)"
             >
               中断
+            </el-button>
+            <el-button
+              v-if="row.status !== 'running'"
+              size="small"
+              type="success"
+              @click="handleReExecute(row)"
+            >
+              重新执行
             </el-button>
             <el-button size="small" @click="handleViewLogs(row)">日志</el-button>
             <el-button size="small" type="primary" @click="handleViewFiles(row)">文件</el-button>
@@ -325,10 +340,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Delete, VideoPause, RefreshRight, Close, DataLine } from '@element-plus/icons-vue'
-import { getExecutions, getExecutionLogs, deleteExecution, deleteWorkflowExecution, cancelExecution, batchManageExecutions, getExecutionsStatistics } from '../api'
+import { Refresh, Delete, VideoPause, RefreshRight, Close, DataLine, Select } from '@element-plus/icons-vue'
+import { getExecutions, getExecutionLogs, deleteExecution, deleteWorkflowExecution, cancelExecution, batchManageExecutions, getExecutionsStatistics, reExecuteScript } from '../api'
 import ExecutionFiles from '../components/ExecutionFiles.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
+import SelectionPanel from '../components/SelectionPanel.vue'
 
 const executions = ref([])
 const currentPage = ref(1)
@@ -344,6 +360,8 @@ const selectedExecutions = ref([])
 const batchLoading = ref(false)
 const statisticsData = ref(null)
 const executionsTable = ref(null)
+const selectionPanelRef = ref(null)
+const selectionCount = ref(0)
 
 const loadExecutions = async () => {
   try {
@@ -665,6 +683,41 @@ const getProgressColor = (percentage) => {
   if (percentage >= 70) return '#409eff'
   if (percentage >= 50) return '#e6a23c'
   return '#f56c6c'
+}
+
+// 选择变化回调
+const handleSelectionChange = ({ count }) => {
+  selectionCount.value = count
+}
+
+// 删除完成回调
+const handleSelectionDeleted = () => {
+  loadExecutions()
+}
+
+// 重新执行
+const handleReExecute = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要重新执行此脚本吗？将创建新的执行记录。',
+      '重新执行确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    const res = await reExecuteScript(row.id)
+    if (res.code === 0) {
+      ElMessage.success(`已创建新执行 #${res.data.new_execution_id}`)
+      loadExecutions()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('重新执行失败: ' + (error.message || error))
+    }
+  }
 }
 
 onMounted(() => {
