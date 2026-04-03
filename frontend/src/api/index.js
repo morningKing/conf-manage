@@ -92,3 +92,10 @@ export const deleteSelectionBatch = (sessionId) => request.post(`/executions/sel
 // 重新执行
 export const reExecuteScript = (executionId) => request.post(`/executions/${executionId}/re-execute`)
 
+// Excel 文件操作
+export const getExcelFile = (executionId, filePath) =>
+  request.get(`/executions/${executionId}/files/${encodeURIComponent(filePath)}/excel`)
+
+export const saveExcelFile = (executionId, filePath, data) =>
+  request.post(`/executions/${executionId}/files/${encodeURIComponent(filePath)}/excel`, data)
+
