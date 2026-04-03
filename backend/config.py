@@ -4,11 +4,11 @@
 import os
 
 # 环境变量支持（便于部署切换）
-DB_TYPE = os.environ.get('DB_TYPE', 'postgresql')
+DB_TYPE = os.environ.get('DB_TYPE', 'sqlite')
 DB_HOST = os.environ.get('DB_HOST', 'localhost')
 DB_PORT = os.environ.get('DB_PORT', '5432')
 DB_USER = os.environ.get('DB_USER', 'postgres')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', 'jay123')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 DB_NAME = os.environ.get('DB_NAME', 'confmanage')
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
