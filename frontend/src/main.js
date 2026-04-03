@@ -15,9 +15,15 @@ import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'
 import 'luckysheet/dist/css/luckysheet.css'
 
-// 动态导入 Luckysheet UMD 模块
-import('luckysheet/dist/luckysheet.umd.js').then(() => {
-  console.log('Luckysheet loaded successfully')
+// 动态导入 Luckysheet 并挂载到 window
+import('luckysheet').then((module) => {
+  // Vite会将UMD转换为ES模块，需要手动挂载到window
+  if (module && module.default) {
+    window.luckysheet = module.default
+  } else if (module) {
+    window.luckysheet = module
+  }
+  console.log('Luckysheet loaded:', window.luckysheet ? 'success' : 'failed')
 }).catch(err => {
   console.error('Failed to load Luckysheet:', err)
 })

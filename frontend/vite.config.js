@@ -9,6 +9,9 @@ export default defineConfig({
       '@': resolve(__dirname, 'src')
     }
   },
+  optimizeDeps: {
+    include: ['luckysheet']
+  },
   server: {
     port: 5173,
     proxy: {

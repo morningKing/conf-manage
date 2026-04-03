@@ -101,7 +101,13 @@ const initLuckysheet = (data) => {
   // 检查 Luckysheet 是否已加载
   if (!window.luckysheet) {
     // 尝试动态加载
-    import('luckysheet/dist/luckysheet.umd.js').then(() => {
+    import('luckysheet').then((module) => {
+      // Vite会将UMD转换为ES模块，需要手动挂载到window
+      if (module && module.default) {
+        window.luckysheet = module.default
+      } else if (module) {
+        window.luckysheet = module
+      }
       if (window.luckysheet) {
         createLuckysheet(data)
       } else {
