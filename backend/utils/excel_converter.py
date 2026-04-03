@@ -58,15 +58,21 @@ def _openpyxl_to_luckysheet(workbook, file_path):
         max_row = sheet.max_row
         max_col = sheet.max_column
 
+        # 构建二维数组 data
+        data = [[None for _ in range(max_col)] for _ in range(max_row)]
+
         for row_idx in range(1, max_row + 1):
             for col_idx in range(1, max_col + 1):
                 cell = sheet.cell(row=row_idx, column=col_idx)
                 if cell.value is not None:
+                    cell_value = _convert_cell_value(cell.value)
                     cell_data.append({
                         'r': row_idx - 1,  # 0-based
                         'c': col_idx - 1,
-                        'v': _convert_cell_value(cell.value)
+                        'v': cell_value
                     })
+                    # 同时填充 data 二维数组
+                    data[row_idx - 1][col_idx - 1] = cell_value
 
         # 构建列宽信息
         col_info = []
@@ -98,7 +104,7 @@ def _openpyxl_to_luckysheet(workbook, file_path):
                 'columnlen': col_info if col_info else None,
                 'rowlen': row_info if row_info else None
             },
-            'data': [],  # Luckysheet 会自动从 celldata 生成
+            'data': data,
             'row': max_row,
             'column': max_col
         })
@@ -114,15 +120,23 @@ def _xlrd_to_luckysheet(workbook, file_path):
         sheet = workbook.sheet_by_index(sheet_index)
         cell_data = []
 
-        for row_idx in range(sheet.nrows):
-            for col_idx in range(sheet.ncols):
+        nrows = sheet.nrows
+        ncols = sheet.ncols
+
+        # 构建二维数组 data
+        data = [[None for _ in range(ncols)] for _ in range(nrows)]
+
+        for row_idx in range(nrows):
+            for col_idx in range(ncols):
                 cell = sheet.cell(row_idx, col_idx)
                 if cell.ctype != 0:  # 0 = empty
+                    cell_value = _convert_xlrd_value(cell)
                     cell_data.append({
                         'r': row_idx,
                         'c': col_idx,
-                        'v': _convert_xlrd_value(cell)
+                        'v': cell_value
                     })
+                    data[row_idx][col_idx] = cell_value
 
         sheets.append({
             'name': sheet.name,
@@ -131,9 +145,9 @@ def _xlrd_to_luckysheet(workbook, file_path):
             'status': 1 if sheet_index == 0 else 0,
             'celldata': cell_data,
             'config': {},
-            'data': [],
-            'row': sheet.nrows,
-            'column': sheet.ncols
+            'data': data,
+            'row': nrows,
+            'column': ncols
         })
 
     return sheets
