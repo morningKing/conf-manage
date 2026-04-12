@@ -636,6 +636,12 @@ router.afterEach(() => {
   padding-left: 50px !important;
 }
 
+/* 限制侧边栏菜单弹出层的z-index，避免覆盖对话框 */
+.el-menu--popup,
+.el-menu--popup-x {
+  z-index: 1000 !important;
+}
+
 /* 收起状态下的子菜单弹出层 */
 .el-menu--collapse .el-sub-menu__title span {
   height: 0;
