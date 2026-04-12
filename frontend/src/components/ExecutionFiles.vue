@@ -119,7 +119,8 @@
       top="2vh"
       destroy-on-close
       append-to-body
-      :z-index="2000"
+      :z-index="3000"
+      class="excel-editor-dialog"
     >
       <ExcelEditor
         v-if="excelVisible && currentExcelFile && executionId"

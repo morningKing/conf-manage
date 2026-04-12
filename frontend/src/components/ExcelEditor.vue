@@ -419,6 +419,6 @@ defineExpose({
 [data-univer-dropdown],
 [role="listbox"],
 [role="menu"] {
-  z-index: 2100 !important;
+  z-index: 3100 !important;
 }
 </style>
