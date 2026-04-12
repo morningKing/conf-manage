@@ -89,6 +89,7 @@ execution_spaces/
 workflow_execution_spaces/
 scripts/
 uploads/
+temp_upload/
 
 # Environment
 .env

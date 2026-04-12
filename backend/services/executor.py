@@ -167,8 +167,36 @@ def execute_script(execution_id, custom_cwd=None):
                     env[key] = str(value)
 
                 # 注入执行参数（执行参数优先级高于全局变量）
+                # 处理不同类型的参数
+                script_params = json.loads(script.parameters) if script.parameters else []
+
                 for key, value in params.items():
-                    env[key] = str(value)
+                    # 找到参数定义，获取type
+                    param_def = next((p for p in script_params if p['key'] == key), None)
+                    param_type = param_def.get('type', 'text') if param_def else 'text'
+
+                    # 根据类型处理参数值
+                    if param_type == 'file':
+                        # 文件类型 - 值为文件路径，直接传入
+                        env[key] = str(value)
+                    elif param_type in ['multiselect', 'checkbox']:
+                        # 多选类型 - 值为数组，转为逗号分隔字符串
+                        if isinstance(value, list):
+                            env[key] = ','.join(str(v) for v in value)
+                        else:
+                            env[key] = str(value)
+                    elif param_type == 'switch':
+                        # 开关类型 - 值为布尔，转为true/false字符串
+                        env[key] = 'true' if value else 'false'
+                    elif param_type == 'number':
+                        # 数字类型 - 转为字符串
+                        env[key] = str(value)
+                    elif param_type == 'date':
+                        # 日期类型 - 确保转为字符串格式
+                        env[key] = str(value) if value else ''
+                    else:
+                        # 其他类型 - 直接转为字符串
+                        env[key] = str(value) if value else ''
 
                 # 添加文件路径环境变量（使用相对路径）
                 if execution_files:
@@ -195,8 +223,36 @@ def execute_script(execution_id, custom_cwd=None):
                     env[key] = str(value)
 
                 # 注入执行参数（执行参数优先级高于全局变量）
+                # 处理不同类型的参数
+                script_params = json.loads(script.parameters) if script.parameters else []
+
                 for key, value in params.items():
-                    env[key] = str(value)
+                    # 找到参数定义，获取type
+                    param_def = next((p for p in script_params if p['key'] == key), None)
+                    param_type = param_def.get('type', 'text') if param_def else 'text'
+
+                    # 根据类型处理参数值
+                    if param_type == 'file':
+                        # 文件类型 - 值为文件路径，直接传入
+                        env[key] = str(value)
+                    elif param_type in ['multiselect', 'checkbox']:
+                        # 多选类型 - 值为数组，转为逗号分隔字符串
+                        if isinstance(value, list):
+                            env[key] = ','.join(str(v) for v in value)
+                        else:
+                            env[key] = str(value)
+                    elif param_type == 'switch':
+                        # 开关类型 - 值为布尔，转为true/false字符串
+                        env[key] = 'true' if value else 'false'
+                    elif param_type == 'number':
+                        # 数字类型 - 转为字符串
+                        env[key] = str(value)
+                    elif param_type == 'date':
+                        # 日期类型 - 确保转为字符串格式
+                        env[key] = str(value) if value else ''
+                    else:
+                        # 其他类型 - 直接转为字符串
+                        env[key] = str(value) if value else ''
 
                 # 添加文件路径环境变量（使用相对路径）
                 if execution_files:

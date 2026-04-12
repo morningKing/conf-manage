@@ -3,16 +3,19 @@
     <el-empty v-if="!params || params.length === 0" description="此脚本无需参数" :image-size="60" />
 
     <div v-else class="params-form">
-      <el-form label-width="120px">
+      <el-form label-width="140px">
         <el-form-item
           v-for="(param, index) in params"
           :key="index"
-          :label="param.key"
+          :label="param.description || param.key"
           :required="param.required"
         >
+          <!-- 文本输入 -->
           <el-input
+            v-if="param.type === 'text' || !param.type"
             v-model="paramValues[param.key]"
-            :placeholder="param.description || '请输入参数值'"
+            :placeholder="`请输入${param.description || param.key}`"
+            clearable
             @input="emitChange"
           >
             <template #append v-if="param.default_value">
@@ -23,8 +26,128 @@
               </el-tooltip>
             </template>
           </el-input>
-          <div v-if="param.description" class="param-description">
-            <el-text type="info" size="small">{{ param.description }}</el-text>
+
+          <!-- 多行文本 -->
+          <el-input
+            v-else-if="param.type === 'textarea'"
+            v-model="paramValues[param.key]"
+            type="textarea"
+            :rows="3"
+            :placeholder="`请输入${param.description || param.key}`"
+            @input="emitChange"
+          />
+
+          <!-- 数字输入 -->
+          <el-input-number
+            v-else-if="param.type === 'number'"
+            v-model="paramValues[param.key]"
+            :min="param.validation?.min_value"
+            :max="param.validation?.max_value"
+            @change="emitChange"
+          />
+
+          <!-- 密码输入 -->
+          <el-input
+            v-else-if="param.type === 'password'"
+            v-model="paramValues[param.key]"
+            type="password"
+            show-password
+            :placeholder="`请输入${param.description || param.key}`"
+            @input="emitChange"
+          />
+
+          <!-- 单选下拉 -->
+          <el-select
+            v-else-if="param.type === 'select'"
+            v-model="paramValues[param.key]"
+            :placeholder="`请选择${param.description || param.key}`"
+            clearable
+            @change="emitChange"
+          >
+            <el-option
+              v-for="option in param.options"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+
+          <!-- 多选下拉 -->
+          <el-select
+            v-else-if="param.type === 'multiselect'"
+            v-model="paramValues[param.key]"
+            multiple
+            :placeholder="`请选择${param.description || param.key}`"
+            clearable
+            @change="emitChange"
+          >
+            <el-option
+              v-for="option in param.options"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+
+          <!-- 单选按钮组 -->
+          <el-radio-group
+            v-else-if="param.type === 'radio'"
+            v-model="paramValues[param.key]"
+            @change="emitChange"
+          >
+            <el-radio
+              v-for="option in param.options"
+              :key="option.value"
+              :label="option.value"
+            >
+              {{ option.label }}
+            </el-radio>
+          </el-radio-group>
+
+          <!-- 复选框组 -->
+          <el-checkbox-group
+            v-else-if="param.type === 'checkbox'"
+            v-model="paramValues[param.key]"
+            @change="emitChange"
+          >
+            <el-checkbox
+              v-for="option in param.options"
+              :key="option.value"
+              :label="option.value"
+            >
+              {{ option.label }}
+            </el-checkbox>
+          </el-checkbox-group>
+
+          <!-- 文件上传 -->
+          <FileUpload
+            v-else-if="param.type === 'file'"
+            v-model="paramValues[param.key]"
+            :max-size="param.validation?.max_size_mb ? param.validation.max_size_mb * 1024 * 1024 : null"
+            :allowed-extensions="param.validation?.allowed_extensions"
+            mode="single"
+            @update:modelValue="emitChange"
+          />
+
+          <!-- 日期选择 -->
+          <el-date-picker
+            v-else-if="param.type === 'date'"
+            v-model="paramValues[param.key]"
+            type="date"
+            :placeholder="`请选择${param.description || param.key}`"
+            @change="emitChange"
+          />
+
+          <!-- 开关 -->
+          <el-switch
+            v-else-if="param.type === 'switch'"
+            v-model="paramValues[param.key]"
+            @change="emitChange"
+          />
+
+          <!-- 参数说明 -->
+          <div v-if="param.description && param.type !== 'text' && param.type !== 'textarea'" style="color: #909399; font-size: 12px; margin-top: 5px">
+            {{ param.description }}
           </div>
         </el-form-item>
       </el-form>
@@ -45,6 +168,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
+import FileUpload from './FileUpload.vue'
 
 const props = defineProps({
   // 参数定义（JSON字符串或数组）
@@ -75,15 +199,27 @@ const initParams = () => {
       params.value = props.parameters || []
     }
 
-    // 初始化参数值
-    // 优先级：default_value > 空字符串
-    // 注意：不使用之前记录的参数值，确保每次初始化时都是干净的状态
+    // 初始化参数值（根据类型）
     const values = {}
     params.value.forEach(param => {
-      if (param.default_value) {
-        values[param.key] = param.default_value
+      // 根据类型初始化default_value
+      if (param.type === 'multiselect' || param.type === 'checkbox') {
+        // 数组类型
+        values[param.key] = Array.isArray(param.default_value)
+          ? [...param.default_value]
+          : []
+      } else if (param.type === 'number') {
+        // 数字类型
+        values[param.key] = Number(param.default_value) || 0
+      } else if (param.type === 'switch') {
+        // 布尔类型
+        values[param.key] = Boolean(param.default_value)
+      } else if (param.type === 'file') {
+        // 文件类型 - 存储上传后的文件路径
+        values[param.key] = param.default_value || ''
       } else {
-        values[param.key] = ''
+        // 文本类型（包括text, textarea, password, select, radio, date）
+        values[param.key] = param.default_value || ''
       }
     })
     paramValues.value = values
@@ -115,6 +251,11 @@ watch(() => props.parameters, () => {
 onMounted(() => {
   initParams()
 })
+
+// 暴露paramValues供父组件获取
+defineExpose({
+  paramValues
+})
 </script>
 
 <style scoped>
@@ -126,11 +267,6 @@ onMounted(() => {
   background-color: #f5f7fa;
   padding: 15px;
   border-radius: 4px;
-}
-
-.param-description {
-  margin-top: 5px;
-  padding-left: 2px;
 }
 
 code {

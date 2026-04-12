@@ -20,8 +20,86 @@ def execute_script_api(script_id):
 
         # 获取其他参数（如果有的话）
         params = {}
+        params_values = {}
+
         if request.form.get('params'):
-            params = json.loads(request.form.get('params'))
+            try:
+                params_values = json.loads(request.form.get('params'))
+            except json.JSONDecodeError:
+                return jsonify({'code': 1, 'message': '参数格式错误'}), 400
+
+        # 验证参数值（根据脚本参数定义）
+        if script.parameters:
+            try:
+                script_params = json.loads(script.parameters)
+
+                for param_def in script_params:
+                    param_key = param_def.get('key')
+                    param_type = param_def.get('type', 'text')
+                    param_required = param_def.get('required', False)
+                    param_value = params_values.get(param_key)
+
+                    # 校验必填参数
+                    if param_required and not param_value:
+                        return jsonify({'code': 1, 'message': f'参数 {param_key} 为必填项'}), 400
+
+                    # 校验文件类型参数（检查文件路径是否存在）
+                    if param_type == 'file' and param_value:
+                        if not os.path.exists(param_value):
+                            return jsonify({'code': 1, 'message': f'参数 {param_key} 的文件不存在'}), 400
+
+                    # 校验数字范围
+                    if param_type == 'number' and param_value:
+                        validation = param_def.get('validation', {})
+                        min_value = validation.get('min_value')
+                        max_value = validation.get('max_value')
+
+                        try:
+                            num_value = float(param_value)
+                            if min_value and num_value < min_value:
+                                return jsonify({'code': 1, 'message': f'参数 {param_key} 值 {num_value} 小于最小值 {min_value}'}), 400
+                            if max_value and num_value > max_value:
+                                return jsonify({'code': 1, 'message': f'参数 {param_key} 值 {num_value} 大于最大值 {max_value}'}), 400
+                        except (ValueError, TypeError):
+                            return jsonify({'code': 1, 'message': f'参数 {param_key} 必须为数字'}), 400
+
+                    # 校验文本长度
+                    if param_type in ['text', 'textarea', 'password'] and param_value:
+                        validation = param_def.get('validation', {})
+                        min_length = validation.get('min_length')
+                        max_length = validation.get('max_length')
+
+                        str_value = str(param_value)
+                        if min_length and len(str_value) < min_length:
+                            return jsonify({'code': 1, 'message': f'参数 {param_key} 长度小于最小长度 {min_length}'}), 400
+                        if max_length and len(str_value) > max_length:
+                            return jsonify({'code': 1, 'message': f'参数 {param_key} 长度大于最大长度 {max_length}'}), 400
+
+                    # 校验选择类型参数（检查值是否在options中）
+                    if param_type in ['select', 'multiselect', 'radio', 'checkbox'] and param_value:
+                        options = param_def.get('options', [])
+                        valid_values = [opt['value'] for opt in options]
+
+                        if param_type in ['select', 'radio']:
+                            # 单选类型
+                            if param_value not in valid_values:
+                                return jsonify({'code': 1, 'message': f'参数 {param_key} 的值不在有效选项中'}), 400
+                        else:
+                            # 多选类型
+                            if not isinstance(param_value, list):
+                                return jsonify({'code': 1, 'message': f'参数 {param_key} 必须为数组类型'}), 400
+                            for v in param_value:
+                                if v not in valid_values:
+                                    return jsonify({'code': 1, 'message': f'参数 {param_key} 的值 {v} 不在有效选项中'}), 400
+
+                    # 使用校验后的值
+                    params[param_key] = param_value if param_value else param_def.get('default_value', '')
+
+            except json.JSONDecodeError:
+                return jsonify({'code': 1, 'message': '脚本参数定义格式错误'}), 400
+        else:
+            # 如果脚本没有参数定义，直接使用传入的参数值
+            params = params_values
 
         # 获取执行环境ID（如果指定）
         environment_id = request.form.get('environment_id', type=int)
