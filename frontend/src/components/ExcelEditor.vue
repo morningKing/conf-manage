@@ -222,29 +222,42 @@ const convertToUniverFormat = (sheetsData) => {
 const convertFromUniverFormat = () => {
   if (!workbook) return []
 
-  const sheets = workbook.getSheets()
   const result = []
 
-  sheets.forEach((sheet, index) => {
+  // 获取工作簿数据
+  const workbookSnapshot = workbook.getSnapshot()
+
+  if (!workbookSnapshot || !workbookSnapshot.sheets) {
+    console.error('无法获取工作簿数据')
+    return []
+  }
+
+  // 遍历所有sheet
+  workbookSnapshot.sheetOrder.forEach((sheetId, index) => {
+    const sheetSnapshot = workbookSnapshot.sheets[sheetId]
+
+    if (!sheetSnapshot) return
+
     const sheetData = {
-      name: sheet.getName(),
+      name: sheetSnapshot.name || `Sheet${index + 1}`,
       index: index,
       order: index,
       status: index === 0 ? 1 : 0,
-      row: sheet.getRowCount(),
-      column: sheet.getColumnCount(),
+      row: sheetSnapshot.rowCount || 100,
+      column: sheetSnapshot.columnCount || 20,
       celldata: [],
       data: []
     }
 
-    const cellData = sheet.getCellData()
+    // 从snapshot中提取单元格数据
+    const cellDataMap = sheetSnapshot.cellData || {}
     const data = []
     const celldata = []
 
     for (let r = 0; r < sheetData.row; r++) {
       const rowData = []
       for (let c = 0; c < sheetData.column; c++) {
-        const cell = cellData?.[r]?.[c]
+        const cell = cellDataMap?.[r]?.[c]
         if (cell && cell.v !== undefined && cell.v !== null) {
           const cellValue = {
             r: r,
