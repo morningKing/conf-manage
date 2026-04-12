@@ -19,6 +19,7 @@
           :text-color="isDark ? '#b3b3b3' : '#bfcbd9'"
           :active-text-color="isDark ? '#409EFF' : '#409EFF'"
           :unique-opened="false"
+          :popper-append-to-body="false"
         >
           <!-- 脚本中心 -->
           <el-sub-menu index="scripts-center">
@@ -619,6 +620,8 @@ router.afterEach(() => {
 .sidebar {
   box-shadow: 2px 0 6px rgba(0, 21, 41, 0.08);
   transition: width 0.3s, background-color 0.3s;
+  /* 限制侧边栏内所有弹出层的z-index */
+  --el-index-popper: 1000 !important;
 }
 
 .sidebar-dark {
@@ -636,9 +639,12 @@ router.afterEach(() => {
   padding-left: 50px !important;
 }
 
-/* 限制侧边栏菜单弹出层的z-index，避免覆盖对话框 */
+/* 强制限制侧边栏菜单弹出层的z-index */
+.el-menu .el-popper,
+.el-menu .el-sub-menu__popper,
 .el-menu--popup,
-.el-menu--popup-x {
+.el-menu--popup-x,
+.el-menu [role="menu"] {
   z-index: 1000 !important;
 }
 
@@ -907,6 +913,13 @@ router.afterEach(() => {
   font-size: 18px;
   border-bottom: 2px solid #409EFF;
   padding-bottom: 8px;
+}
+
+/* 全局强制限制Element Plus菜单弹出层的z-index（优先级最高） */
+.el-popper.el-sub-menu__popper,
+.el-menu-popper,
+div[class*="el-menu"][class*="popper"] {
+  z-index: 1000 !important;
 }
 
 .guide-content h4 {
