@@ -9,7 +9,8 @@ from .script import Script, ScriptVersion
 from .execution import Execution
 from .schedule import Schedule
 from .environment import Environment
-from .category import Category, Tag, script_tags
+from .folder import Folder
+from .category import Tag, script_tags
 from .workflow import Workflow, WorkflowNode, WorkflowEdge, WorkflowExecution, WorkflowNodeExecution
 from .workflow_template import WorkflowTemplate
 from .global_variable import GlobalVariable
@@ -19,7 +20,7 @@ from .selection_session import SelectionSession
 
 __all__ = [
     'db', 'Script', 'ScriptVersion', 'Execution', 'Schedule', 'Environment',
-    'Category', 'Tag', 'script_tags', 'Workflow', 'WorkflowNode', 'WorkflowEdge',
+    'Folder', 'Tag', 'script_tags', 'Workflow', 'WorkflowNode', 'WorkflowEdge',
     'WorkflowExecution', 'WorkflowNodeExecution', 'WorkflowTemplate', 'GlobalVariable',
     'AIConfig', 'Webhook', 'WebhookLog', 'SelectionSession'
 ]
