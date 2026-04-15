@@ -712,6 +712,16 @@ const handleReExecute = async (row) => {
     if (res.code === 0) {
       ElMessage.success(`已创建新执行 #${res.data.new_execution_id}`)
       loadExecutions()
+      // 脚本执行需要时间，轮询刷新直到完成
+      const pollId = setInterval(async () => {
+        await loadExecutions()
+        const newExec = executions.value.find(e => e.id === res.data.new_execution_id)
+        if (!newExec || newExec.status === 'success' || newExec.status === 'failed') {
+          clearInterval(pollId)
+        }
+      }, 2000)
+      // 最多轮询5分钟
+      setTimeout(() => clearInterval(pollId), 300000)
     }
   } catch (error) {
     if (error !== 'cancel') {

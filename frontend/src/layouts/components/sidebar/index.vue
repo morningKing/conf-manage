@@ -91,12 +91,6 @@ const menuItems = [
     color: '#607D8B',
     children: [
       {
-        path: '/categories',
-        icon: 'Grid',
-        title: '分类管理',
-        color: '#409EFF'
-      },
-      {
         path: '/tags',
         icon: 'PriceTag',
         title: '标签管理',

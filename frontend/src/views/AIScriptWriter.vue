@@ -175,13 +175,13 @@
         <el-form-item label="脚本描述" prop="description">
           <el-input v-model="saveForm.description" type="textarea" :rows="3" />
         </el-form-item>
-        <el-form-item label="分类" prop="category_id">
-          <el-select v-model="saveForm.category_id" placeholder="请选择分类">
+        <el-form-item label="文件夹" prop="folder_id">
+          <el-select v-model="saveForm.folder_id" placeholder="请选择文件夹" clearable>
             <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
+              v-for="folder in folders"
+              :key="folder.id"
+              :label="folder.name"
+              :value="folder.id"
             />
           </el-select>
         </el-form-item>
@@ -221,12 +221,12 @@ const saveFormRef = ref(null)
 const saveForm = ref({
   name: '',
   description: '',
-  category_id: null
+  folder_id: null
 })
 const saveRules = {
   name: [{ required: true, message: '请输入脚本名称', trigger: 'blur' }]
 }
-const categories = ref([])
+const folders = ref([])
 
 // 生成脚本
 const generateScript = async () => {
@@ -439,7 +439,7 @@ const saveAsScript = () => {
   saveForm.value = {
     name: '',
     description: prompt.value,
-    category_id: null
+    folder_id: null
   }
   saveDialogVisible.value = true
 }
@@ -456,8 +456,8 @@ const confirmSave = async () => {
       type: 'python'  // 固定为 Python 类型
     }
 
-    if (saveForm.value.category_id) {
-      scriptData.category_id = saveForm.value.category_id
+    if (saveForm.value.folder_id) {
+      scriptData.folder_id = saveForm.value.folder_id
     }
 
     await request.post('/scripts', scriptData)
@@ -476,18 +476,28 @@ const confirmSave = async () => {
   }
 }
 
-// 加载分类
-const loadCategories = async () => {
+// 加载文件夹
+const loadFolders = async () => {
   try {
-    const response = await request.get('/categories')
-    categories.value = response
+    const response = await request.get('/folders/tree')
+    const flatList = []
+    const flatten = (items, prefix = '') => {
+      for (const item of items) {
+        flatList.push({ id: item.id, name: prefix + item.name })
+        if (item.children && item.children.length > 0) {
+          flatten(item.children, prefix + item.name + ' / ')
+        }
+      }
+    }
+    flatten(response.data || response)
+    folders.value = flatList
   } catch (error) {
-    console.error('加载分类失败:', error)
+    console.error('加载文件夹失败:', error)
   }
 }
 
 onMounted(() => {
-  loadCategories()
+  loadFolders()
 })
 </script>
 

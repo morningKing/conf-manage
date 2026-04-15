@@ -1014,24 +1014,30 @@ def re_execute_script(execution_id):
                 else:
                     shutil.copy2(src, dst)
 
+        # 在 commit 前提取返回值，避免 commit 后懒加载与新线程竞争会话
+        new_exec_id = new_execution.id
+        original_exec_id = execution.id
+        script_name = execution.script.name if execution.script else None
+
+        # 先提交，确保新线程能查到这条记录
+        db.session.commit()
+
         # 异步执行脚本
         app = current_app._get_current_object()
 
         def run_script_with_context():
             with app.app_context():
-                execute_script(new_execution.id)
+                execute_script(new_exec_id)
 
         thread = Thread(target=run_script_with_context)
         thread.start()
 
-        db.session.commit()
-
         return jsonify({
             'code': 0,
             'data': {
-                'new_execution_id': new_execution.id,
-                'original_execution_id': execution.id,
-                'script_name': execution.script.name if execution.script else None
+                'new_execution_id': new_exec_id,
+                'original_execution_id': original_exec_id,
+                'script_name': script_name
             },
             'message': '已创建新执行记录并启动执行'
         })

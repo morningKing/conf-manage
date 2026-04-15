@@ -16,7 +16,7 @@ def get_scripts():
     """获取脚本列表，支持过滤和搜索"""
     try:
         # 获取过滤参数
-        category_id = request.args.get('category_id', type=int)
+        folder_id = request.args.get('folder_id', type=str)
         tag_ids = request.args.get('tags', '')  # 逗号分隔的标签ID
         is_favorite = request.args.get('is_favorite', type=str)
         search = request.args.get('search', '').strip()
@@ -24,9 +24,12 @@ def get_scripts():
         # 构建查询
         query = Script.query
 
-        # 按分类过滤
-        if category_id:
-            query = query.filter(Script.category_id == category_id)
+        # 按文件夹过滤
+        if folder_id is not None:
+            if folder_id == 'null' or folder_id == '':
+                query = query.filter(Script.folder_id.is_(None))
+            else:
+                query = query.filter(Script.folder_id == int(folder_id))
 
         # 按收藏过滤
         if is_favorite and is_favorite.lower() == 'true':
@@ -98,7 +101,7 @@ def create_script():
             code=data['code'],
             dependencies=data.get('dependencies', ''),
             parameters=data.get('parameters', ''),
-            category_id=data.get('category_id'),
+            folder_id=data.get('folder_id'),
             is_favorite=data.get('is_favorite', False),
             version=1
         )
@@ -169,8 +172,8 @@ def update_script(script_id):
             script.dependencies = data['dependencies']
         if 'parameters' in data:
             script.parameters = data['parameters']
-        if 'category_id' in data:
-            script.category_id = data['category_id']
+        if 'folder_id' in data:
+            script.folder_id = data['folder_id']
         if 'is_favorite' in data:
             script.is_favorite = data['is_favorite']
         if 'environment_id' in data:
@@ -393,6 +396,33 @@ def clean_script_versions(script_id):
                 'deleted_count': len(versions_to_delete),
                 'kept_count': keep_latest
             }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/<int:script_id>/move', methods=['POST'])
+def move_script(script_id):
+    """移动脚本到指定文件夹"""
+    try:
+        script = Script.query.get_or_404(script_id)
+        data = request.get_json()
+        folder_id = data.get('folder_id')  # None means move to root
+
+        if folder_id is not None:
+            from models import Folder
+            folder = Folder.query.get(folder_id)
+            if not folder:
+                return jsonify({'code': 1, 'message': '目标文件夹不存在'}), 400
+
+        script.folder_id = folder_id
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'data': script.to_dict(),
+            'message': '脚本移动成功'
         })
     except Exception as e:
         db.session.rollback()

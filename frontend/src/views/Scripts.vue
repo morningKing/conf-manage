@@ -1,185 +1,254 @@
 <template>
-  <div class="scripts-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>脚本列表</span>
-          <div class="header-actions">
-            <el-button @click="guideVisible = true">
-              <el-icon><Document /></el-icon>
-              使用指南
-            </el-button>
-            <el-button type="primary" @click="handleCreate">
-              <el-icon><Plus /></el-icon>
-              新建脚本
-            </el-button>
-          </div>
+  <div class="file-manager">
+    <!-- 左侧文件夹树 -->
+    <div class="folder-tree-panel">
+      <div class="tree-header">
+        <span class="tree-title">文件夹</span>
+      </div>
+      <div class="tree-content">
+        <div
+          class="tree-item root-item"
+          :class="{ active: currentFolderId === null && !searchMode }"
+          @click="navigateToRoot"
+          @dragover.prevent="handleTreeDragOver($event, null)"
+          @dragleave="handleTreeDragLeave($event)"
+          @drop.prevent="handleTreeDrop($event, null)"
+        >
+          <el-icon><FolderOpened /></el-icon>
+          <span>全部脚本</span>
         </div>
-      </template>
-
-      <!-- 筛选和搜索区域 -->
-      <div class="filter-bar">
-        <el-input
-          v-model="searchText"
-          placeholder="搜索脚本名称或描述"
-          style="width: 300px;"
-          clearable
-          @input="handleSearch"
+        <el-tree
+          ref="folderTreeRef"
+          :data="folderTree"
+          node-key="id"
+          :props="{ label: 'name', children: 'children' }"
+          :expand-on-click-node="false"
+          :highlight-current="true"
+          default-expand-all
+          @node-click="handleTreeNodeClick"
+          @node-contextmenu="handleTreeContextMenu"
         >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
+          <template #default="{ node, data }">
+            <div
+              class="tree-node-content"
+              @dragover.prevent="handleTreeDragOver($event, data.id)"
+              @dragleave="handleTreeDragLeave($event)"
+              @drop.prevent="handleTreeDrop($event, data.id)"
+            >
+              <el-icon :style="{ color: data.color || '#E6A23C' }"><Folder /></el-icon>
+              <span class="tree-node-label">{{ data.name }}</span>
+              <span v-if="data.script_count" class="tree-node-count">{{ data.script_count }}</span>
+            </div>
           </template>
-        </el-input>
-
-        <el-select
-          v-model="filterCategory"
-          placeholder="选择分类"
-          clearable
-          style="width: 200px;"
-          @change="handleFilter"
-        >
-          <el-option label="全部分类" :value="null" />
-          <el-option
-            v-for="category in categories"
-            :key="category.id"
-            :label="category.name"
-            :value="category.id"
-          >
-            <span :style="{ color: category.color }">{{ category.name }}</span>
-          </el-option>
-        </el-select>
-
-        <el-select
-          v-model="filterTags"
-          placeholder="选择标签"
-          multiple
-          clearable
-          collapse-tags
-          collapse-tags-tooltip
-          style="width: 250px;"
-          @change="handleFilter"
-        >
-          <el-option
-            v-for="tag in tags"
-            :key="tag.id"
-            :label="tag.name"
-            :value="tag.id"
-          >
-            <el-tag :color="tag.color" size="small" effect="plain">{{ tag.name }}</el-tag>
-          </el-option>
-        </el-select>
-
-        <el-button
-          :type="filterFavorite ? 'warning' : ''"
-          @click="toggleFavorite"
-          style="margin-left: 10px;"
-        >
-          <el-icon><Star /></el-icon>
-          {{ filterFavorite ? '仅收藏' : '全部' }}
+        </el-tree>
+      </div>
+      <div class="tree-footer">
+        <el-button text @click="handleCreateRootFolder">
+          <el-icon><Plus /></el-icon>
+          新建文件夹
         </el-button>
       </div>
+    </div>
 
-      <el-table :data="scripts" stripe>
-        <el-table-column prop="name" label="脚本名称" width="200" />
-        <el-table-column prop="type" label="类型" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.type === 'python' ? 'success' : 'warning'">
-              {{ row.type }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="分类" width="120">
-          <template #default="{ row }">
-            <el-tag v-if="row.category" :color="row.category.color" effect="plain">
-              {{ row.category.name }}
-            </el-tag>
-            <span v-else style="color: #909399;">未分类</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="标签" width="200">
-          <template #default="{ row }">
-            <el-tag
-              v-for="tag in row.tags"
-              :key="tag.id"
-              :color="tag.color"
-              size="small"
-              style="margin-right: 5px;"
-              effect="plain"
-            >
-              {{ tag.name }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
-        <el-table-column prop="version" label="版本" width="80" />
-        <el-table-column prop="updated_at" label="更新时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.updated_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="620" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              :type="row.is_favorite ? 'warning' : ''"
-              size="small"
-              @click="handleToggleFavorite(row)"
-            >
-              <el-icon><Star /></el-icon>
-            </el-button>
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="success" @click="handleExecute(row)">执行</el-button>
-            <el-button size="small" type="info" @click="handleVersions(row)">版本</el-button>
-            <el-dropdown trigger="click" @command="(cmd) => cmd === 'versions' ? handleCleanHistory(row, 'versions') : handleCleanHistory(row, 'executions')">
-              <el-button size="small" type="warning">
-                清理
-                <el-icon class="el-icon--right"><arrow-down /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="versions">清理版本</el-dropdown-item>
-                  <el-dropdown-item command="executions">清理执行</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <!-- 右侧内容区 -->
+    <div class="content-panel">
+      <!-- 顶部工具栏 -->
+      <div class="content-header">
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item @click="navigateToRoot" class="breadcrumb-clickable">
+            全部脚本
+          </el-breadcrumb-item>
+          <el-breadcrumb-item
+            v-for="item in breadcrumbPath"
+            :key="item.id"
+            @click="navigateToFolder(item.id)"
+            class="breadcrumb-clickable"
+          >
+            {{ item.name }}
+          </el-breadcrumb-item>
+        </el-breadcrumb>
 
-    <!-- 创建/编辑对话框 -->
+        <div class="header-actions">
+          <el-input
+            v-model="searchText"
+            placeholder="搜索脚本"
+            style="width: 200px;"
+            clearable
+            @input="handleSearch"
+            @clear="handleSearchClear"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button @click="handleCreateFolder">
+            <el-icon><FolderAdd /></el-icon>
+            新建文件夹
+          </el-button>
+          <el-button type="primary" @click="handleCreateScript">
+            <el-icon><Plus /></el-icon>
+            新建脚本
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 内容网格 -->
+      <div class="content-grid" v-if="!searchMode">
+        <!-- 文件夹 -->
+        <div
+          v-for="folder in currentFolders"
+          :key="'folder-' + folder.id"
+          class="grid-item folder-item"
+          @dblclick="navigateToFolder(folder.id)"
+          @contextmenu.prevent="showFolderContextMenu($event, folder)"
+          @dragover.prevent="handleGridFolderDragOver($event, folder.id)"
+          @dragleave="handleGridFolderDragLeave($event)"
+          @drop.prevent="handleGridFolderDrop($event, folder.id)"
+        >
+          <div class="item-icon folder-icon" :style="{ color: folder.color || '#E6A23C' }">
+            <el-icon :size="40"><Folder /></el-icon>
+          </div>
+          <div class="item-name">{{ folder.name }}</div>
+        </div>
+
+        <!-- 脚本 -->
+        <div
+          v-for="script in currentScripts"
+          :key="'script-' + script.id"
+          class="grid-item script-item"
+          draggable="true"
+          @dragstart="handleDragStart($event, script)"
+          @dragend="handleDragEnd"
+          @contextmenu.prevent="showScriptContextMenu($event, script)"
+        >
+          <div class="item-icon script-icon" :class="script.type">
+            <el-icon :size="40"><Document /></el-icon>
+            <span class="type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
+          </div>
+          <div class="item-name">{{ script.name }}</div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-if="currentFolders.length === 0 && currentScripts.length === 0" class="empty-state">
+          <el-empty description="此文件夹为空">
+            <div class="empty-actions">
+              <el-button type="primary" @click="handleCreateScript">新建脚本</el-button>
+              <el-button @click="handleCreateFolder">新建文件夹</el-button>
+            </div>
+          </el-empty>
+        </div>
+      </div>
+
+      <!-- 搜索结果 -->
+      <div class="content-grid" v-else>
+        <div
+          v-for="script in searchResults"
+          :key="'search-' + script.id"
+          class="grid-item script-item"
+          @contextmenu.prevent="showScriptContextMenu($event, script)"
+        >
+          <div class="item-icon script-icon" :class="script.type">
+            <el-icon :size="40"><Document /></el-icon>
+            <span class="type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
+          </div>
+          <div class="item-name">{{ script.name }}</div>
+          <div class="item-path" v-if="script.folder">{{ script.folder.name }}</div>
+        </div>
+        <div v-if="searchResults.length === 0" class="empty-state">
+          <el-empty description="没有找到匹配的脚本" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+    >
+      <!-- 脚本右键菜单 -->
+      <template v-if="contextMenu.type === 'script'">
+        <div class="context-menu-item" @click="handleExecute(contextMenu.target)">
+          <el-icon><VideoPlay /></el-icon>
+          <span>执行</span>
+        </div>
+        <div class="context-menu-item" @click="handleEdit(contextMenu.target)">
+          <el-icon><Edit /></el-icon>
+          <span>编辑</span>
+        </div>
+        <div class="context-menu-item" @click="handleView(contextMenu.target)">
+          <el-icon><View /></el-icon>
+          <span>查看</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" @click="handleDeleteScript(contextMenu.target)">
+          <el-icon><Delete /></el-icon>
+          <span>删除</span>
+        </div>
+      </template>
+      <!-- 文件夹右键菜单 -->
+      <template v-if="contextMenu.type === 'folder'">
+        <div class="context-menu-item" @click="handleCreateSubFolder(contextMenu.target)">
+          <el-icon><FolderAdd /></el-icon>
+          <span>新建子文件夹</span>
+        </div>
+        <div class="context-menu-item" @click="handleRenameFolder(contextMenu.target)">
+          <el-icon><EditPen /></el-icon>
+          <span>重命名</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" @click="handleDeleteFolder(contextMenu.target)">
+          <el-icon><Delete /></el-icon>
+          <span>删除</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 创建/编辑文件夹对话框 -->
     <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
+      v-model="folderDialogVisible"
+      :title="folderDialogTitle"
+      width="500px"
+    >
+      <el-form :model="folderForm" label-width="100px">
+        <el-form-item label="文件夹名称">
+          <el-input v-model="folderForm.name" placeholder="请输入文件夹名称" />
+        </el-form-item>
+        <el-form-item label="颜色">
+          <ColorPicker
+            v-model="folderForm.color"
+            :preview-text="folderForm.name || '文件夹'"
+            :show-alpha="false"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="folderDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveFolder">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 创建/编辑脚本对话框 -->
+    <el-dialog
+      v-model="scriptDialogVisible"
+      :title="scriptDialogTitle"
       width="80%"
       :close-on-click-modal="false"
       class="script-dialog"
     >
-      <el-form :model="form" label-width="100px" class="script-form">
+      <el-form :model="scriptForm" label-width="100px" class="script-form">
         <el-form-item label="脚本名称">
-          <el-input v-model="form.name" placeholder="请输入脚本名称" />
+          <el-input v-model="scriptForm.name" placeholder="请输入脚本名称" />
         </el-form-item>
         <el-form-item label="脚本类型">
-          <el-select v-model="form.type" placeholder="请选择脚本类型" @change="handleTypeChange">
+          <el-select v-model="scriptForm.type" placeholder="请选择脚本类型" @change="handleTypeChange">
             <el-option label="Python" value="python" />
             <el-option label="JavaScript" value="javascript" />
           </el-select>
         </el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="form.category_id" placeholder="选择分类（可选）" clearable>
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            >
-              <span :style="{ color: category.color }">{{ category.name }}</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
         <el-form-item label="标签">
           <el-select
-            v-model="form.tag_ids"
+            v-model="scriptForm.tag_ids"
             placeholder="选择标签（可选）"
             multiple
             clearable
@@ -197,50 +266,71 @@
           </el-select>
         </el-form-item>
         <el-form-item label="收藏">
-          <el-switch v-model="form.is_favorite" />
+          <el-switch v-model="scriptForm.is_favorite" />
         </el-form-item>
         <el-form-item label="执行环境">
-          <el-select v-model="form.environment_id" placeholder="默认环境（可选）" clearable>
+          <el-select v-model="scriptForm.environment_id" placeholder="默认环境（可选）" clearable>
             <el-option
               v-for="env in filteredEnvironments"
               :key="env.id"
               :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
               :value="env.id"
-            >
-              <span>{{ env.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px;">{{ env.version }}</span>
-            </el-option>
+            />
           </el-select>
-          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-            {{ form.environment_id ? '将使用指定环境的解释器执行' : '将使用系统默认解释器或环境类型的默认环境' }}
-          </div>
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" rows="2" />
+          <el-input v-model="scriptForm.description" type="textarea" rows="2" />
         </el-form-item>
         <el-form-item label="依赖配置">
-          <el-input
-            v-model="form.dependencies"
-            type="textarea"
-            rows="2"
-            placeholder="多个依赖用逗号分隔,例如: requests,pandas"
-          />
+          <el-input v-model="scriptForm.dependencies" type="textarea" rows="2" placeholder="多个依赖用逗号分隔" />
         </el-form-item>
         <el-form-item label="参数配置">
-          <ParameterConfig v-model="form.parameters" />
+          <ParameterConfig v-model="scriptForm.parameters" />
         </el-form-item>
         <el-form-item label="脚本代码">
           <CodeEditor
-            v-model="form.code"
-            :language="form.type"
+            v-model="scriptForm.code"
+            :language="scriptForm.type"
             height="400px"
             theme="dark"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button @click="scriptDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveScript">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 查看脚本对话框 -->
+    <el-dialog
+      v-model="viewDialogVisible"
+      :title="`查看脚本: ${viewScript?.name || ''}`"
+      width="80%"
+    >
+      <el-descriptions :column="2" border v-if="viewScript">
+        <el-descriptions-item label="名称">{{ viewScript.name }}</el-descriptions-item>
+        <el-descriptions-item label="类型">
+          <el-tag :type="viewScript.type === 'python' ? 'success' : 'warning'">{{ viewScript.type }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="版本">v{{ viewScript.version }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatTime(viewScript.updated_at) }}</el-descriptions-item>
+        <el-descriptions-item label="描述" :span="2">{{ viewScript.description || '无' }}</el-descriptions-item>
+      </el-descriptions>
+      <div style="margin-top: 16px;">
+        <CodeEditor
+          v-if="viewScript"
+          :model-value="viewScript.code"
+          :language="viewScript.type"
+          height="500px"
+          theme="dark"
+          :readonly="true"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="viewDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="handleEdit(viewScript); viewDialogVisible = false">编辑</el-button>
+        <el-button type="success" @click="handleExecute(viewScript); viewDialogVisible = false">执行</el-button>
       </template>
     </el-dialog>
 
@@ -250,7 +340,6 @@
         <el-form-item label="脚本名称">
           <el-input :value="currentScript?.name" disabled />
         </el-form-item>
-
         <el-form-item label="脚本参数" v-if="currentScript?.parameters">
           <ExecutionParams
             :key="`exec-params-${currentScript.id}-${executeVisible}`"
@@ -258,7 +347,6 @@
             v-model="executeParamsObj"
           />
         </el-form-item>
-
         <el-form-item label="执行环境">
           <el-select v-model="executeForm.environment_id" placeholder="默认环境（可选）" clearable style="width: 100%;">
             <el-option
@@ -266,21 +354,9 @@
               :key="env.id"
               :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
               :value="env.id"
-            >
-              <span>{{ env.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px;">{{ env.version }}</span>
-            </el-option>
+            />
           </el-select>
-          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-            {{ executeForm.environment_id
-              ? '将使用指定环境的解释器执行'
-              : currentScript?.environment_id
-                ? '将使用脚本预设的环境'
-                : '将使用系统默认解释器'
-            }}
-          </div>
         </el-form-item>
-
         <el-form-item label="上传文件">
           <FileUpload v-model="uploadFiles" />
         </el-form-item>
@@ -300,627 +376,151 @@
       @close="closeLogStream"
     >
       <div class="log-header">
-        <el-tag :type="getStatusType(logStatus)" size="large">
-          {{ getStatusText(logStatus) }}
-        </el-tag>
+        <el-tag :type="getStatusType(logStatus)" size="large">{{ getStatusText(logStatus) }}</el-tag>
         <div class="log-actions">
-          <el-button
-            v-if="logStatus === 'running'"
-            type="danger"
-            size="small"
-            @click="handleCancelExecution"
-          >
-            中断执行
-          </el-button>
-          <el-button
-            v-if="logStatus === 'running'"
-            type="info"
-            size="small"
-            @click="closeLogStream"
-          >
-            停止监听
-          </el-button>
+          <el-button v-if="logStatus === 'running'" type="danger" size="small" @click="handleCancelExecution">中断执行</el-button>
+          <el-button v-if="logStatus === 'running'" type="info" size="small" @click="closeLogStream">停止监听</el-button>
         </div>
       </div>
-
       <el-divider />
-
-      <!-- 进度显示 -->
       <div class="progress-section">
-        <ExecutionProgress
-          :progress="logProgress"
-          :stage="logStage"
-          :status="logStatus"
-          :show-detail="true"
-        />
+        <ExecutionProgress :progress="logProgress" :stage="logStage" :status="logStatus" :show-detail="true" />
       </div>
-
       <el-divider />
-
       <div class="log-container" ref="logContainer">
         <pre v-if="realTimeLogs">{{ realTimeLogs }}</pre>
         <div v-else class="log-empty">等待日志输出...</div>
       </div>
-
       <div v-if="logError" class="error-container">
         <el-divider>错误信息</el-divider>
         <pre>{{ logError }}</pre>
       </div>
-
-      <!-- 执行空间文件列表 -->
       <div v-if="logStatus === 'success' || logStatus === 'failed'" class="files-section">
         <el-divider>执行空间文件</el-divider>
         <div v-if="filesLoading" style="text-align: center; padding: 20px;">
           <el-icon class="is-loading"><Loading /></el-icon>
           <span style="margin-left: 8px;">加载文件列表中...</span>
         </div>
-        <div v-else-if="executionFiles.length === 0" class="files-empty">
-          执行空间中没有文件
-        </div>
+        <div v-else-if="executionFiles.length === 0" class="files-empty">执行空间中没有文件</div>
         <el-table v-else :data="executionFiles" stripe max-height="300">
           <el-table-column prop="name" label="文件名" min-width="200" />
           <el-table-column prop="path" label="路径" min-width="200" show-overflow-tooltip />
           <el-table-column label="大小" width="120">
-            <template #default="{ row }">
-              {{ formatFileSize(row.size) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="modified_time" label="修改时间" width="180">
-            <template #default="{ row }">
-              {{ new Date(row.modified_time).toLocaleString('zh-CN') }}
-            </template>
+            <template #default="{ row }">{{ formatFileSize(row.size) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" @click="handleFilePreview(row)" v-if="row.is_text">
-                预览
-              </el-button>
-              <el-button size="small" type="primary" @click="handleFileDownload(row)">
-                下载
-              </el-button>
+              <el-button size="small" @click="handleFilePreview(row)" v-if="row.is_text">预览</el-button>
+              <el-button size="small" type="primary" @click="handleFileDownload(row)">下载</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
-
       <template #footer>
         <el-button @click="closeLogStream">关闭</el-button>
       </template>
     </el-dialog>
 
     <!-- 文件预览对话框 -->
-    <el-dialog
-      v-model="filePreviewVisible"
-      :title="`预览: ${selectedFile?.name || ''}`"
-      width="80%"
-    >
+    <el-dialog v-model="filePreviewVisible" :title="`预览: ${selectedFile?.name || ''}`" width="80%">
       <div class="file-preview-container">
         <pre v-if="filePreviewType === 'text'">{{ filePreviewContent }}</pre>
-        <div v-else style="color: #909399; text-align: center; padding: 40px;">
-          {{ filePreviewContent }}
-        </div>
+        <div v-else style="color: #909399; text-align: center; padding: 40px;">{{ filePreviewContent }}</div>
       </div>
       <template #footer>
         <el-button @click="filePreviewVisible = false">关闭</el-button>
         <el-button type="primary" @click="handleFileDownload(selectedFile)">下载</el-button>
       </template>
     </el-dialog>
-
-    <!-- 版本历史对话框 -->
-    <el-dialog v-model="versionVisible" title="版本历史" width="80%">
-      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-        <el-alert
-          v-if="compareVersions.length > 0"
-          type="info"
-          :closable="false"
-          style="flex: 1; margin-right: 16px;"
-        >
-          已选择 {{ compareVersions.length }} 个版本用于对比
-          <el-button
-            v-if="compareVersions.length === 2"
-            type="primary"
-            size="small"
-            @click="showVersionDiff"
-            style="margin-left: 10px;"
-          >
-            开始对比
-          </el-button>
-          <el-button
-            size="small"
-            @click="compareVersions = []"
-            style="margin-left: 10px;"
-          >
-            清空选择
-          </el-button>
-        </el-alert>
-        <el-button type="warning" size="small" @click="handleCleanHistory(currentScript, 'versions')">
-          <el-icon><Delete /></el-icon>
-          清理版本历史
-        </el-button>
-      </div>
-
-      <el-table
-        :data="versions"
-        stripe
-        @selection-change="handleVersionSelection"
-      >
-        <el-table-column type="selection" width="55" :selectable="() => compareVersions.length < 2" />
-        <el-table-column prop="version" label="版本号" width="100" />
-        <el-table-column prop="description" label="描述" />
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200">
-          <template #default="{ row }">
-            <el-button size="small" @click="handleViewVersion(row)">查看</el-button>
-            <el-button
-              size="small"
-              type="warning"
-              @click="handleRollback(row)"
-              v-if="row.version !== currentScript?.version"
-            >
-              回滚
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <!-- 版本代码查看对话框 -->
-    <el-dialog
-      v-model="versionCodeVisible"
-      :title="`版本 ${currentVersion?.version} 代码`"
-      width="80%"
-    >
-      <CodeEditor
-        v-if="currentVersion"
-        :model-value="currentVersion.code"
-        :language="currentScript?.type || 'python'"
-        height="600px"
-        theme="dark"
-        :readonly="true"
-      />
-      <template #footer>
-        <el-button @click="versionCodeVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 版本对比对话框 -->
-    <el-dialog v-model="diffVisible" title="版本对比" width="95%" :close-on-click-modal="false">
-      <CodeDiff
-        v-if="diffVisible && compareVersions.length === 2"
-        :old-code="compareVersions[0].code"
-        :new-code="compareVersions[1].code"
-        :old-version="`v${compareVersions[0].version}`"
-        :new-version="`v${compareVersions[1].version}`"
-        :language="currentScript?.type || 'python'"
-        height="600px"
-        theme="dark"
-      />
-      <template #footer>
-        <el-button @click="diffVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 清理历史记录对话框 -->
-    <el-dialog
-      v-model="cleanHistoryVisible"
-      :title="cleanHistoryType === 'versions' ? '清理版本历史' : '清理执行历史'"
-      width="500px"
-    >
-      <el-form :model="cleanHistoryForm" label-width="120px">
-        <el-form-item label="保留最新数量">
-          <el-input-number
-            v-model="cleanHistoryForm.keep_latest"
-            :min="1"
-            :max="1000"
-            style="width: 100%"
-          />
-          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-            保留最新的 {{ cleanHistoryForm.keep_latest }} 条记录，删除其余记录
-          </div>
-        </el-form-item>
-
-        <el-form-item v-if="cleanHistoryType === 'executions'" label="执行状态">
-          <el-select v-model="cleanHistoryForm.status" placeholder="全部状态" clearable style="width: 100%">
-            <el-option label="全部状态" :value="null" />
-            <el-option label="成功" value="success" />
-            <el-option label="失败" value="failed" />
-            <el-option label="已取消" value="cancelled" />
-          </el-select>
-          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-            仅清理指定状态的执行记录
-          </div>
-        </el-form-item>
-
-        <el-form-item v-if="cleanHistoryType === 'executions'" label="清理天数">
-          <el-input-number
-            v-model="cleanHistoryForm.before_days"
-            :min="1"
-            :max="3650"
-            placeholder="可选"
-            style="width: 100%"
-          />
-          <div style="color: #909399; font-size: 12px; margin-top: 5px;">
-            清理 {{ cleanHistoryForm.before_days || '所有' }} 天前的记录
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="cleanHistoryVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCleanHistoryConfirm">确定清理</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 使用指南对话框 -->
-    <el-dialog v-model="guideVisible" title="📖 脚本编写使用指南" width="80%">
-      <el-tabs v-model="guideActiveTab" type="border-card">
-        <!-- Python 指南 -->
-        <el-tab-pane label="Python" name="python">
-          <div class="script-guide">
-            <h4>一、参数传递</h4>
-            <p class="guide-desc">所有参数通过环境变量传递，使用 <code>os.environ.get()</code> 获取</p>
-            <pre class="code-example">import os
-
-# 获取参数（带默认值）
-param1 = os.environ.get('PARAM_NAME', 'default_value')
-host = os.environ.get('HOST', 'localhost')
-port = int(os.environ.get('PORT', '8080'))</pre>
-
-            <h4>二、文件访问</h4>
-            <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
-            <pre class="code-example">import os
-import json
-
-# 获取上传的文件列表
-files_json = os.environ.get('FILES', '[]')
-files = json.loads(files_json)  # ['file1.txt', 'file2.csv']
-
-# 读取文件（使用文件名即可，无需路径）
-for filename in files:
-    with open(filename, 'r', encoding='utf-8') as f:
-        content = f.read()
-        print(f'读取文件: {filename}')
-
-# 写入新文件到执行空间
-with open('output.txt', 'w') as f:
-    f.write('处理结果...')</pre>
-
-            <h4>三、工作流中获取上一步输出</h4>
-            <p class="guide-desc">在工作流中，可以通过环境变量访问前置节点的执行结果</p>
-            <pre class="code-example">import os
-import json
-
-# 假设前置节点ID为 node_1
-# 获取节点执行状态
-node_1_status = os.environ.get('NODE_node_1_STATUS')
-
-# 获取节点输出（JSON格式）
-node_1_output = os.environ.get('NODE_node_1_OUTPUT', '{}')
-result = json.loads(node_1_output)
-
-# 使用前置节点的结果
-if node_1_status == 'success':
-    data = result.get('data')
-    print(f'上一步处理了 {data} 条记录')</pre>
-
-            <h4>四、完整示例</h4>
-            <p class="guide-desc">CSV文件处理脚本示例</p>
-            <pre class="code-example">#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-CSV数据处理脚本
-"""
-import os
-import json
-import sys
-import csv
-
-def main():
-    try:
-        # 1. 获取参数
-        output_file = os.environ.get('OUTPUT_FILE', 'result.csv')
-        delimiter = os.environ.get('DELIMITER', ',')
-
-        # 2. 获取上传的文件
-        files_json = os.environ.get('FILES', '[]')
-        files = json.loads(files_json)
-
-        if not files:
-            print('错误: 未上传文件', file=sys.stderr)
-            sys.exit(1)
-
-        # 3. 处理CSV文件
-        input_file = files[0]
-        print(f'开始处理文件: {input_file}')
-
-        rows = []
-        with open(input_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f, delimiter=delimiter)
-            for row in reader:
-                # 数据处理逻辑
-                rows.append(row)
-
-        print(f'共读取 {len(rows)} 行数据')
-
-        # 4. 输出结果
-        with open(output_file, 'w', encoding='utf-8') as f:
-            if rows:
-                writer = csv.DictWriter(f, fieldnames=rows[0].keys())
-                writer.writeheader()
-                writer.writerows(rows)
-
-        print(f'处理完成，结果保存到: {output_file}')
-
-    except Exception as e:
-        print(f'错误: {str(e)}', file=sys.stderr)
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()</pre>
-
-            <div class="guide-tips">
-              <h4>💡 重要提示</h4>
-              <ul>
-                <li>执行空间是<strong>独立的临时目录</strong>，每次执行都会创建新的空间</li>
-                <li>上传的文件和生成的文件都在<strong>执行空间</strong>中，执行完成后可在日志弹窗中查看和下载</li>
-                <li>参数名和工作流节点ID是<strong>大小写敏感</strong>的</li>
-                <li>工作流节点输出格式：<code>NODE_{节点ID}_{属性}</code>，属性包括 STATUS、OUTPUT 等</li>
-                <li>建议使用 <code>try-except</code> 进行<strong>错误处理</strong></li>
-              </ul>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <!-- JavaScript 指南 -->
-        <el-tab-pane label="JavaScript" name="javascript">
-          <div class="script-guide">
-            <h4>一、参数传递</h4>
-            <p class="guide-desc">所有参数通过环境变量传递，使用 <code>process.env</code> 获取</p>
-            <pre class="code-example">// 获取参数（带默认值）
-const param1 = process.env.PARAM_NAME || 'default_value';
-const host = process.env.HOST || 'localhost';
-const port = parseInt(process.env.PORT || '8080');</pre>
-
-            <h4>二、文件访问</h4>
-            <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
-            <pre class="code-example">const fs = require('fs');
-
-// 获取上传的文件列表
-const filesJson = process.env.FILES || '[]';
-const files = JSON.parse(filesJson);  // ['file1.txt', 'file2.csv']
-
-// 读取文件（使用文件名即可，无需路径）
-files.forEach(filename => {
-    const content = fs.readFileSync(filename, 'utf8');
-    console.log(`读取文件: ${filename}`);
-});
-
-// 写入新文件到执行空间
-fs.writeFileSync('output.txt', '处理结果...');</pre>
-
-            <h4>三、工作流中获取上一步输出</h4>
-            <p class="guide-desc">在工作流中，可以通过环境变量访问前置节点的执行结果</p>
-            <pre class="code-example">// 假设前置节点ID为 node_1
-// 获取节点执行状态
-const node1Status = process.env.NODE_node_1_STATUS;
-
-// 获取节点输出（JSON格式）
-const node1Output = process.env.NODE_node_1_OUTPUT || '{}';
-const result = JSON.parse(node1Output);
-
-// 使用前置节点的结果
-if (node1Status === 'success') {
-    const data = result.data;
-    console.log(`上一步处理了 ${data} 条记录`);
-}</pre>
-
-            <h4>四、完整示例</h4>
-            <p class="guide-desc">JSON文件处理脚本示例</p>
-            <pre class="code-example">#!/usr/bin/env node
-/**
- * JSON数据处理脚本
- */
-const fs = require('fs');
-
-function main() {
-    try {
-        // 1. 获取参数
-        const outputFile = process.env.OUTPUT_FILE || 'result.json';
-
-        // 2. 获取上传的文件
-        const filesJson = process.env.FILES || '[]';
-        const files = JSON.parse(filesJson);
-
-        if (files.length === 0) {
-            console.error('错误: 未上传文件');
-            process.exit(1);
-        }
-
-        // 3. 处理JSON文件
-        const inputFile = files[0];
-        console.log(`开始处理文件: ${inputFile}`);
-
-        const content = fs.readFileSync(inputFile, 'utf8');
-        const data = JSON.parse(content);
-
-        // 数据处理逻辑
-        console.log(`共读取 ${data.length} 条数据`);
-
-        // 4. 输出结果
-        fs.writeFileSync(outputFile, JSON.stringify(data, null, 2));
-        console.log(`处理完成，结果保存到: ${outputFile}`);
-
-    } catch (error) {
-        console.error(`错误: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-main();</pre>
-
-            <div class="guide-tips">
-              <h4>💡 重要提示</h4>
-              <ul>
-                <li>执行空间是<strong>独立的临时目录</strong>，每次执行都会创建新的空间</li>
-                <li>上传的文件和生成的文件都在<strong>执行空间</strong>中，执行完成后可在日志弹窗中查看和下载</li>
-                <li>参数名和工作流节点ID是<strong>大小写敏感</strong>的</li>
-                <li>工作流节点输出格式：<code>NODE_{节点ID}_{属性}</code>，属性包括 STATUS、OUTPUT 等</li>
-                <li>建议使用 <code>try-catch</code> 进行<strong>错误处理</strong></li>
-              </ul>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <!-- Bash 指南 -->
-        <el-tab-pane label="Bash" name="bash">
-          <div class="script-guide">
-            <h4>一、参数传递</h4>
-            <p class="guide-desc">所有参数通过环境变量传递</p>
-            <pre class="code-example">#!/bin/bash
-
-# 获取参数（带默认值）
-PARAM_NAME=${PARAM_NAME:-"default_value"}
-HOST=${HOST:-"localhost"}
-PORT=${PORT:-"8080"}</pre>
-
-            <h4>二、文件访问</h4>
-            <p class="guide-desc">上传的文件会保存在执行空间（当前目录），通过 FILES 环境变量获取文件列表</p>
-            <pre class="code-example">#!/bin/bash
-
-# 获取上传的文件列表（需要 jq 工具解析JSON）
-FILES_JSON=${FILES:-"[]"}
-
-# 如果有文件，遍历处理
-if [ "$FILES_JSON" != "[]" ]; then
-    echo "处理上传的文件..."
-    # 示例：读取第一个文件
-    # first_file=$(echo $FILES_JSON | jq -r '.[0]')
-    # cat "$first_file"
-fi</pre>
-
-            <h4>三、完整示例</h4>
-            <p class="guide-desc">文本文件处理脚本示例</p>
-            <pre class="code-example">#!/bin/bash
-set -e
-
-# 获取参数
-OUTPUT_FILE=${OUTPUT_FILE:-"output.txt"}
-
-# 获取上传的文件
-FILES_JSON=${FILES:-"[]"}
-
-echo "开始处理..."
-
-# 创建输出文件
-touch "$OUTPUT_FILE"
-
-# 处理逻辑
-echo "处理完成" > "$OUTPUT_FILE"
-
-echo "结果已保存到: $OUTPUT_FILE"</pre>
-
-            <div class="guide-tips">
-              <h4>💡 重要提示</h4>
-              <ul>
-                <li>执行空间是<strong>独立的临时目录</strong>，每次执行都会创建新的空间</li>
-                <li>上传的文件和生成的文件都在<strong>执行空间</strong>中，执行完成后可在日志弹窗中查看和下载</li>
-                <li>参数名是<strong>大小写敏感</strong>的</li>
-                <li>Bash 脚本建议使用 <code>set -e</code> 在遇到错误时自动退出</li>
-              </ul>
-            </div>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-      <template #footer>
-        <el-button @click="guideVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getScripts,
   createScript,
   updateScript,
   deleteScript,
-  getScriptVersions,
-  rollbackScript,
   executeScriptWithFiles,
   getEnvironments,
   cancelExecution,
-  getCategories,
   getTags,
-  toggleScriptFavorite,
   getExecutionFiles,
   getExecutionFile,
   previewExecutionFile,
-  cleanScriptVersions,
-  cleanScriptExecutions
+  getFolderTree,
+  getFolderContents,
+  getRootContents,
+  createScriptFolder,
+  updateFolder,
+  deleteScriptFolder,
+  getFolderPath,
+  moveScript
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
-import CodeDiff from '../components/CodeDiff.vue'
 import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
-import { Plus, Search, Star, Loading, Document, ArrowDown, Delete } from '@element-plus/icons-vue'
+import ColorPicker from '../components/ColorPicker.vue'
+import {
+  Plus, Search, Folder, FolderOpened, FolderAdd, Document, Edit, EditPen,
+  Delete, VideoPlay, View, Loading
+} from '@element-plus/icons-vue'
 
-const scripts = ref([])
+// ===== 文件夹树 =====
+const folderTreeRef = ref(null)
+const folderTree = ref([])
+const currentFolderId = ref(null)
+const breadcrumbPath = ref([])
+
+// ===== 当前文件夹内容 =====
+const currentFolders = ref([])
+const currentScripts = ref([])
+
+// ===== 搜索 =====
+const searchText = ref('')
+const searchMode = ref(false)
+const searchResults = ref([])
+
+// ===== 基础数据 =====
 const environments = ref([])
-const categories = ref([])
 const tags = ref([])
 
-// 筛选相关
-const searchText = ref('')
-const filterCategory = ref(null)
-const filterTags = ref([])
-const filterFavorite = ref(false)
+// ===== 右键菜单 =====
+const contextMenu = ref({ visible: false, x: 0, y: 0, type: '', target: null })
 
-const dialogVisible = ref(false)
-const dialogTitle = ref('新建脚本')
-const form = ref({
-  name: '',
-  type: 'python',
-  description: '',
-  code: '',
-  dependencies: '',
-  parameters: '',
-  environment_id: null,
-  category_id: null,
-  tag_ids: [],
-  is_favorite: false
+// ===== 文件夹编辑对话框 =====
+const folderDialogVisible = ref(false)
+const folderDialogTitle = ref('新建文件夹')
+const folderForm = ref({ name: '', color: '#E6A23C' })
+const editingFolder = ref(null)
+const folderParentId = ref(null)
+
+// ===== 脚本编辑对话框 =====
+const scriptDialogVisible = ref(false)
+const scriptDialogTitle = ref('新建脚本')
+const scriptForm = ref({
+  name: '', type: 'python', description: '', code: '',
+  dependencies: '', parameters: '', environment_id: null,
+  folder_id: null, tag_ids: [], is_favorite: false
 })
+const editingScript = ref(null)
+
+// ===== 查看对话框 =====
+const viewDialogVisible = ref(false)
+const viewScript = ref(null)
+
+// ===== 执行对话框 =====
 const currentScript = ref(null)
 const executeVisible = ref(false)
 const executeForm = ref({})
-const executeParams = ref('')
 const executeParamsObj = ref({})
 const uploadFiles = ref([])
-const versionVisible = ref(false)
-const versions = ref([])
-const versionCodeVisible = ref(false)
-const currentVersion = ref(null)
-const compareVersions = ref([])  // 用于对比的版本列表
-const diffVisible = ref(false)  // 对比对话框显示状态
-const guideVisible = ref(false)  // 使用指南对话框显示状态
-const guideActiveTab = ref('python')  // 使用指南当前标签页
 
-// 清理历史记录相关
-const cleanHistoryVisible = ref(false)  // 清理历史对话框显示状态
-const cleanHistoryType = ref('versions')  // 清理类型：versions 或 executions
-const cleanHistoryForm = ref({
-  keep_latest: 5,  // 保留最新N条
-  status: '',  // 执行状态过滤（仅针对执行记录）
-  before_days: null  // 清理N天前的记录（仅针对执行记录）
-})
-
-// 实时日志相关
+// ===== 日志 =====
 const logVisible = ref(false)
 const realTimeLogs = ref('')
 const logError = ref('')
@@ -931,7 +531,7 @@ const currentExecutionId = ref(null)
 const logContainer = ref(null)
 let eventSource = null
 
-// 执行文件相关
+// ===== 执行文件 =====
 const executionFiles = ref([])
 const filesLoading = ref(false)
 const selectedFile = ref(null)
@@ -939,29 +539,54 @@ const filePreviewVisible = ref(false)
 const filePreviewContent = ref('')
 const filePreviewType = ref('text')
 
-// 根据当前脚本类型过滤环境（用于创建/编辑脚本）
+// ===== 拖拽 =====
+let dragScript = null
+
+// ===== 计算属性 =====
 const filteredEnvironments = computed(() => {
-  return environments.value.filter(env => env.type === form.value.type)
+  return environments.value.filter(env => env.type === scriptForm.value.type)
 })
 
-// 根据当前执行脚本类型过滤环境（用于执行脚本）
 const executeEnvironments = computed(() => {
   if (!currentScript.value) return []
   return environments.value.filter(env => env.type === currentScript.value.type)
 })
 
-const loadScripts = async () => {
+// ===== 数据加载 =====
+const loadFolderTree = async () => {
   try {
-    const params = {}
-    if (filterCategory.value) params.category_id = filterCategory.value
-    if (filterTags.value.length > 0) params.tags = filterTags.value.join(',')
-    if (filterFavorite.value) params.is_favorite = 'true'
-    if (searchText.value) params.search = searchText.value
-
-    const res = await getScripts(params)
-    scripts.value = res.data
+    const res = await getFolderTree()
+    folderTree.value = res.data
   } catch (error) {
-    console.error(error)
+    console.error('加载文件夹树失败:', error)
+  }
+}
+
+const loadFolderContents = async (folderId) => {
+  try {
+    let res
+    if (folderId === null) {
+      res = await getRootContents()
+    } else {
+      res = await getFolderContents(folderId)
+    }
+    currentFolders.value = res.data.folders
+    currentScripts.value = res.data.scripts
+  } catch (error) {
+    console.error('加载文件夹内容失败:', error)
+  }
+}
+
+const loadBreadcrumb = async (folderId) => {
+  if (folderId === null) {
+    breadcrumbPath.value = []
+    return
+  }
+  try {
+    const res = await getFolderPath(folderId)
+    breadcrumbPath.value = res.data
+  } catch (error) {
+    console.error('加载面包屑失败:', error)
   }
 }
 
@@ -969,15 +594,6 @@ const loadEnvironments = async () => {
   try {
     const res = await getEnvironments()
     environments.value = res.data
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-const loadCategories = async () => {
-  try {
-    const res = await getCategories()
-    categories.value = res.data
   } catch (error) {
     console.error(error)
   }
@@ -992,147 +608,279 @@ const loadTags = async () => {
   }
 }
 
-const handleFilter = () => {
-  loadScripts()
+// ===== 导航 =====
+const navigateToRoot = () => {
+  currentFolderId.value = null
+  searchMode.value = false
+  searchText.value = ''
+  loadFolderContents(null)
+  loadBreadcrumb(null)
+  if (folderTreeRef.value) {
+    folderTreeRef.value.setCurrentKey(null)
+  }
 }
 
+const navigateToFolder = (folderId) => {
+  currentFolderId.value = folderId
+  searchMode.value = false
+  searchText.value = ''
+  loadFolderContents(folderId)
+  loadBreadcrumb(folderId)
+  if (folderTreeRef.value) {
+    folderTreeRef.value.setCurrentKey(folderId)
+  }
+}
+
+const handleTreeNodeClick = (data) => {
+  navigateToFolder(data.id)
+}
+
+// ===== 搜索 =====
+let searchTimer = null
 const handleSearch = () => {
-  loadScripts()
-}
-
-const toggleFavorite = () => {
-  filterFavorite.value = !filterFavorite.value
-  loadScripts()
-}
-
-const handleToggleFavorite = async (row) => {
-  try {
-    await toggleScriptFavorite(row.id)
-    ElMessage.success(row.is_favorite ? '已取消收藏' : '已收藏')
-    loadScripts()
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('操作失败')
-  }
-}
-
-const handleTypeChange = () => {
-  // 当脚本类型改变时，清空环境选择（如果当前选择的环境类型不匹配）
-  if (form.value.environment_id) {
-    const selectedEnv = environments.value.find(env => env.id === form.value.environment_id)
-    if (selectedEnv && selectedEnv.type !== form.value.type) {
-      form.value.environment_id = null
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    if (!searchText.value.trim()) {
+      handleSearchClear()
+      return
     }
+    searchMode.value = true
+    try {
+      const res = await getScripts({ search: searchText.value })
+      searchResults.value = res.data
+    } catch (error) {
+      console.error(error)
+    }
+  }, 300)
+}
+
+const handleSearchClear = () => {
+  searchMode.value = false
+  searchResults.value = []
+  loadFolderContents(currentFolderId.value)
+}
+
+// ===== 右键菜单 =====
+const showScriptContextMenu = (event, script) => {
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    type: 'script',
+    target: script
   }
 }
 
-const handleCreate = () => {
-  dialogTitle.value = '新建脚本'
-  form.value = {
-    name: '',
-    type: 'python',
-    description: '',
-    code: '',
-    dependencies: '',
-    parameters: '',
-    environment_id: null,
-    category_id: null,
-    tag_ids: [],
-    is_favorite: false
+const showFolderContextMenu = (event, folder) => {
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    type: 'folder',
+    target: folder
   }
-  currentScript.value = null
-  dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑脚本'
-  form.value = {
-    ...row,
-    tag_ids: row.tags ? row.tags.map(t => t.id) : []
-  }
-  currentScript.value = row
-  dialogVisible.value = true
+const handleTreeContextMenu = (event, data) => {
+  event.preventDefault()
+  showFolderContextMenu(event, data)
 }
 
-const handleSave = async () => {
+const hideContextMenu = () => {
+  contextMenu.value.visible = false
+}
+
+// ===== 文件夹操作 =====
+const handleCreateRootFolder = () => {
+  promptCreateFolder(null)
+}
+
+const handleCreateFolder = () => {
+  promptCreateFolder(currentFolderId.value)
+}
+
+const handleCreateSubFolder = (folder) => {
+  hideContextMenu()
+  promptCreateFolder(folder.id)
+}
+
+const promptCreateFolder = (parentId) => {
+  folderDialogTitle.value = '新建文件夹'
+  folderForm.value = { name: '', color: '#E6A23C' }
+  editingFolder.value = null
+  folderParentId.value = parentId
+  folderDialogVisible.value = true
+}
+
+const handleRenameFolder = (folder) => {
+  hideContextMenu()
+  folderDialogTitle.value = '编辑文件夹'
+  folderForm.value = { name: folder.name, color: folder.color || '#E6A23C' }
+  editingFolder.value = folder
+  folderParentId.value = null
+  folderDialogVisible.value = true
+}
+
+const handleSaveFolder = async () => {
+  if (!folderForm.value.name.trim()) {
+    ElMessage.warning('文件夹名称不能为空')
+    return
+  }
   try {
-    if (currentScript.value) {
-      await updateScript(currentScript.value.id, form.value)
-      ElMessage.success('更新成功')
+    if (editingFolder.value) {
+      await updateFolder(editingFolder.value.id, {
+        name: folderForm.value.name.trim(),
+        color: folderForm.value.color
+      })
+      ElMessage.success('文件夹更新成功')
     } else {
-      await createScript(form.value)
-      ElMessage.success('创建成功')
+      await createScriptFolder({
+        name: folderForm.value.name.trim(),
+        parent_id: folderParentId.value,
+        color: folderForm.value.color
+      })
+      ElMessage.success('文件夹创建成功')
     }
-    dialogVisible.value = false
-    loadScripts()
+    folderDialogVisible.value = false
+    loadFolderTree()
+    loadFolderContents(currentFolderId.value)
   } catch (error) {
-    console.error(error)
+    ElMessage.error((editingFolder.value ? '更新' : '创建') + '文件夹失败: ' + (error.message || error))
   }
 }
 
-const handleDelete = async (row) => {
+const handleDeleteFolder = async (folder) => {
+  hideContextMenu()
   try {
-    await ElMessageBox.confirm('确定要删除此脚本吗?', '提示', {
+    await ElMessageBox.confirm(`确定要删除文件夹「${folder.name}」吗？`, '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await deleteScript(row.id)
-    ElMessage.success('删除成功')
-    loadScripts()
+    await deleteScriptFolder(folder.id)
+    ElMessage.success('文件夹删除成功')
+    loadFolderTree()
+    if (currentFolderId.value === folder.id) {
+      navigateToRoot()
+    } else {
+      loadFolderContents(currentFolderId.value)
+    }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error(error)
+    if (error !== 'cancel' && error?.message !== 'cancel') {
+      ElMessage.error('删除失败: ' + (error.message || error))
     }
   }
 }
 
-const handleExecute = (row) => {
-  currentScript.value = row
-  executeParams.value = ''
+// ===== 脚本操作 =====
+const handleCreateScript = () => {
+  scriptDialogTitle.value = '新建脚本'
+  scriptForm.value = {
+    name: '', type: 'python', description: '', code: '',
+    dependencies: '', parameters: '', environment_id: null,
+    folder_id: currentFolderId.value, tag_ids: [], is_favorite: false
+  }
+  editingScript.value = null
+  scriptDialogVisible.value = true
+}
+
+const handleEdit = (script) => {
+  hideContextMenu()
+  scriptDialogTitle.value = '编辑脚本'
+  scriptForm.value = {
+    ...script,
+    tag_ids: script.tags ? script.tags.map(t => t.id) : []
+  }
+  editingScript.value = script
+  scriptDialogVisible.value = true
+}
+
+const handleView = (script) => {
+  hideContextMenu()
+  viewScript.value = script
+  viewDialogVisible.value = true
+}
+
+const handleSaveScript = async () => {
+  try {
+    if (editingScript.value) {
+      await updateScript(editingScript.value.id, scriptForm.value)
+      ElMessage.success('更新成功')
+    } else {
+      await createScript(scriptForm.value)
+      ElMessage.success('创建成功')
+    }
+    scriptDialogVisible.value = false
+    loadFolderContents(currentFolderId.value)
+    loadFolderTree()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('保存失败: ' + (error.message || error))
+  }
+}
+
+const handleDeleteScript = async (script) => {
+  hideContextMenu()
+  try {
+    await ElMessageBox.confirm(`确定要删除脚本「${script.name}」吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deleteScript(script.id)
+    ElMessage.success('删除成功')
+    loadFolderContents(currentFolderId.value)
+    loadFolderTree()
+  } catch (error) {
+    if (error !== 'cancel') console.error(error)
+  }
+}
+
+const handleTypeChange = () => {
+  if (scriptForm.value.environment_id) {
+    const selectedEnv = environments.value.find(env => env.id === scriptForm.value.environment_id)
+    if (selectedEnv && selectedEnv.type !== scriptForm.value.type) {
+      scriptForm.value.environment_id = null
+    }
+  }
+}
+
+// ===== 执行 =====
+const handleExecute = (script) => {
+  hideContextMenu()
+  currentScript.value = script
   executeParamsObj.value = {}
   uploadFiles.value = []
-  executeForm.value = {
-    environment_id: null  // 初始化为 null，用户可选择
-  }
+  executeForm.value = { environment_id: null }
   executeVisible.value = true
 }
 
 const handleExecuteConfirm = async () => {
   try {
     const formData = new FormData()
-
-    // 添加文件
     uploadFiles.value.forEach((file, index) => {
       formData.append(`file${index}`, file)
     })
-
-    // 添加参数（使用ExecutionParams组件收集的参数）
     if (executeParamsObj.value && Object.keys(executeParamsObj.value).length > 0) {
       formData.append('params', JSON.stringify(executeParamsObj.value))
     }
-
-    // 添加执行环境ID（如果指定）
     if (executeForm.value.environment_id) {
       formData.append('environment_id', executeForm.value.environment_id)
     }
 
     const res = await executeScriptWithFiles(currentScript.value.id, formData)
     const executionId = res.data.id
-
     ElMessage.success('脚本执行已启动')
     executeVisible.value = false
-
-    // 打开实时日志窗口
     openLogStream(executionId)
   } catch (error) {
-    ElMessage.error('参数格式错误或执行失败: ' + error.message)
+    ElMessage.error('执行失败: ' + error.message)
     console.error(error)
   }
 }
 
+// ===== 日志流 =====
 const openLogStream = (executionId) => {
-  // 重置日志状态
   realTimeLogs.value = ''
   logError.value = ''
   logStatus.value = 'pending'
@@ -1141,72 +889,47 @@ const openLogStream = (executionId) => {
   currentExecutionId.value = executionId
   logVisible.value = true
 
-  // 关闭已有的连接
-  if (eventSource) {
-    eventSource.close()
-  }
+  if (eventSource) eventSource.close()
 
-  // 创建 SSE 连接
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   eventSource = new EventSource(`${apiUrl}/executions/${executionId}/logs/stream`)
 
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
-
       if (data.type === 'log') {
-        // 追加日志内容
         realTimeLogs.value += data.content
-        // 自动滚动到底部
         nextTick(() => {
-          if (logContainer.value) {
-            logContainer.value.scrollTop = logContainer.value.scrollHeight
-          }
+          if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight
         })
       } else if (data.type === 'progress') {
-        // 更新进度信息
         logProgress.value = data.progress || 0
         logStage.value = data.stage || 'pending'
-        // 根据阶段更新状态
-        if (data.stage === 'running' || data.stage === 'preparing' || data.stage === 'installing_deps' || data.stage === 'finishing') {
+        if (['running', 'preparing', 'installing_deps', 'finishing'].includes(data.stage)) {
           logStatus.value = 'running'
         }
       } else if (data.type === 'status') {
-        // 更新状态
         logStatus.value = data.status
         logProgress.value = data.progress || 100
         logStage.value = data.stage || (data.status === 'success' ? 'completed' : 'failed')
-        if (data.error) {
-          logError.value = data.error
-        }
-        // 关闭连接
+        if (data.error) logError.value = data.error
         eventSource.close()
         eventSource = null
-        // 加载执行文件列表
         loadExecutionFiles()
-      } else if (data.error) {
-        ElMessage.error(data.error)
-        eventSource.close()
-        eventSource = null
       }
     } catch (error) {
       console.error('解析日志数据失败:', error)
     }
   }
 
-  eventSource.onerror = (error) => {
-    console.error('日志流连接错误:', error)
+  eventSource.onerror = () => {
     ElMessage.error('日志流连接中断')
-    if (eventSource) {
-      eventSource.close()
-      eventSource = null
-    }
+    if (eventSource) { eventSource.close(); eventSource = null }
   }
 }
 
 const loadExecutionFiles = async () => {
   if (!currentExecutionId.value) return
-
   filesLoading.value = true
   try {
     const res = await getExecutionFiles(currentExecutionId.value)
@@ -1218,15 +941,30 @@ const loadExecutionFiles = async () => {
   }
 }
 
-const formatFileSize = (size) => {
-  if (size < 1024) return size + ' B'
-  if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB'
-  return (size / (1024 * 1024)).toFixed(2) + ' MB'
+const closeLogStream = () => {
+  if (eventSource) { eventSource.close(); eventSource = null }
+  logVisible.value = false
+  executionFiles.value = []
 }
 
+const handleCancelExecution = async () => {
+  try {
+    await ElMessageBox.confirm('确定要中断当前执行吗？', '提示', {
+      confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+    })
+    await cancelExecution(currentExecutionId.value)
+    ElMessage.success('执行已中断')
+    logStatus.value = 'failed'
+    logStage.value = 'cancelled'
+    logProgress.value = 100
+  } catch (error) {
+    if (error !== 'cancel') ElMessage.error('中断执行失败: ' + (error.message || error))
+  }
+}
+
+// ===== 文件操作 =====
 const handleFilePreview = async (file) => {
   selectedFile.value = file
-
   if (file.is_text) {
     try {
       const res = await previewExecutionFile(currentExecutionId.value, file.path)
@@ -1237,7 +975,6 @@ const handleFilePreview = async (file) => {
       ElMessage.error('预览文件失败: ' + error.message)
     }
   } else {
-    // 二进制文件直接下载
     handleFileDownload(file)
   }
 }
@@ -1247,192 +984,364 @@ const handleFileDownload = (file) => {
   window.open(url, '_blank')
 }
 
-const closeLogStream = () => {
-  if (eventSource) {
-    eventSource.close()
-    eventSource = null
-  }
-  logVisible.value = false
-  // 清空文件列表
-  executionFiles.value = []
+// ===== 拖拽 =====
+const handleDragStart = (event, script) => {
+  dragScript = script
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', script.id.toString())
 }
 
-const getStatusType = (status) => {
-  const types = {
-    pending: 'info',
-    running: '',
-    success: 'success',
-    failed: 'danger'
-  }
-  return types[status] || 'info'
+const handleDragEnd = () => {
+  dragScript = null
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'))
 }
 
-const getStatusText = (status) => {
-  const texts = {
-    pending: '等待中',
-    running: '运行中',
-    success: '执行成功',
-    failed: '执行失败'
-  }
-  return texts[status] || '未知状态'
+const handleTreeDragOver = (event, folderId) => {
+  if (!dragScript) return
+  if (dragScript.folder_id === folderId) return
+  event.currentTarget.classList.add('drag-over')
 }
 
-const handleVersions = async (row) => {
+const handleTreeDragLeave = (event) => {
+  event.currentTarget.classList.remove('drag-over')
+}
+
+const handleTreeDrop = async (event, folderId) => {
+  event.currentTarget.classList.remove('drag-over')
+  if (!dragScript) return
+  if (dragScript.folder_id === folderId) return
+
   try {
-    currentScript.value = row
-    const res = await getScriptVersions(row.id)
-    versions.value = res.data
-    compareVersions.value = []  // 清空对比选择
-    versionVisible.value = true
+    await moveScript(dragScript.id, { folder_id: folderId })
+    ElMessage.success('脚本已移动')
+    loadFolderContents(currentFolderId.value)
+    loadFolderTree()
   } catch (error) {
-    console.error(error)
+    ElMessage.error('移动失败: ' + (error.message || error))
   }
+  dragScript = null
 }
 
-const handleVersionSelection = (selection) => {
-  compareVersions.value = selection
+const handleGridFolderDragOver = (event, folderId) => {
+  if (!dragScript) return
+  event.currentTarget.classList.add('drag-over')
 }
 
-const showVersionDiff = () => {
-  if (compareVersions.value.length !== 2) {
-    ElMessage.warning('请选择两个版本进行对比')
-    return
-  }
-  diffVisible.value = true
+const handleGridFolderDragLeave = (event) => {
+  event.currentTarget.classList.remove('drag-over')
 }
 
-const handleViewVersion = (row) => {
-  currentVersion.value = row
-  versionCodeVisible.value = true
-}
+const handleGridFolderDrop = async (event, folderId) => {
+  event.currentTarget.classList.remove('drag-over')
+  if (!dragScript) return
 
-const handleRollback = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要回滚到版本 ${row.version} 吗?`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await rollbackScript(currentScript.value.id, row.version)
-    ElMessage.success('回滚成功')
-    versionVisible.value = false
-    loadScripts()
+    await moveScript(dragScript.id, { folder_id: folderId })
+    ElMessage.success('脚本已移动')
+    loadFolderContents(currentFolderId.value)
+    loadFolderTree()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error(error)
-    }
+    ElMessage.error('移动失败: ' + (error.message || error))
   }
+  dragScript = null
 }
 
-const handleCleanHistory = (row, type = 'versions') => {
-  currentScript.value = row
-  cleanHistoryType.value = type
-  cleanHistoryForm.value = {
-    keep_latest: type === 'versions' ? 5 : 50,
-    status: '',
-    before_days: null
-  }
-  cleanHistoryVisible.value = true
-}
-
-const handleCleanHistoryConfirm = async () => {
-  try {
-    const scriptId = currentScript.value.id
-    let result
-
-    if (cleanHistoryType.value === 'versions') {
-      result = await cleanScriptVersions(scriptId, {
-        keep_latest: cleanHistoryForm.value.keep_latest
-      })
-    } else {
-      const data = {
-        keep_latest: cleanHistoryForm.value.keep_latest
-      }
-      if (cleanHistoryForm.value.status) {
-        data.status = cleanHistoryForm.value.status
-      }
-      if (cleanHistoryForm.value.before_days) {
-        data.before_days = cleanHistoryForm.value.before_days
-      }
-      result = await cleanScriptExecutions(scriptId, data)
-    }
-
-    ElMessage.success(result.message || '清理成功')
-    cleanHistoryVisible.value = false
-
-    // 如果是清理版本历史，重新加载版本列表
-    if (cleanHistoryType.value === 'versions') {
-      const res = await getScriptVersions(scriptId)
-      versions.value = res.data
-    }
-  } catch (error) {
-    ElMessage.error('清理失败: ' + (error.message || error))
-    console.error(error)
-  }
-}
-
-const handleCancelExecution = async () => {
-  try {
-    await ElMessageBox.confirm('确定要中断当前执行吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-
-    await cancelExecution(currentExecutionId.value)
-    ElMessage.success('执行已中断')
-
-    // 更新状态
-    logStatus.value = 'failed'
-    logStage.value = 'cancelled'
-    logProgress.value = 100
-
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('中断执行失败: ' + (error.message || error))
-      console.error(error)
-    }
-  }
-}
-
+// ===== 工具函数 =====
 const formatTime = (time) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN')
 }
 
+const formatFileSize = (size) => {
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(2) + ' KB'
+  return (size / (1024 * 1024)).toFixed(2) + ' MB'
+}
+
+const getStatusType = (status) => {
+  const types = { pending: 'info', running: '', success: 'success', failed: 'danger' }
+  return types[status] || 'info'
+}
+
+const getStatusText = (status) => {
+  const texts = { pending: '等待中', running: '运行中', success: '执行成功', failed: '执行失败' }
+  return texts[status] || '未知状态'
+}
+
+// ===== 生命周期 =====
 onMounted(() => {
-  loadScripts()
+  loadFolderTree()
+  loadFolderContents(null)
   loadEnvironments()
-  loadCategories()
   loadTags()
+  document.addEventListener('click', hideContextMenu)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', hideContextMenu)
+  if (eventSource) { eventSource.close(); eventSource = null }
 })
 </script>
 
 <style scoped>
-.scripts-container {
+.file-manager {
+  display: flex;
+  height: calc(100vh - 60px);
+  background: var(--el-bg-color);
+}
+
+/* ===== 左侧文件夹树 ===== */
+.folder-tree-panel {
+  width: 250px;
+  min-width: 250px;
+  border-right: 1px solid var(--el-border-color-lighter);
+  display: flex;
+  flex-direction: column;
+  background: var(--el-bg-color);
+}
+
+.tree-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.tree-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.tree-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  color: var(--el-text-color-regular);
+  transition: all 0.2s;
+}
+
+.tree-item:hover {
+  background: var(--el-fill-color-light);
+}
+
+.tree-item.active {
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  font-weight: 500;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.tree-node-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-node-count {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+  background: var(--el-fill-color);
+  padding: 0 6px;
+  border-radius: 10px;
+}
+
+.tree-footer {
+  padding: 8px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+/* ===== 右侧内容区 ===== */
+.content-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 20px;
 }
 
-.card-header {
+.content-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.breadcrumb-clickable {
+  cursor: pointer;
+}
+
+.breadcrumb-clickable:hover :deep(.el-breadcrumb__inner) {
+  color: var(--el-color-primary);
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
-}
-
-.filter-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
 }
 
-/* 脚本编辑对话框样式 */
+/* ===== 内容网格 ===== */
+.content-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 16px;
+  padding: 4px;
+}
+
+.grid-item {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.grid-item:hover {
+  background: var(--el-fill-color-light);
+}
+
+.grid-item.drag-over {
+  background: var(--el-color-primary-light-8);
+  outline: 2px dashed var(--el-color-primary);
+}
+
+.item-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.folder-icon {
+  color: inherit;
+}
+
+.script-icon.python {
+  color: #3776AB;
+}
+
+.script-icon.javascript {
+  color: #F7DF1E;
+}
+
+.type-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 10px;
+  background: var(--el-bg-color);
+  padding: 0 4px;
+  border-radius: 3px;
+  color: var(--el-text-color-secondary);
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.item-name {
+  font-size: 13px;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--el-text-color-primary);
+}
+
+.item-path {
+  font-size: 11px;
+  color: var(--el-text-color-placeholder);
+  margin-top: 2px;
+}
+
+.empty-state {
+  width: 100%;
+  padding: 60px 0;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+/* ===== 右键菜单 ===== */
+.context-menu {
+  position: fixed;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  padding: 6px 0;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 3000;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  transition: all 0.15s;
+}
+
+.context-menu-item:hover {
+  background: var(--el-fill-color-light);
+  color: var(--el-color-primary);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--el-color-danger-light-9);
+  color: var(--el-color-danger);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--el-border-color-lighter);
+  margin: 4px 0;
+}
+
+/* ===== 拖拽高亮 ===== */
+.drag-over {
+  background: var(--el-color-primary-light-8) !important;
+  outline: 2px dashed var(--el-color-primary);
+}
+
+/* ===== 对话框样式 ===== */
 .script-dialog :deep(.el-dialog__body) {
   max-height: 70vh;
   overflow-y: auto;
@@ -1443,6 +1352,7 @@ onMounted(() => {
   padding-right: 10px;
 }
 
+/* ===== 日志样式 ===== */
 .log-header {
   display: flex;
   justify-content: space-between;
@@ -1497,7 +1407,6 @@ onMounted(() => {
   font-family: 'Courier New', monospace;
   font-size: 13px;
   margin: 0;
-  overflow-x: auto;
 }
 
 .files-section {
@@ -1527,128 +1436,5 @@ onMounted(() => {
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
-}
-
-/* 使用指南样式 */
-.script-guide {
-  padding: 10px 0;
-}
-
-.script-guide h4 {
-  color: #409eff;
-  font-size: 15px;
-  margin: 20px 0 10px 0;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-}
-
-.script-guide h4:first-child {
-  margin-top: 0;
-}
-
-.guide-desc {
-  color: #606266;
-  font-size: 13px;
-  margin: 8px 0;
-  line-height: 1.6;
-}
-
-.guide-desc code {
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: #e83e8c;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 12px;
-}
-
-.code-example {
-  background: #282c34;
-  color: #abb2bf;
-  padding: 12px 15px;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  overflow-x: auto;
-  margin: 10px 0;
-  border-left: 3px solid #409eff;
-}
-
-.guide-tips {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
-  border-radius: 4px;
-  padding: 15px;
-  margin-top: 20px;
-}
-
-.guide-tips h4 {
-  color: #fa8c16;
-  font-size: 14px;
-  margin: 0 0 10px 0;
-  border: none;
-  padding: 0;
-}
-
-.guide-tips ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.guide-tips li {
-  color: #595959;
-  font-size: 13px;
-  line-height: 1.8;
-  margin-bottom: 8px;
-}
-
-.guide-tips li:last-child {
-  margin-bottom: 0;
-}
-
-.guide-tips code {
-  background: #fffbe6;
-  padding: 2px 6px;
-  border-radius: 3px;
-  color: #d4380d;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 12px;
-}
-
-.guide-tips strong {
-  color: #262626;
-}
-
-/* 深色模式下的使用指南样式 */
-.dark-mode .guide-desc {
-  color: #b3b3b3;
-}
-
-.dark-mode .guide-desc code {
-  background: #2a2a2a;
-  color: #f78fb3;
-}
-
-.dark-mode .guide-tips {
-  background: #2c2416;
-  border-color: #594214;
-}
-
-.dark-mode .guide-tips h4 {
-  color: #ffa940;
-}
-
-.dark-mode .guide-tips li {
-  color: #d9d9d9;
-}
-
-.dark-mode .guide-tips code {
-  background: #3d2f1f;
-  color: #ff7a45;
-}
-
-.dark-mode .guide-tips strong {
-  color: #f0f0f0;
 }
 </style>

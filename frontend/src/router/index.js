@@ -41,11 +41,6 @@ const routes = [
     component: () => import('../views/Environments.vue')
   },
   {
-    path: '/categories',
-    name: 'Categories',
-    component: () => import('../views/Categories.vue')
-  },
-  {
     path: '/tags',
     name: 'Tags',
     component: () => import('../views/Tags.vue')

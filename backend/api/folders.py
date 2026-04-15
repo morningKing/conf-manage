@@ -57,7 +57,7 @@ def get_root_contents():
 
 
 @api_bp.route('/folders', methods=['POST'])
-def create_folder():
+def create_script_folder():
     """创建文件夹"""
     try:
         data = request.get_json()
@@ -78,7 +78,7 @@ def create_folder():
             if not parent:
                 return jsonify({'code': 1, 'message': '父文件夹不存在'}), 400
 
-        folder = Folder(name=name, parent_id=parent_id)
+        folder = Folder(name=name, parent_id=parent_id, color=data.get('color', '#E6A23C'))
         db.session.add(folder)
         db.session.commit()
 
@@ -111,6 +111,9 @@ def update_folder(folder_id):
 
         if 'sort_order' in data:
             folder.sort_order = data['sort_order']
+
+        if 'color' in data:
+            folder.color = data['color']
 
         db.session.commit()
 

@@ -15,6 +15,7 @@ export const executeScriptWithFiles = (id, formData) => request.post(`/scripts/$
 export const toggleScriptFavorite = (id) => request.post(`/scripts/${id}/favorite`)
 export const cleanScriptVersions = (id, data) => request.delete(`/scripts/${id}/versions/clean`, { data })
 export const cleanScriptExecutions = (id, data) => request.delete(`/scripts/${id}/executions/clean`, { data })
+export const moveScript = (id, data) => request.post(`/scripts/${id}/move`, data)
 
 // 执行历史
 export const getExecutions = (params) => request.get('/executions', { params })
@@ -58,11 +59,15 @@ export const deleteEnvironment = (id) => request.delete(`/environments/${id}`)
 export const setDefaultEnvironment = (id) => request.post(`/environments/${id}/set-default`)
 export const detectEnvironment = (data) => request.post('/environments/detect', data)
 
-// 分类管理
-export const getCategories = () => request.get('/categories')
-export const createCategory = (data) => request.post('/categories', data)
-export const updateCategory = (id, data) => request.put(`/categories/${id}`, data)
-export const deleteCategory = (id) => request.delete(`/categories/${id}`)
+// 文件夹管理（脚本文件夹）
+export const getFolderTree = () => request.get('/folders/tree')
+export const getFolderContents = (id) => request.get(`/folders/${id}/contents`)
+export const getRootContents = () => request.get('/folders/root/contents')
+export const createScriptFolder = (data) => request.post('/folders', data)
+export const updateFolder = (id, data) => request.put(`/folders/${id}`, data)
+export const deleteScriptFolder = (id) => request.delete(`/folders/${id}`)
+export const moveFolder = (id, data) => request.post(`/folders/${id}/move`, data)
+export const getFolderPath = (id) => request.get(`/folders/${id}/path`)
 
 // 标签管理
 export const getTags = () => request.get('/tags')
