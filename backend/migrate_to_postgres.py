@@ -29,9 +29,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import Config
 from models import (
     db, Script, ScriptVersion, Execution, Schedule, Environment,
-    Category, Tag, script_tags, Workflow, WorkflowNode, WorkflowEdge,
+    Folder, Tag, script_tags, Workflow, WorkflowNode, WorkflowEdge,
     WorkflowExecution, WorkflowNodeExecution, WorkflowTemplate, GlobalVariable,
-    AIConfig, Webhook, WebhookLog
+    AIConfig, Webhook, WebhookLog, SelectionSession
 )
 from flask import Flask
 
@@ -58,7 +58,7 @@ def get_postgres_engine():
     return create_engine(uri)
 
 
-def create_postgres_tables(pg_engine):
+def create_postgres_tables(pg_engine, drop_existing=False):
     """在 PostgreSQL 中创建表结构"""
     print("\n[STEP] 创建 PostgreSQL 表结构...")
 
@@ -69,8 +69,9 @@ def create_postgres_tables(pg_engine):
     db.init_app(app)
 
     with app.app_context():
-        # 删除已存在的表（如果需要重新迁移）
-        # db.drop_all()
+        if drop_existing:
+            print("  [INFO] 删除已存在的旧表...")
+            db.drop_all()
         db.create_all()
 
     print("[OK] 表结构创建完成")
@@ -225,7 +226,7 @@ def verify_migration(sqlite_engine, pg_engine, skip=False):
     print("\n[STEP] 验证迁移结果...")
 
     tables_to_verify = [
-        ('categories', 'categories'),
+        ('folders', 'folders'),
         ('tags', 'tags'),
         ('global_variables', 'global_variables'),
         ('environments', 'environments'),
@@ -243,6 +244,7 @@ def verify_migration(sqlite_engine, pg_engine, skip=False):
         ('workflow_node_executions', 'workflow_node_executions'),
         ('workflow_templates', 'workflow_templates'),
         ('ai_configs', 'ai_configs'),
+        ('selection_sessions', 'selection_sessions'),
     ]
 
     all_valid = True
@@ -257,6 +259,49 @@ def verify_migration(sqlite_engine, pg_engine, skip=False):
         print(f"  {sqlite_table}: SQLite={sqlite_count}, PostgreSQL={pg_count} [{status}]")
 
     return all_valid
+
+
+def reset_sequences(pg_engine):
+    """重置 PostgreSQL 自增序列（迁移后必须执行）"""
+    print("\n[STEP] 重置自增序列...")
+
+    # 需要重置序列的表
+    tables_with_seq = [
+        ('scripts', 'scripts_id_seq'),
+        ('script_versions', 'script_versions_id_seq'),
+        ('executions', 'executions_id_seq'),
+        ('schedules', 'schedules_id_seq'),
+        ('environments', 'environments_id_seq'),
+        ('folders', 'folders_id_seq'),
+        ('tags', 'tags_id_seq'),
+        ('global_variables', 'global_variables_id_seq'),
+        ('workflows', 'workflows_id_seq'),
+        ('workflow_nodes', 'workflow_nodes_id_seq'),
+        ('workflow_edges', 'workflow_edges_id_seq'),
+        ('workflow_executions', 'workflow_executions_id_seq'),
+        ('workflow_node_executions', 'workflow_node_executions_id_seq'),
+        ('workflow_templates', 'workflow_templates_id_seq'),
+        ('ai_configs', 'ai_configs_id_seq'),
+        ('webhooks', 'webhooks_id_seq'),
+        ('webhook_logs', 'webhook_logs_id_seq'),
+        ('selection_sessions', 'selection_sessions_id_seq'),
+    ]
+
+    with pg_engine.connect() as conn:
+        for table, seq in tables_with_seq:
+            try:
+                result = conn.execute(text(f"SELECT MAX(id) FROM {table}"))
+                max_id = result.scalar() or 0
+                if max_id > 0:
+                    conn.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH {max_id + 1}"))
+                    print(f"  {table}: sequence reset to {max_id + 1}")
+                else:
+                    print(f"  {table}: empty (sequence stays at 1)")
+            except Exception as e:
+                print(f"  {table}: skipped ({str(e)[:50]})")
+        conn.commit()
+
+    print("[OK] 序列重置完成")
 
 
 def print_report(results):
@@ -308,6 +353,12 @@ def main():
         help='跳过迁移验证'
     )
 
+    parser.add_argument(
+        '--drop-existing',
+        action='store_true',
+        help='删除 PostgreSQL 中已存在的旧表后重建'
+    )
+
     args = parser.parse_args()
 
     print("=" * 60)
@@ -333,7 +384,7 @@ def main():
 
     # 创建 PostgreSQL 表结构
     try:
-        create_postgres_tables(pg_engine)
+        create_postgres_tables(pg_engine, args.drop_existing)
     except Exception as e:
         print(f"[ERROR] 创建表结构失败: {str(e)}")
         sys.exit(1)
@@ -341,7 +392,7 @@ def main():
     # 定义迁移顺序（按依赖关系排序）
     tables_order = [
         # (表名, 模型类, JSON字段列表)
-        ('categories', Category, None),
+        ('folders', Folder, None),
         ('tags', Tag, None),
         ('global_variables', GlobalVariable, None),
         ('environments', Environment, None),
@@ -360,6 +411,7 @@ def main():
         ('workflow_node_executions', WorkflowNodeExecution, ['output']),
         ('workflow_templates', WorkflowTemplate, ['template_config']),
         ('ai_configs', AIConfig, None),
+        ('selection_sessions', SelectionSession, ['execution_ids']),
     ]
 
     # 执行迁移
@@ -395,6 +447,9 @@ def main():
 
     # 打印报告
     print_report(results)
+
+    # 重置序列（关键步骤！）
+    reset_sequences(pg_engine)
 
     # 完成
     print(f"\n完成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
