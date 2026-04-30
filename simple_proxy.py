@@ -119,6 +119,12 @@ class ProxyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length) if content_length > 0 else None
 
+            # 转发所有必要的headers
+            headers = {}
+            for key, value in self.headers.items():
+                if key in ['Content-Type', 'Authorization']:
+                    headers[key] = value
+
             # 创建连接
             conn = http.client.HTTPConnection(
                 parsed_backend.hostname,
@@ -127,12 +133,7 @@ class ProxyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             )
 
             # 发送请求
-            conn.request(
-                method,
-                self.path,
-                body=body,
-                headers={'Content-Type': self.headers.get('Content-Type', 'application/json')}
-            )
+            conn.request(method, self.path, body=body, headers=headers)
 
             # 获取响应
             response = conn.getresponse()
@@ -178,10 +179,11 @@ class ProxyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length) if content_length > 0 else None
 
-            # 构造请求
-            headers = {
-                'Content-Type': self.headers.get('Content-Type', 'application/json')
-            }
+            # 构造请求 - 转发所有必要的headers（使用items()遍历）
+            headers = {}
+            for key, value in self.headers.items():
+                if key in ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']:
+                    headers[key] = value
 
             req = urllib.request.Request(
                 backend_url,
