@@ -561,11 +561,11 @@ router.afterEach(() => {
 }
 
 .guide-content h3 {
-  color: var(--gradient-start);
+  color: var(--accent-primary);
   margin-top: 20px;
   margin-bottom: 15px;
   font-size: 18px;
-  border-bottom: 2px solid var(--gradient-start);
+  border-bottom: 2px solid var(--accent-primary);
   padding-bottom: 8px;
 }
 
