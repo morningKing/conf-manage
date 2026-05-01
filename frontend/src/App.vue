@@ -600,7 +600,7 @@ router.afterEach(() => {
 }
 
 .guide-content code {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-active, rgba(102, 126, 234, 0.1));
   color: #e96900;
   padding: 2px 6px;
   border-radius: 3px;
@@ -646,12 +646,12 @@ router.afterEach(() => {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-secondary, rgba(102, 126, 234, 0.3));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--border-main, rgba(102, 126, 234, 0.5));
 }
 
 .light-mode ::-webkit-scrollbar-thumb {

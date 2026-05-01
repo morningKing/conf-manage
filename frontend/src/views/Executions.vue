@@ -735,7 +735,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
 }
 
 .header-left {
@@ -750,11 +750,11 @@ onMounted(() => {
 }
 
 .selected-tag {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-active, rgba(102, 126, 234, 0.1));
   border-radius: 12px;
   padding: 4px 10px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
 }
 
 .progress-section {
@@ -790,7 +790,7 @@ pre {
 }
 
 .batch-title {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
   font-size: 14px;
   margin-bottom: 12px;
 }
@@ -808,8 +808,8 @@ pre {
 
 .stat-card {
   text-align: center;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-tertiary, #fafafa);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
   border-radius: 12px;
 }
 
@@ -832,14 +832,14 @@ pre {
 .stat-value {
   font-size: 28px;
   font-weight: bold;
-  color: #fff;
+  color: var(--accent-primary, #667eea);
   line-height: 1;
   margin-bottom: 8px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted, rgba(30, 30, 46, 0.6));
 }
 
 .status-stats {
@@ -853,7 +853,7 @@ pre {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
 }
 
 .status-count {

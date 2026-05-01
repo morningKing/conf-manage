@@ -1118,18 +1118,18 @@ onUnmounted(() => {
   border-radius: 8px;
   cursor: pointer;
   margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
   transition: all 0.3s ease;
   background: transparent;
 }
 
 .tree-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-active, rgba(102, 126, 234, 0.1));
 }
 
 .tree-item.active {
-  background: rgba(102, 126, 234, 0.15);
-  color: #fff;
+  background: var(--glass-highlight, rgba(102, 126, 234, 0.15));
+  color: var(--accent-primary, #667eea);
   font-weight: 500;
 }
 
@@ -1146,13 +1146,13 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
 }
 
 .tree-node-count {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-muted, rgba(30, 30, 46, 0.6));
+  background: var(--glass-base, rgba(102, 126, 234, 0.05));
   padding: 0 6px;
   border-radius: 10px;
 }
@@ -1215,13 +1215,13 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
   user-select: none;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: var(--bg-tertiary, #fafafa);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
 }
 
 .grid-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: var(--bg-secondary, #ffffff);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
 }
 
 .grid-item.drag-over {
@@ -1273,12 +1273,12 @@ onUnmounted(() => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary, #1e1e2e);
 }
 
 .item-path {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted, rgba(30, 30, 46, 0.5));
   margin-top: 2px;
 }
 
