@@ -92,8 +92,8 @@ const isActive = (path) => {
 <style scoped>
 .glass-sidebar {
   width: 55px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--bg-secondary, #252536);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
   border-radius: 12px;
   height: calc(100vh - 30px);
   margin: 15px;
@@ -101,15 +101,13 @@ const isActive = (path) => {
   flex-direction: column;
   align-items: center;
   padding: 12px 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 /* Logo Area */
 .logo-area {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
   width: 100%;
   display: flex;
   justify-content: center;
@@ -154,7 +152,7 @@ const isActive = (path) => {
 }
 
 .nav-area::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-low, rgba(102, 126, 234, 0.2));
   border-radius: 2px;
 }
 
@@ -164,17 +162,17 @@ const isActive = (path) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--bg-tertiary, #2a2a40);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   text-decoration: none;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--glass-active, rgba(102, 126, 234, 0.15));
+  color: var(--text-primary, #fff);
 }
 
 .nav-item.active {
@@ -187,7 +185,7 @@ const isActive = (path) => {
 .tools-area {
   padding-top: 16px;
   margin-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -201,17 +199,17 @@ const isActive = (path) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--bg-tertiary, #2a2a40);
   border: none;
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .tool-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--glass-active, rgba(102, 126, 234, 0.15));
+  color: var(--text-primary, #fff);
 }
 
 /* Responsive: Mobile Bottom Navigation */

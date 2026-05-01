@@ -80,54 +80,57 @@ const buttonClasses = computed(() => {
   cursor: not-allowed;
 }
 
-/* Primary type */
+/* Primary type - 使用实色背景 */
 .glass-button--primary {
-  background: rgba(255, 255, 255, 0.15);
+  background: #667eea;
   color: white;
 }
 
 .glass-button--primary:hover:not(.glass-button--disabled) {
-  background: rgba(255, 255, 255, 0.25);
+  background: #764ba2;
 }
 
-/* Secondary type */
+/* Secondary type - 使用深色背景 */
 .glass-button--secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--bg-tertiary, #2a2a40);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
 }
 
 .glass-button--secondary:hover:not(.glass-button--disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--bg-secondary, #252536);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
+  color: var(--text-primary, #fff);
 }
 
-/* Success type */
+/* Success type - 使用实色 */
 .glass-button--success {
-  background: rgba(103, 194, 58, 0.2);
-  color: #67c23a;
+  background: #67c23a;
+  color: white;
 }
 
 .glass-button--success:hover:not(.glass-button--disabled) {
-  background: rgba(103, 194, 58, 0.3);
+  background: #85ce61;
 }
 
-/* Warning type */
+/* Warning type - 使用实色 */
 .glass-button--warning {
-  background: rgba(230, 162, 60, 0.2);
-  color: #e6a23c;
+  background: #e6a23c;
+  color: white;
 }
 
 .glass-button--warning:hover:not(.glass-button--disabled) {
-  background: rgba(230, 162, 60, 0.3);
+  background: #ebb563;
 }
 
-/* Danger type */
+/* Danger type - 使用实色 */
 .glass-button--danger {
-  background: rgba(245, 108, 108, 0.2);
-  color: #f56c6c;
+  background: #f56c6c;
+  color: white;
 }
 
 .glass-button--danger:hover:not(.glass-button--disabled) {
-  background: rgba(245, 108, 108, 0.3);
+  background: #f78989;
 }
 
 /* Size variations */

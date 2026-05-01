@@ -68,13 +68,11 @@ defineProps({
 <style scoped>
 /* Base Card Styles */
 .glass-card {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: var(--bg-tertiary, #2a2a40);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
   border-radius: 12px;
   padding: 15px;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 /* Hoverable Variant */
@@ -83,19 +81,19 @@ defineProps({
 }
 
 .glass-card-hoverable:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
+  background: var(--bg-secondary, #252536);
 }
 
 /* Dark Variant */
 .glass-card-dark {
-  background: rgba(30, 30, 50, 0.85);
-  border-color: rgba(102, 126, 234, 0.30);
+  background: rgba(30, 30, 50, 0.95);
+  border-color: var(--border-gradient, rgba(102, 126, 234, 0.5));
 }
 
 .glass-card-dark.glass-card-hoverable:hover {
-  border-color: rgba(102, 126, 234, 0.50);
-  background: rgba(30, 30, 50, 0.95);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
+  background: rgba(30, 30, 50, 1);
 }
 
 /* Header Section */
@@ -105,16 +103,16 @@ defineProps({
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
 }
 
 .glass-card-dark .glass-card-header {
-  border-bottom-color: rgba(102, 126, 234, 0.20);
+  border-bottom-color: var(--border-low, rgba(102, 126, 234, 0.2));
 }
 
 /* Title */
 .glass-card-title {
-  color: #fff;
+  color: var(--text-primary, #fff);
   font-size: 14px;
   font-weight: 500;
 }
@@ -128,7 +126,7 @@ defineProps({
 
 /* Body Section */
 .glass-card-body {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.85));
 }
 
 /* Footer Section */
@@ -137,10 +135,10 @@ defineProps({
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
 }
 
 .glass-card-dark .glass-card-footer {
-  border-top-color: rgba(102, 126, 234, 0.20);
+  border-top-color: var(--border-low, rgba(102, 126, 234, 0.2));
 }
 </style>
