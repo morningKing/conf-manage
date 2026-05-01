@@ -90,17 +90,17 @@ const buttonClasses = computed(() => {
   background: #764ba2;
 }
 
-/* Secondary type - 使用深色背景 */
+/* Secondary type - 使用亮色背景 */
 .glass-button--secondary {
-  background: var(--bg-tertiary, #2a2a40);
-  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
+  background: var(--bg-tertiary, #fafafa);
+  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
 }
 
 .glass-button--secondary:hover:not(.glass-button--disabled) {
-  background: var(--bg-secondary, #252536);
-  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
-  color: var(--text-primary, #fff);
+  background: var(--bg-secondary, #ffffff);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
+  color: var(--text-primary, #1e1e2e);
 }
 
 /* Success type - 使用实色 */

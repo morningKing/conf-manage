@@ -68,8 +68,8 @@ defineProps({
 <style scoped>
 /* Base Card Styles */
 .glass-card {
-  background: var(--bg-tertiary, #2a2a40);
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
+  background: var(--bg-tertiary, #fafafa);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
   border-radius: 12px;
   padding: 15px;
   transition: all 0.3s ease;
@@ -81,19 +81,19 @@ defineProps({
 }
 
 .glass-card-hoverable:hover {
-  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
-  background: var(--bg-secondary, #252536);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
+  background: var(--bg-secondary, #ffffff);
 }
 
 /* Dark Variant */
 .glass-card-dark {
-  background: rgba(30, 30, 50, 0.95);
-  border-color: var(--border-gradient, rgba(102, 126, 234, 0.5));
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border-gradient, rgba(102, 126, 234, 0.4));
 }
 
 .glass-card-dark.glass-card-hoverable:hover {
-  border-color: var(--border-main, rgba(102, 126, 234, 0.6));
-  background: rgba(30, 30, 50, 1);
+  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
+  background: rgba(255, 255, 255, 1);
 }
 
 /* Header Section */
@@ -103,16 +103,16 @@ defineProps({
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
 }
 
 .glass-card-dark .glass-card-header {
-  border-bottom-color: var(--border-low, rgba(102, 126, 234, 0.2));
+  border-bottom-color: var(--border-low, rgba(102, 126, 234, 0.15));
 }
 
 /* Title */
 .glass-card-title {
-  color: var(--text-primary, #fff);
+  color: var(--text-primary, #1e1e2e);
   font-size: 14px;
   font-weight: 500;
 }
@@ -126,7 +126,7 @@ defineProps({
 
 /* Body Section */
 .glass-card-body {
-  color: var(--text-secondary, rgba(255, 255, 255, 0.85));
+  color: var(--text-secondary, rgba(30, 30, 46, 0.85));
 }
 
 /* Footer Section */
@@ -135,10 +135,10 @@ defineProps({
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
+  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
 }
 
 .glass-card-dark .glass-card-footer {
-  border-top-color: var(--border-low, rgba(102, 126, 234, 0.2));
+  border-top-color: var(--border-low, rgba(102, 126, 234, 0.15));
 }
 </style>

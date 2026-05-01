@@ -92,8 +92,8 @@ const isActive = (path) => {
 <style scoped>
 .glass-sidebar {
   width: 55px;
-  background: var(--bg-secondary, #252536);
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.4));
+  background: var(--bg-secondary, #ffffff);
+  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
   border-radius: 12px;
   height: calc(100vh - 30px);
   margin: 15px;
@@ -107,7 +107,7 @@ const isActive = (path) => {
 .logo-area {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
+  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
   width: 100%;
   display: flex;
   justify-content: center;
@@ -152,7 +152,7 @@ const isActive = (path) => {
 }
 
 .nav-area::-webkit-scrollbar-thumb {
-  background: var(--border-low, rgba(102, 126, 234, 0.2));
+  background: var(--border-low, rgba(102, 126, 234, 0.15));
   border-radius: 2px;
 }
 
@@ -162,17 +162,17 @@ const isActive = (path) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-tertiary, #2a2a40);
+  background: var(--bg-tertiary, #fafafa);
   border-radius: 8px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary, rgba(30, 30, 46, 0.7));
   text-decoration: none;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .nav-item:hover {
-  background: var(--glass-active, rgba(102, 126, 234, 0.15));
-  color: var(--text-primary, #fff);
+  background: var(--glass-active, rgba(102, 126, 234, 0.1));
+  color: var(--text-primary, #1e1e2e);
 }
 
 .nav-item.active {
@@ -185,7 +185,7 @@ const isActive = (path) => {
 .tools-area {
   padding-top: 16px;
   margin-top: 16px;
-  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.2));
+  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -199,17 +199,17 @@ const isActive = (path) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-tertiary, #2a2a40);
+  background: var(--bg-tertiary, #fafafa);
   border: none;
   border-radius: 8px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--text-secondary, rgba(30, 30, 46, 0.7));
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .tool-btn:hover {
-  background: var(--glass-active, rgba(102, 126, 234, 0.15));
-  color: var(--text-primary, #fff);
+  background: var(--glass-active, rgba(102, 126, 234, 0.1));
+  color: var(--text-primary, #1e1e2e);
 }
 
 /* Responsive: Mobile Bottom Navigation */
