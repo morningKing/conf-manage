@@ -1,21 +1,17 @@
 <template>
   <div class="webhooks-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>Webhook管理</span>
-          <div class="header-actions">
-            <el-button @click="showGuide = true">
-              <el-icon><Document /></el-icon>
-              使用指南
-            </el-button>
-            <el-button type="primary" @click="handleCreate">
-              <el-icon><Plus /></el-icon>
-              新建Webhook
-            </el-button>
-          </div>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">Webhook管理</span>
+        <div class="header-actions">
+          <GlassButton label="使用指南" type="secondary" size="small" @click="showGuide = true">
+            <template #icon><Document /></template>
+          </GlassButton>
+          <GlassButton label="新建Webhook" type="primary" size="small" @click="handleCreate">
+            <template #icon><Plus /></template>
+          </GlassButton>
         </div>
-      </template>
+      </div>
 
       <!-- 搜索栏 -->
       <div class="filter-bar">
@@ -70,18 +66,16 @@
             {{ formatTime(row.last_called_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="320" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="showWebhookUrl(row)">
-              <el-icon><Link /></el-icon>
-              URL
-            </el-button>
-            <el-button size="small" @click="handleTest(row)">
-              <el-icon><VideoPlay /></el-icon>
-              测试
-            </el-button>
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <GlassButton label="URL" type="secondary" size="small" @click="showWebhookUrl(row)">
+              <template #icon><Link /></template>
+            </GlassButton>
+            <GlassButton label="测试" type="primary" size="small" @click="handleTest(row)">
+              <template #icon><VideoPlay /></template>
+            </GlassButton>
+            <GlassButton label="编辑" type="secondary" size="small" @click="handleEdit(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="handleDelete(row)" />
           </template>
         </el-table-column>
       </el-table>
@@ -98,7 +92,7 @@
           @current-change="loadWebhooks"
         />
       </div>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -179,8 +173,8 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <GlassButton label="取消" type="secondary" @click="dialogVisible = false" />
+        <GlassButton label="确定" type="primary" @click="handleSubmit" :disabled="submitting" />
       </template>
     </el-dialog>
 
@@ -353,6 +347,7 @@ import {
   getWebhooks, getWebhook, createWebhook, updateWebhook,
   deleteWebhook, regenerateWebhookToken, toggleWebhook
 } from '@/api/webhooks'
+import GlassButton from '../components/GlassButton.vue'
 
 // 数据
 const webhooks = ref([])

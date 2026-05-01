@@ -1,15 +1,12 @@
 <template>
   <div class="schedules-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>定时任务</span>
-          <el-button type="primary" @click="handleCreate">
-            <el-icon><Plus /></el-icon>
-            新建任务
-          </el-button>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">定时任务</span>
+        <GlassButton label="新建任务" type="primary" size="small" @click="handleCreate">
+          <template #icon><Plus /></template>
+        </GlassButton>
+      </div>
 
       <el-table :data="schedules" stripe>
         <el-table-column prop="name" label="任务名称" width="200" />
@@ -32,22 +29,21 @@
             {{ formatTime(row.next_run) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              size="small"
+            <GlassButton label="编辑" type="secondary" size="small" @click="handleEdit(row)" />
+            <GlassButton
+              :label="row.enabled ? '禁用' : '启用'"
               :type="row.enabled ? 'warning' : 'success'"
+              size="small"
               @click="handleToggle(row)"
-            >
-              {{ row.enabled ? '禁用' : '启用' }}
-            </el-button>
-            <el-button size="small" type="info" @click="handleRunNow(row)">立即运行</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            />
+            <GlassButton label="立即运行" type="primary" size="small" @click="handleRunNow(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="handleDelete(row)" />
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -92,8 +88,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <GlassButton label="取消" type="secondary" @click="dialogVisible = false" />
+        <GlassButton label="保存" type="primary" @click="handleSave" />
       </template>
     </el-dialog>
   </div>
@@ -102,6 +98,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import {
   getSchedules,
   createSchedule,
@@ -111,6 +108,7 @@ import {
   runScheduleNow,
   getScripts
 } from '../api'
+import GlassButton from '../components/GlassButton.vue'
 
 const schedules = ref([])
 const scripts = ref([])

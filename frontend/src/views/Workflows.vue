@@ -1,15 +1,13 @@
 <template>
   <div class="workflows-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>工作流管理</span>
-          <el-space>
-            <el-button type="primary" @click="showCreateDialog">创建工作流</el-button>
-            <el-button @click="showTemplateDialog">从模板创建</el-button>
-          </el-space>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">工作流管理</span>
+        <div class="header-actions">
+          <GlassButton label="创建工作流" type="primary" size="small" @click="showCreateDialog" />
+          <GlassButton label="从模板创建" type="secondary" size="small" @click="showTemplateDialog" />
         </div>
-      </template>
+      </div>
 
       <!-- 工作流列表 -->
       <el-table :data="workflows" style="width: 100%">
@@ -28,22 +26,16 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="editWorkflow(row)">编辑</el-button>
-            <el-button size="small" type="success" @click="executeWorkflow(row)">
-              执行
-            </el-button>
-            <el-button size="small" @click="toggleWorkflow(row)">
-              {{ row.enabled ? '禁用' : '启用' }}
-            </el-button>
-            <el-button size="small" type="danger" @click="deleteWorkflow(row)">
-              删除
-            </el-button>
+            <GlassButton label="编辑" type="secondary" size="small" @click="editWorkflow(row)" />
+            <GlassButton label="执行" type="success" size="small" @click="executeWorkflow(row)" />
+            <GlassButton :label="row.enabled ? '禁用' : '启用'" type="primary" size="small" @click="toggleWorkflow(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="deleteWorkflow(row)" />
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑工作流对话框 -->
     <el-dialog
@@ -312,6 +304,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   List, Share, DataAnalysis, Timer, Link, Document, Upload, UploadFilled
 } from '@element-plus/icons-vue'
+import GlassButton from '../components/GlassButton.vue'
 import {
   getWorkflowTemplates,
   useWorkflowTemplate

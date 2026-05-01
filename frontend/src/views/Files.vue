@@ -1,21 +1,18 @@
 <template>
   <div class="files-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>文件管理</span>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">文件管理</span>
+      </div>
 
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <!-- 常规文件管理 -->
         <el-tab-pane label="常规文件" name="regular">
           <div class="tab-header">
             <div>
-              <el-button @click="handleCreateFolder">
-                <el-icon><FolderAdd /></el-icon>
-                新建文件夹
-              </el-button>
+              <GlassButton label="新建文件夹" type="secondary" size="small" @click="handleCreateFolder">
+                <template #icon><FolderAdd /></template>
+              </GlassButton>
               <el-upload
                 :action="uploadUrl"
                 :data="{ path: currentPath }"
@@ -23,10 +20,9 @@
                 :show-file-list="false"
                 style="display: inline-block; margin-left: 10px"
               >
-                <el-button type="primary">
-                  <el-icon><Upload /></el-icon>
-                  上传文件
-                </el-button>
+                <GlassButton label="上传文件" type="primary" size="small">
+                  <template #icon><Upload /></template>
+                </GlassButton>
               </el-upload>
             </div>
           </div>
@@ -74,25 +70,21 @@
             </el-table-column>
             <el-table-column label="操作" width="200">
               <template #default="{ row }">
-                <el-button
+                <GlassButton
                   v-if="!row.is_dir && canPreview(row.name)"
-                  size="small"
+                  label="预览"
                   type="success"
-                  @click.stop="handlePreview(row)"
-                >
-                  预览
-                </el-button>
-                <el-button
-                  v-if="!row.is_dir"
                   size="small"
+                  @click.stop="handlePreview(row)"
+                />
+                <GlassButton
+                  v-if="!row.is_dir"
+                  label="下载"
                   type="primary"
+                  size="small"
                   @click.stop="handleDownload(row)"
-                >
-                  下载
-                </el-button>
-                <el-button size="small" type="danger" @click.stop="handleDelete(row)">
-                  删除
-                </el-button>
+                />
+                <GlassButton label="删除" type="danger" size="small" @click.stop="handleDelete(row)" />
               </template>
             </el-table-column>
           </el-table>
@@ -176,14 +168,14 @@
           <el-empty v-else description="请选择一个工作流执行记录查看文件" />
         </el-tab-pane>
       </el-tabs>
-    </el-card>
+    </div>
 
     <!-- 新建文件夹对话框 -->
     <el-dialog v-model="folderVisible" title="新建文件夹" width="400px">
       <el-input v-model="folderName" placeholder="请输入文件夹名称" />
       <template #footer>
-        <el-button @click="folderVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCreateFolderConfirm">创建</el-button>
+        <GlassButton label="取消" type="secondary" @click="folderVisible = false" />
+        <GlassButton label="创建" type="primary" @click="handleCreateFolderConfirm" />
       </template>
     </el-dialog>
 
@@ -291,6 +283,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { FolderAdd, Upload, Folder, Document, Refresh } from '@element-plus/icons-vue'
 import { getFiles, deleteFile, createFolder, downloadFile, getExecutions } from '../api'
 import ExecutionFiles from '../components/ExecutionFiles.vue'
+import GlassButton from '../components/GlassButton.vue'
 import request from '../api/request'
 
 const activeTab = ref('regular')
