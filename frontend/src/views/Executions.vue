@@ -1,29 +1,23 @@
 <template>
   <div class="executions-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <div class="header-left">
-            <span>执行历史</span>
-            <el-tag v-if="selectedExecutions.length > 0" type="primary" class="selected-count">
-              已选择 {{ selectedExecutions.length }} 项
-            </el-tag>
-          </div>
-          <div class="header-right">
-            <el-button v-if="selectedExecutions.length > 0" @click="clearSelection">
-              取消选择
-            </el-button>
-            <el-button @click="loadExecutions">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
-            <el-button @click="showStatistics">
-              <el-icon><DataLine /></el-icon>
-              统计
-            </el-button>
-          </div>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <div class="header-left">
+          <span class="glass-card-title">执行历史</span>
+          <span v-if="selectedExecutions.length > 0" class="selected-tag">
+            已选择 {{ selectedExecutions.length }} 项
+          </span>
         </div>
-      </template>
+        <div class="header-right">
+          <GlassButton v-if="selectedExecutions.length > 0" label="取消选择" type="secondary" size="small" @click="clearSelection" />
+          <GlassButton label="刷新" type="secondary" size="small" @click="loadExecutions">
+            <template #icon><Refresh /></template>
+          </GlassButton>
+          <GlassButton label="统计" type="secondary" size="small" @click="showStatistics">
+            <template #icon><DataLine /></template>
+          </GlassButton>
+        </div>
+      </div>
 
       <!-- 选择会话面板 -->
       <SelectionPanel
@@ -33,40 +27,36 @@
       />
 
       <!-- 批量操作栏 -->
-      <div v-if="selectedExecutions.length > 0" class="batch-actions">
-        <el-divider content-position="left">批量操作</el-divider>
+      <div v-if="selectedExecutions.length > 0" class="batch-actions glass-card">
+        <div class="batch-title">批量操作</div>
         <div class="batch-buttons">
-          <el-button
+          <GlassButton
+            label="删除选中"
             type="danger"
+            size="small"
             :disabled="!canBatchDelete"
             @click="batchDelete"
-            :loading="batchLoading"
-          >
-            <el-icon><Delete /></el-icon>
-            删除选中 ({{ getSelectedCount('canDelete') }})
-          </el-button>
-          <el-button
+          />
+          <GlassButton
+            label="取消运行"
             type="warning"
+            size="small"
             :disabled="!canBatchCancel"
             @click="batchCancel"
-            :loading="batchLoading"
-          >
-            <el-icon><VideoPause /></el-icon>
-            取消运行 ({{ getSelectedCount('canCancel') }})
-          </el-button>
-          <el-button
+          />
+          <GlassButton
+            label="重试失败"
             type="primary"
+            size="small"
             :disabled="!canBatchRetry"
             @click="batchRetry"
-            :loading="batchLoading"
-          >
-            <el-icon><RefreshRight /></el-icon>
-            重试失败 ({{ getSelectedCount('canRetry') }})
-          </el-button>
-          <el-button @click="clearSelection">
-            <el-icon><Close /></el-icon>
-            清空选择
-          </el-button>
+          />
+          <GlassButton
+            label="清空选择"
+            type="secondary"
+            size="small"
+            @click="clearSelection"
+          />
         </div>
       </div>
 
@@ -130,27 +120,25 @@
             {{ getDuration(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="320" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button
+            <GlassButton
               v-if="row.status === 'running'"
-              size="small"
+              label="中断"
               type="warning"
-              @click="handleCancel(row)"
-            >
-              中断
-            </el-button>
-            <el-button
-              v-if="row.status !== 'running'"
               size="small"
+              @click="handleCancel(row)"
+            />
+            <GlassButton
+              v-if="row.status !== 'running'"
+              label="重新执行"
               type="success"
+              size="small"
               @click="handleReExecute(row)"
-            >
-              重新执行
-            </el-button>
-            <el-button size="small" @click="handleViewLogs(row)">日志</el-button>
-            <el-button size="small" type="primary" @click="handleViewFiles(row)">文件</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            />
+            <GlassButton label="日志" type="secondary" size="small" @click="handleViewLogs(row)" />
+            <GlassButton label="文件" type="primary" size="small" @click="handleViewFiles(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="handleDelete(row)" />
           </template>
         </el-table-column>
       </el-table>
@@ -165,7 +153,7 @@
         @current-change="handleCurrentChange"
         style="margin-top: 20px"
       />
-    </el-card>
+    </div>
 
     <!-- 日志查看对话框 -->
     <el-dialog v-model="logVisible" title="执行日志" width="80%" top="5vh">
@@ -209,7 +197,7 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="logVisible = false">关闭</el-button>
+        <GlassButton label="关闭" type="secondary" @click="logVisible = false" />
       </template>
     </el-dialog>
 
@@ -226,7 +214,7 @@
         :workflow-execution-id="currentExecution.workflow_execution_id"
       />
       <template #footer>
-        <el-button @click="filesVisible = false">关闭</el-button>
+        <GlassButton label="关闭" type="secondary" @click="filesVisible = false" />
       </template>
     </el-dialog>
 
@@ -331,7 +319,7 @@
         </el-table>
       </div>
       <template #footer>
-        <el-button @click="statisticsVisible = false">关闭</el-button>
+        <GlassButton label="关闭" type="secondary" @click="statisticsVisible = false" />
       </template>
     </el-dialog>
   </div>
@@ -345,6 +333,7 @@ import { getExecutions, getExecutionLogs, deleteExecution, deleteWorkflowExecuti
 import ExecutionFiles from '../components/ExecutionFiles.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
 import SelectionPanel from '../components/SelectionPanel.vue'
+import GlassButton from '../components/GlassButton.vue'
 
 const executions = ref([])
 const currentPage = ref(1)
@@ -740,10 +729,13 @@ onMounted(() => {
   padding: 20px;
 }
 
-.card-header {
+.glass-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-left {
@@ -757,8 +749,12 @@ onMounted(() => {
   gap: 10px;
 }
 
-.selected-count {
+.selected-tag {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 4px 10px;
   font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .progress-section {
@@ -767,15 +763,15 @@ onMounted(() => {
 
 .log-container,
 .error-container {
-  background-color: #f5f5f5;
+  background: rgba(30, 30, 50, 0.85);
   padding: 15px;
-  border-radius: 4px;
+  border-radius: 12px;
   max-height: 400px;
   overflow-y: auto;
 }
 
 .error-container {
-  background-color: #fef0f0;
+  border: 1px solid rgba(245, 108, 108, 0.3);
   color: #f56c6c;
 }
 
@@ -791,8 +787,12 @@ pre {
 .batch-actions {
   margin-bottom: 16px;
   padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+}
+
+.batch-title {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin-bottom: 12px;
 }
 
 .batch-buttons {
@@ -808,18 +808,21 @@ pre {
 
 .stat-card {
   text-align: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
 }
 
 .stat-card.success {
-  border-color: #67c23a;
+  border-color: rgba(103, 194, 58, 0.3);
 }
 
 .stat-card.danger {
-  border-color: #f56c6c;
+  border-color: rgba(245, 108, 108, 0.3);
 }
 
 .stat-card.primary {
-  border-color: #409eff;
+  border-color: rgba(64, 158, 255, 0.3);
 }
 
 .stat-item {
@@ -829,14 +832,14 @@ pre {
 .stat-value {
   font-size: 28px;
   font-weight: bold;
-  color: #303133;
+  color: #fff;
   line-height: 1;
   margin-bottom: 8px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .status-stats {
@@ -850,12 +853,12 @@ pre {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .status-count {
   font-weight: bold;
-  color: #303133;
+  color: #fff;
 }
 
 .status-info {
