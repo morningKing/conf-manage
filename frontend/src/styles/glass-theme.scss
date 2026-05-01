@@ -273,7 +273,7 @@ $text-placeholder: rgba(255, 255, 255, 0.5);
   }
 
   &.active {
-    background: linear-gradient(135deg, $gradient-start, $gradient-end);
+    background: linear-gradient(135deg, $accent-primary, $accent-secondary);
     color: $text-primary;
   }
 }
