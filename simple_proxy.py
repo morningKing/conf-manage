@@ -14,7 +14,7 @@ import sys
 
 # 配置
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
-BACKEND_URL = 'http://localhost:5000'
+BACKEND_URL = 'http://localhost:5001'
 PORT = 3000
 
 

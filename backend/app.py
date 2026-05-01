@@ -66,9 +66,9 @@ if __name__ == '__main__':
     print('=' * 60)
     print('脚本工具管理系统后端服务')
     print('=' * 60)
-    print(f'服务地址: http://localhost:5000')
-    print(f'API地址: http://localhost:5000/api')
-    print(f'健康检查: http://localhost:5000/health')
+    print(f'服务地址: http://localhost:5001')
+    print(f'API地址: http://localhost:5001/api')
+    print(f'健康检查: http://localhost:5001/health')
     print('=' * 60)
     # 使用 use_reloader=False 防止定时任务在调试模式下被多次初始化
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
