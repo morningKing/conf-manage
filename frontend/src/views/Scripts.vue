@@ -43,10 +43,7 @@
         </el-tree>
       </div>
       <div class="tree-footer">
-        <el-button text @click="handleCreateRootFolder">
-          <el-icon><Plus /></el-icon>
-          新建文件夹
-        </el-button>
+        <GlassButton label="新建文件夹" icon="Plus" type="secondary" size="small" @click="handleCreateRootFolder" />
       </div>
     </div>
 
@@ -81,14 +78,8 @@
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button @click="handleCreateFolder">
-            <el-icon><FolderAdd /></el-icon>
-            新建文件夹
-          </el-button>
-          <el-button type="primary" @click="handleCreateScript">
-            <el-icon><Plus /></el-icon>
-            新建脚本
-          </el-button>
+          <GlassButton label="新建文件夹" icon="FolderAdd" type="secondary" @click="handleCreateFolder" />
+          <GlassButton label="新建脚本" icon="Plus" type="primary" @click="handleCreateScript" />
         </div>
       </div>
 
@@ -132,8 +123,8 @@
         <div v-if="currentFolders.length === 0 && currentScripts.length === 0" class="empty-state">
           <el-empty description="此文件夹为空">
             <div class="empty-actions">
-              <el-button type="primary" @click="handleCreateScript">新建脚本</el-button>
-              <el-button @click="handleCreateFolder">新建文件夹</el-button>
+              <GlassButton label="新建脚本" type="primary" @click="handleCreateScript" />
+              <GlassButton label="新建文件夹" type="secondary" @click="handleCreateFolder" />
             </div>
           </el-empty>
         </div>
@@ -223,8 +214,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="folderDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveFolder">保存</el-button>
+        <GlassButton label="取消" type="secondary" @click="folderDialogVisible = false" />
+        <GlassButton label="保存" type="primary" @click="handleSaveFolder" />
       </template>
     </el-dialog>
 
@@ -297,8 +288,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="scriptDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveScript">保存</el-button>
+        <GlassButton label="取消" type="secondary" @click="scriptDialogVisible = false" />
+        <GlassButton label="保存" type="primary" @click="handleSaveScript" />
       </template>
     </el-dialog>
 
@@ -328,9 +319,9 @@
         />
       </div>
       <template #footer>
-        <el-button @click="viewDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleEdit(viewScript); viewDialogVisible = false">编辑</el-button>
-        <el-button type="success" @click="handleExecute(viewScript); viewDialogVisible = false">执行</el-button>
+        <GlassButton label="关闭" type="secondary" @click="viewDialogVisible = false" />
+        <GlassButton label="编辑" type="primary" @click="handleEdit(viewScript); viewDialogVisible = false" />
+        <GlassButton label="执行" type="success" @click="handleExecute(viewScript); viewDialogVisible = false" />
       </template>
     </el-dialog>
 
@@ -362,8 +353,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="executeVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleExecuteConfirm">执行</el-button>
+        <GlassButton label="取消" type="secondary" @click="executeVisible = false" />
+        <GlassButton label="执行" type="primary" @click="handleExecuteConfirm" />
       </template>
     </el-dialog>
 
@@ -378,8 +369,8 @@
       <div class="log-header">
         <el-tag :type="getStatusType(logStatus)" size="large">{{ getStatusText(logStatus) }}</el-tag>
         <div class="log-actions">
-          <el-button v-if="logStatus === 'running'" type="danger" size="small" @click="handleCancelExecution">中断执行</el-button>
-          <el-button v-if="logStatus === 'running'" type="info" size="small" @click="closeLogStream">停止监听</el-button>
+          <GlassButton v-if="logStatus === 'running'" label="中断执行" type="danger" size="small" @click="handleCancelExecution" />
+          <GlassButton v-if="logStatus === 'running'" label="停止监听" type="secondary" size="small" @click="closeLogStream" />
         </div>
       </div>
       <el-divider />
@@ -410,14 +401,14 @@
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" @click="handleFilePreview(row)" v-if="row.is_text">预览</el-button>
-              <el-button size="small" type="primary" @click="handleFileDownload(row)">下载</el-button>
+              <GlassButton v-if="row.is_text" label="预览" type="secondary" size="small" @click="handleFilePreview(row)" />
+              <GlassButton label="下载" type="primary" size="small" @click="handleFileDownload(row)" />
             </template>
           </el-table-column>
         </el-table>
       </div>
       <template #footer>
-        <el-button @click="closeLogStream">关闭</el-button>
+        <GlassButton label="关闭" type="secondary" @click="closeLogStream" />
       </template>
     </el-dialog>
 
@@ -428,8 +419,8 @@
         <div v-else style="color: #909399; text-align: center; padding: 40px;">{{ filePreviewContent }}</div>
       </div>
       <template #footer>
-        <el-button @click="filePreviewVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleFileDownload(selectedFile)">下载</el-button>
+        <GlassButton label="关闭" type="secondary" @click="filePreviewVisible = false" />
+        <GlassButton label="下载" type="primary" @click="handleFileDownload(selectedFile)" />
       </template>
     </el-dialog>
   </div>
@@ -465,6 +456,8 @@ import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
 import ColorPicker from '../components/ColorPicker.vue'
+import GlassCard from '../components/GlassCard.vue'
+import GlassButton from '../components/GlassButton.vue'
 import {
   Plus, Search, Folder, FolderOpened, FolderAdd, Document, Edit, EditPen,
   Delete, VideoPlay, View, Loading
@@ -1122,20 +1115,21 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   margin-bottom: 4px;
-  color: var(--el-text-color-regular);
-  transition: all 0.2s;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  background: transparent;
 }
 
 .tree-item:hover {
-  background: var(--el-fill-color-light);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .tree-item.active {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: rgba(102, 126, 234, 0.15);
+  color: #fff;
   font-weight: 500;
 }
 
@@ -1152,12 +1146,13 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .tree-node-count {
   font-size: 12px;
-  color: var(--el-text-color-placeholder);
-  background: var(--el-fill-color);
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.10);
   padding: 0 6px;
   border-radius: 10px;
 }
@@ -1216,19 +1211,22 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 16px 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   user-select: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.20);
 }
 
 .grid-item:hover {
-  background: var(--el-fill-color-light);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .grid-item.drag-over {
-  background: var(--el-color-primary-light-8);
-  outline: 2px dashed var(--el-color-primary);
+  background: rgba(102, 126, 234, 0.15);
+  outline: 2px dashed rgba(102, 126, 234, 0.50);
 }
 
 .item-icon {
@@ -1275,12 +1273,12 @@ onUnmounted(() => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  color: var(--el-text-color-primary);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .item-path {
   font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 2px;
 }
 
@@ -1337,8 +1335,8 @@ onUnmounted(() => {
 
 /* ===== 拖拽高亮 ===== */
 .drag-over {
-  background: var(--el-color-primary-light-8) !important;
-  outline: 2px dashed var(--el-color-primary);
+  background: rgba(102, 126, 234, 0.15) !important;
+  outline: 2px dashed rgba(102, 126, 234, 0.50);
 }
 
 /* ===== 对话框样式 ===== */
