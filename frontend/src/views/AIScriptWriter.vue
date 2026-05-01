@@ -1,16 +1,10 @@
 <template>
   <div class="ai-script-writer">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>AI脚本编写器</span>
-          <div>
-            <el-button @click="saveAsScript" type="success" :disabled="!generatedScript">
-              保存为脚本
-            </el-button>
-          </div>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">AI脚本编写器</span>
+        <GlassButton label="保存为脚本" type="success" size="small" @click="saveAsScript" :disabled="!generatedScript" />
+      </div>
 
       <div class="writer-container">
         <!-- 左侧：AI交互区域 -->
@@ -44,20 +38,15 @@
               @keydown.ctrl.enter="generateScript"
             />
             <div class="actions">
-              <el-button
+              <GlassButton
+                :label="generating ? '生成中...' : '生成脚本'"
                 type="primary"
+                size="small"
                 @click="generateScript"
-                :loading="generating"
-                :disabled="!prompt.trim()"
-              >
-                {{ generating ? '生成中...' : '生成脚本' }} (Ctrl+Enter)
-              </el-button>
-              <el-button v-if="generatedScript" @click="improveScript" :disabled="generating">
-                改进脚本
-              </el-button>
-              <el-button v-if="generatedScript" @click="explainScript" :disabled="generating">
-                解释脚本
-              </el-button>
+                :disabled="!prompt.trim() || generating"
+              />
+              <GlassButton v-if="generatedScript" label="改进脚本" type="secondary" size="small" @click="improveScript" :disabled="generating" />
+              <GlassButton v-if="generatedScript" label="解释脚本" type="secondary" size="small" @click="explainScript" :disabled="generating" />
             </div>
           </div>
 
@@ -66,22 +55,8 @@
             <div class="editor-header">
               <span>生成的脚本</span>
               <div>
-                <el-button
-                  size="small"
-                  @click="copyScript"
-                  :disabled="!generatedScript"
-                >
-                  复制
-                </el-button>
-                <el-button
-                  size="small"
-                  type="primary"
-                  @click="previewExecute"
-                  :disabled="!generatedScript || executing"
-                  :loading="executing"
-                >
-                  预览执行
-                </el-button>
+                <GlassButton label="复制" type="secondary" size="small" @click="copyScript" :disabled="!generatedScript" />
+                <GlassButton label="预览执行" type="primary" size="small" @click="previewExecute" :disabled="!generatedScript || executing" />
               </div>
             </div>
             <textarea
@@ -164,7 +139,7 @@
           </el-dialog>
         </div>
       </div>
-    </el-card>
+    </div>
 
     <!-- 保存对话框 -->
     <el-dialog v-model="saveDialogVisible" title="保存为脚本" width="500px">
@@ -201,6 +176,7 @@ import { Document, Folder } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import { useRouter } from 'vue-router'
 import FileUpload from '@/components/FileUpload.vue'
+import GlassButton from '../components/GlassButton.vue'
 
 const router = useRouter()
 

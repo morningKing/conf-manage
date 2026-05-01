@@ -1,25 +1,21 @@
 <template>
   <div class="code-editor-container">
     <!-- 工具栏 -->
-    <div class="editor-toolbar" v-if="!readonly">
-      <el-button-group>
-        <el-button size="small" @click="formatCode" :loading="formatting">
-          <el-icon><Document /></el-icon>
-          格式化
-        </el-button>
-        <el-button size="small" @click="triggerSearch">
-          <el-icon><Search /></el-icon>
-          搜索
-        </el-button>
-        <el-button size="small" @click="triggerFileImport">
-          <el-icon><Upload /></el-icon>
-          导入文件
-        </el-button>
-        <el-button size="small" @click="showTemplateDialog = true">
-          <el-icon><Collection /></el-icon>
-          模板
-        </el-button>
-      </el-button-group>
+    <div class="editor-toolbar glass-card" v-if="!readonly">
+      <div class="toolbar-buttons">
+        <GlassButton label="格式化" type="secondary" size="small" @click="formatCode" :disabled="formatting">
+          <template #icon><Document /></template>
+        </GlassButton>
+        <GlassButton label="搜索" type="secondary" size="small" @click="triggerSearch">
+          <template #icon><Search /></template>
+        </GlassButton>
+        <GlassButton label="导入文件" type="secondary" size="small" @click="triggerFileImport">
+          <template #icon><Upload /></template>
+        </GlassButton>
+        <GlassButton label="模板" type="secondary" size="small" @click="showTemplateDialog = true">
+          <template #icon><Collection /></template>
+        </GlassButton>
+      </div>
 
       <div class="toolbar-info">
         <el-tag size="small" type="info">{{ language }}</el-tag>
@@ -69,6 +65,7 @@
 import { ref, onMounted, watch, onBeforeUnmount, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, Search, Upload, Collection } from '@element-plus/icons-vue'
+import GlassButton from './GlassButton.vue'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { python } from '@codemirror/lang-python'

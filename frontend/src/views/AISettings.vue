@@ -1,12 +1,10 @@
 <template>
   <div class="ai-settings">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>AI配置管理</span>
-          <el-button type="primary" @click="showAddDialog">添加配置</el-button>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">AI配置管理</span>
+        <GlassButton label="添加配置" type="primary" size="small" @click="showAddDialog" />
+      </div>
 
       <el-table :data="configs" style="width: 100%">
         <el-table-column prop="provider" label="提供商" width="120" />
@@ -28,17 +26,15 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250">
+        <el-table-column label="操作" width="230">
           <template #default="{ row }">
-            <el-button v-if="!row.is_active" size="small" type="primary" @click="activateConfig(row)">
-              激活
-            </el-button>
-            <el-button size="small" @click="editConfig(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteConfig(row)">删除</el-button>
+            <GlassButton v-if="!row.is_active" label="激活" type="primary" size="small" @click="activateConfig(row)" />
+            <GlassButton label="编辑" type="secondary" size="small" @click="editConfig(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="deleteConfig(row)" />
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 添加/编辑对话框 -->
     <el-dialog
@@ -81,8 +77,8 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <GlassButton label="取消" type="secondary" @click="dialogVisible = false" />
+        <GlassButton label="确定" type="primary" @click="submitForm" />
       </template>
     </el-dialog>
   </div>
@@ -91,6 +87,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import GlassButton from '../components/GlassButton.vue'
 import request from '@/api/request'
 
 const configs = ref([])

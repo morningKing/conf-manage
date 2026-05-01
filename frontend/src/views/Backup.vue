@@ -1,32 +1,26 @@
 <template>
   <div class="backup-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>备份管理</span>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">备份管理</span>
+      </div>
 
       <el-tabs v-model="activeTab">
         <!-- 系统备份 Tab -->
         <el-tab-pane label="系统备份" name="system">
           <div class="backup-actions">
-            <el-button type="primary" @click="showCreateBackupDialog" :loading="creating">
-              <el-icon><FolderAdd /></el-icon>
-              创建系统备份
-            </el-button>
-            <el-button type="success" @click="exportDb" :loading="exporting">
-              <el-icon><Download /></el-icon>
-              导出数据库
-            </el-button>
-            <el-button type="warning" @click="showCleanDialog">
-              <el-icon><Delete /></el-icon>
-              清理旧备份
-            </el-button>
-            <el-button @click="loadBackups" :loading="loading">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
+            <GlassButton label="创建系统备份" type="primary" size="small" @click="showCreateBackupDialog" :disabled="creating">
+              <template #icon><FolderAdd /></template>
+            </GlassButton>
+            <GlassButton label="导出数据库" type="success" size="small" @click="exportDb" :disabled="exporting">
+              <template #icon><Download /></template>
+            </GlassButton>
+            <GlassButton label="清理旧备份" type="warning" size="small" @click="showCleanDialog">
+              <template #icon><Delete /></template>
+            </GlassButton>
+            <GlassButton label="刷新" type="secondary" size="small" @click="loadBackups" :disabled="loading">
+              <template #icon><Refresh /></template>
+            </GlassButton>
           </div>
 
           <!-- 备份列表 -->
@@ -66,10 +60,9 @@
 
         <!-- 数据库信息 Tab -->
         <el-tab-pane label="数据库信息" name="database">
-          <el-button type="primary" @click="loadDatabaseInfo" :loading="loadingDbInfo">
-            <el-icon><Refresh /></el-icon>
-            刷新数据库信息
-          </el-button>
+          <GlassButton label="刷新数据库信息" type="primary" size="small" @click="loadDatabaseInfo" :disabled="loadingDbInfo">
+            <template #icon><Refresh /></template>
+          </GlassButton>
 
           <div v-if="databaseInfo" class="database-info">
             <el-descriptions :column="2" border style="margin-top: 20px">
@@ -98,7 +91,7 @@
           </div>
         </el-tab-pane>
       </el-tabs>
-    </el-card>
+    </div>
 
     <!-- 创建系统备份对话框 -->
     <el-dialog
@@ -161,6 +154,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import GlassButton from '../components/GlassButton.vue'
 import {
   FolderAdd,
   Download,

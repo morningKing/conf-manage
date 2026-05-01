@@ -1,15 +1,12 @@
 <template>
   <div class="environments-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>执行环境管理</span>
-          <el-button type="primary" @click="handleCreate">
-            <el-icon><Plus /></el-icon>
-            新建环境
-          </el-button>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">执行环境管理</span>
+        <GlassButton label="新建环境" type="primary" size="small" @click="handleCreate">
+          <template #icon><Plus /></template>
+        </GlassButton>
+      </div>
 
       <el-tabs v-model="activeTab">
         <el-tab-pane label="Python 环境" name="python">
@@ -23,18 +20,11 @@
                 <el-tag v-if="row.is_default" type="success" size="small">默认</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="260" fixed="right">
               <template #default="{ row }">
-                <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-button
-                  size="small"
-                  type="success"
-                  @click="handleSetDefault(row)"
-                  :disabled="row.is_default"
-                >
-                  设为默认
-                </el-button>
-                <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+                <GlassButton label="编辑" type="secondary" size="small" @click="handleEdit(row)" />
+                <GlassButton label="设为默认" type="success" size="small" @click="handleSetDefault(row)" :disabled="row.is_default" />
+                <GlassButton label="删除" type="danger" size="small" @click="handleDelete(row)" />
               </template>
             </el-table-column>
           </el-table>
@@ -51,24 +41,17 @@
                 <el-tag v-if="row.is_default" type="success" size="small">默认</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="260" fixed="right">
               <template #default="{ row }">
-                <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-button
-                  size="small"
-                  type="success"
-                  @click="handleSetDefault(row)"
-                  :disabled="row.is_default"
-                >
-                  设为默认
-                </el-button>
-                <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+                <GlassButton label="编辑" type="secondary" size="small" @click="handleEdit(row)" />
+                <GlassButton label="设为默认" type="success" size="small" @click="handleSetDefault(row)" :disabled="row.is_default" />
+                <GlassButton label="删除" type="danger" size="small" @click="handleDelete(row)" />
               </template>
             </el-table-column>
           </el-table>
         </el-tab-pane>
       </el-tabs>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -121,6 +104,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import GlassButton from '../components/GlassButton.vue'
 import {
   getEnvironments,
   createEnvironment,

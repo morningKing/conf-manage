@@ -1,12 +1,10 @@
 <template>
   <div class="global-variables-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>全局变量管理</span>
-          <el-button type="primary" @click="showCreateDialog">新增变量</el-button>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">全局变量管理</span>
+        <GlassButton label="新增变量" type="primary" size="small" @click="showCreateDialog" />
+      </div>
 
       <!-- 变量列表 -->
       <el-table :data="variables" style="width: 100%">
@@ -31,16 +29,14 @@
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="editVariable(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="deleteVariable(row)">
-              删除
-            </el-button>
+            <GlassButton label="编辑" type="secondary" size="small" @click="editVariable(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="deleteVariable(row)" />
           </template>
         </el-table-column>
       </el-table>
 
       <el-empty v-if="variables.length === 0" description="暂无全局变量" />
-    </el-card>
+    </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -79,8 +75,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <GlassButton label="取消" type="secondary" @click="dialogVisible = false" />
+        <GlassButton label="保存" type="primary" @click="handleSave" />
       </template>
     </el-dialog>
   </div>
@@ -89,6 +85,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import GlassButton from '../components/GlassButton.vue'
 import {
   getGlobalVariables,
   createGlobalVariable,
