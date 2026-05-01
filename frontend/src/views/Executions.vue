@@ -858,7 +858,7 @@ pre {
 
 .status-count {
   font-weight: bold;
-  color: #fff;
+  color: var(--accent-primary, #667eea);
 }
 
 .status-info {
