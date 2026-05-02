@@ -264,9 +264,9 @@ const loadCleanupStats = async () => {
     const response = await getCleanupStats()
     cleanupStats.value = {
       total_executions: response.data.total_executions || 0,
-      whitelist_count: response.data.whitelist_count || 0,
+      whitelist_count: response.data.whitelisted_executions || 0,
       to_cleanup: response.data.to_cleanup || 0,
-      execution_space_size: response.data.execution_space_size || 0
+      execution_space_size: response.data.execution_spaces_size_mb || 0
     }
   } catch (error) {
     console.error('加载清理统计失败:', error)
@@ -299,7 +299,7 @@ const handleExecuteCleanup = async () => {
 
     cleanupLoading.value = true
     const response = await executeCleanup()
-    ElMessage.success(`清理完成，删除了 ${response.data.deleted_count || 0} 条记录`)
+    ElMessage.success(`清理完成，删除了 ${response.data.deleted_executions || 0} 条记录`)
     loadCleanupStats()
   } catch (error) {
     if (error !== 'cancel') {
