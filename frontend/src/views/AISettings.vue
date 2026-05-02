@@ -36,6 +36,61 @@
       </el-table>
     </div>
 
+    <!-- 清理管理 -->
+    <div class="glass-card cleanup-section" style="margin-top: 20px">
+      <div class="glass-card-header">
+        <span class="glass-card-title">清理管理</span>
+      </div>
+      <div class="glass-card-body">
+        <el-row :gutter="20" style="margin-bottom: 20px">
+          <el-col :span="6">
+            <el-statistic title="总执行记录" :value="cleanupStats.total_executions" />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic title="白名单记录" :value="cleanupStats.whitelist_count" />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic title="待清理" :value="cleanupStats.to_cleanup" />
+          </el-col>
+          <el-col :span="6">
+            <el-statistic title="执行空间(MB)" :value="cleanupStats.execution_space_size" :precision="2" />
+          </el-col>
+        </el-row>
+        <el-row :gutter="20" align="middle">
+          <el-col :span="8">
+            <div class="config-item">
+              <span class="config-label">保留阈值：</span>
+              <el-input-number
+                v-model="cleanupThreshold"
+                :min="50"
+                :max="10000"
+                :step="100"
+                style="width: 150px"
+              />
+              <span class="config-hint">条记录</span>
+            </div>
+          </el-col>
+          <el-col :span="8" :offset="8" style="text-align: right">
+            <GlassButton
+              label="保存配置"
+              type="secondary"
+              size="small"
+              @click="handleSaveCleanupConfig"
+              :loading="cleanupLoading"
+              style="margin-right: 10px"
+            />
+            <GlassButton
+              label="立即清理"
+              type="danger"
+              size="small"
+              @click="handleExecuteCleanup"
+              :loading="cleanupLoading"
+            />
+          </el-col>
+        </el-row>
+      </div>
+    </div>
+
     <!-- 添加/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
@@ -89,6 +144,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import GlassButton from '../components/GlassButton.vue'
 import request from '@/api/request'
+import { getCleanupStats, executeCleanup, getCleanupConfig, updateCleanupConfig } from '../api'
 
 const configs = ref([])
 const dialogVisible = ref(false)
@@ -108,6 +164,16 @@ const rules = {
   api_key: [{ required: true, message: '请输入API Key', trigger: 'blur' }],
   model: [{ required: true, message: '请输入模型名称', trigger: 'blur' }]
 }
+
+// 清理管理状态
+const cleanupStats = ref({
+  total_executions: 0,
+  whitelist_count: 0,
+  to_cleanup: 0,
+  execution_space_size: 0
+})
+const cleanupThreshold = ref(500)
+const cleanupLoading = ref(false)
 
 const loadConfigs = async () => {
   try {
@@ -192,8 +258,66 @@ const deleteConfig = async (config) => {
   }
 }
 
+// 清理管理方法
+const loadCleanupStats = async () => {
+  try {
+    const response = await getCleanupStats()
+    cleanupStats.value = {
+      total_executions: response.data.total_executions || 0,
+      whitelist_count: response.data.whitelist_count || 0,
+      to_cleanup: response.data.to_cleanup || 0,
+      execution_space_size: response.data.execution_space_size || 0
+    }
+  } catch (error) {
+    console.error('加载清理统计失败:', error)
+  }
+}
+
+const handleSaveCleanupConfig = async () => {
+  try {
+    cleanupLoading.value = true
+    await updateCleanupConfig({ threshold: cleanupThreshold.value })
+    ElMessage.success('配置保存成功')
+  } catch (error) {
+    ElMessage.error('保存配置失败')
+  } finally {
+    cleanupLoading.value = false
+  }
+}
+
+const handleExecuteCleanup = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要执行清理吗？将清理 ${cleanupStats.value.to_cleanup} 条执行记录。`,
+      '清理确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    cleanupLoading.value = true
+    const response = await executeCleanup()
+    ElMessage.success(`清理完成，删除了 ${response.data.deleted_count || 0} 条记录`)
+    loadCleanupStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('清理执行失败')
+    }
+  } finally {
+    cleanupLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadConfigs()
+  loadCleanupStats()
+  getCleanupConfig().then(response => {
+    cleanupThreshold.value = response.data.threshold || 500
+  }).catch(() => {
+    // 使用默认值
+  })
 })
 </script>
 
@@ -212,5 +336,26 @@ onMounted(() => {
   font-size: 12px;
   color: #909399;
   margin-top: 5px;
+}
+
+.cleanup-section .glass-card-body {
+  padding: 20px;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+}
+
+.config-label {
+  font-size: 14px;
+  color: #606266;
+  margin-right: 10px;
+}
+
+.config-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 10px;
 }
 </style>
