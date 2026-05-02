@@ -477,6 +477,12 @@ const isEditable = (filename) => {
 }
 
 const handlePreview = async (row) => {
+  // Excel files open in Excel editor instead of preview dialog
+  if (isExcelFile(row.name)) {
+    window.open(`/excel-editor?path=${encodeURIComponent(row.path)}`, '_blank')
+    return
+  }
+
   currentPreviewFile.value = row
   previewVisible.value = true
   previewLoading.value = true
