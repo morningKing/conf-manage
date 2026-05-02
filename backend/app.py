@@ -12,6 +12,7 @@ from models import db
 from api import api_bp
 from services.scheduler import scheduler_manager
 from utils.cleanup import run_cleanup_if_needed
+from websocket import socketio
 
 
 def create_app(config_class=Config):
@@ -33,6 +34,9 @@ def create_app(config_class=Config):
             "allow_headers": ["Content-Type", "Authorization"]
         }
     })
+
+    # 初始化WebSocket
+    socketio.init_app(app)
 
     # 注册蓝图
     app.register_blueprint(api_bp)
@@ -72,6 +76,8 @@ if __name__ == '__main__':
     print(f'服务地址: http://localhost:5001')
     print(f'API地址: http://localhost:5001/api')
     print(f'健康检查: http://localhost:5001/health')
+    print(f'WebSocket: ws://localhost:5001/excel')
     print('=' * 60)
     # 使用 use_reloader=False 防止定时任务在调试模式下被多次初始化
-    app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
+    # allow_unsafe_werkzeug=True 用于开发环境
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
