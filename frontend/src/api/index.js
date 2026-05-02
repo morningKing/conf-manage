@@ -104,6 +104,14 @@ export const getExcelFile = (executionId, filePath) =>
 export const saveExcelFile = (executionId, filePath, data) =>
   request.post(`/executions/${executionId}/files/${encodeURIComponent(filePath)}?excel=true`, data)
 
+// Excel 编辑器操作
+export const getExcelInfo = (params) => request.get('/excel/info', { params })
+export const getExcelSheet = (params) => request.get('/excel/sheet', { params })
+export const saveExcel = (data) => request.post('/excel/save', data)
+export const addExcelSheet = (data) => request.post('/excel/sheet/add', data)
+export const deleteExcelSheet = (params) => request.delete('/excel/sheet/delete', { params })
+export const renameExcelSheet = (data) => request.put('/excel/sheet/rename', data)
+
 // 系统清理管理
 export const getCleanupStats = () => request.get('/system/cleanup/stats')
 export const executeCleanup = () => request.post('/system/cleanup')
