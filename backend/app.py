@@ -11,6 +11,7 @@ from config import Config
 from models import db
 from api import api_bp
 from services.scheduler import scheduler_manager
+from utils.cleanup import run_cleanup_if_needed
 
 
 def create_app(config_class=Config):
@@ -57,6 +58,8 @@ def create_app(config_class=Config):
         scheduler_manager.set_app(app)
         # 重新加载定时任务
         scheduler_manager.reload_schedules()
+        # 执行清理检查
+        run_cleanup_if_needed()
 
     return app
 
