@@ -104,3 +104,13 @@ export const getExcelFile = (executionId, filePath) =>
 export const saveExcelFile = (executionId, filePath, data) =>
   request.post(`/executions/${executionId}/files/${encodeURIComponent(filePath)}?excel=true`, data)
 
+// 系统清理管理
+export const getCleanupStats = () => request.get('/system/cleanup/stats')
+export const executeCleanup = () => request.post('/system/cleanup')
+export const getCleanupConfig = () => request.get('/system/cleanup/config')
+export const updateCleanupConfig = (data) => request.put('/system/cleanup/config', data)
+
+// 定时任务白名单
+export const toggleSchedulePreserve = (id) => request.post(`/schedules/${id}/preserve`)
+export const batchToggleSchedulePreserve = (data) => request.post('/schedules/batch/preserve', data)
+
