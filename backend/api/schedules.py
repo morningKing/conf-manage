@@ -60,7 +60,8 @@ def create_schedule():
             description=data.get('description', ''),
             cron=data['cron'],
             params=data.get('params', ''),
-            enabled=data.get('enabled', True)
+            enabled=data.get('enabled', True),
+            preserve=data.get('preserve', False)
         )
         db.session.add(schedule)
         db.session.commit()
@@ -95,6 +96,8 @@ def update_schedule(schedule_id):
             schedule.cron = data['cron']
         if 'params' in data:
             schedule.params = data['params']
+        if 'preserve' in data:
+            schedule.preserve = data['preserve']
         if 'enabled' in data:
             old_enabled = schedule.enabled
             schedule.enabled = data['enabled']
@@ -194,6 +197,51 @@ def run_schedule_now(schedule_id):
             'code': 0,
             'data': execution.to_dict(),
             'message': '任务已启动执行'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/schedules/<int:id>/preserve', methods=['POST'])
+def toggle_schedule_preserve(id):
+    """切换定时任务的白名单状态"""
+    try:
+        schedule = Schedule.query.get_or_404(id)
+        schedule.preserve = not schedule.preserve
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'data': schedule.to_dict(),
+            'message': f'任务白名单状态已{"开启" if schedule.preserve else "关闭"}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/schedules/batch/preserve', methods=['POST'])
+def batch_toggle_preserve():
+    """批量设置白名单状态"""
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        preserve = data.get('preserve', True)
+
+        if not ids:
+            return jsonify({'code': 1, 'message': '未提供任务ID列表'}), 400
+
+        # 批量更新
+        Schedule.query.filter(Schedule.id.in_(ids)).update(
+            {'preserve': preserve},
+            synchronize_session='fetch'
+        )
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': f'已{"开启" if preserve else "关闭"} {len(ids)} 个任务的白名单状态'
         })
     except Exception as e:
         db.session.rollback()
