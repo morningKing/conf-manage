@@ -2,14 +2,17 @@
 Excel WebSocket handlers for real-time collaboration
 """
 import logging
+import time
+import threading
+from flask import request
 from flask_socketio import emit, join_room, leave_room
 from . import socketio
 
 logger = logging.getLogger(__name__)
 
-# Store user sessions with their colors
-# Structure: { sid: { 'room': str, 'user_id': str, 'color': str } }
+# Thread-safe session storage
 user_sessions = {}
+user_sessions_lock = threading.Lock()
 
 # Colors for cursor/selection highlighting
 CURSOR_COLORS = [
@@ -18,14 +21,16 @@ CURSOR_COLORS = [
     '#BB8FCE', '#85C1E9', '#F8B500', '#00CED1'
 ]
 color_index = 0
+color_lock = threading.Lock()
 
 
 def get_next_color():
     """Get next available cursor color"""
     global color_index
-    color = CURSOR_COLORS[color_index % len(CURSOR_COLORS)]
-    color_index += 1
-    return color
+    with color_lock:
+        color = CURSOR_COLORS[color_index % len(CURSOR_COLORS)]
+        color_index += 1
+        return color
 
 
 @socketio.on('connect', namespace='/excel')
@@ -38,27 +43,27 @@ def handle_connect():
 @socketio.on('disconnect', namespace='/excel')
 def handle_disconnect():
     """Handle client disconnection"""
-    from flask import request
     sid = request.sid
 
-    if sid in user_sessions:
-        session = user_sessions[sid]
-        room = session.get('room')
-        user_id = session.get('user_id')
+    with user_sessions_lock:
+        if sid in user_sessions:
+            session = user_sessions[sid]
+            room = session.get('room')
+            user_id = session.get('user_id')
 
-        if room:
-            # Notify others in the room
-            emit('user_left', {
-                'user_id': user_id,
-                'message': f'User {user_id} left'
-            }, room=room, include_self=False)
+            if room:
+                # Notify others in the room
+                emit('user_left', {
+                    'user_id': user_id,
+                    'message': f'User {user_id} left'
+                }, room=room, include_self=False)
 
-            # Leave the room
-            leave_room(room)
+                # Leave the room
+                leave_room(room)
 
-        # Clean up session
-        del user_sessions[sid]
-        logger.info(f'User {user_id} disconnected from room {room}')
+            # Clean up session
+            del user_sessions[sid]
+            logger.info(f'User {user_id} disconnected from room {room}')
 
 
 @socketio.on('join', namespace='/excel')
@@ -72,8 +77,6 @@ def handle_join(data):
         'user_name': str (optional)
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
     user_name = data.get('user_name', user_id)
@@ -88,14 +91,15 @@ def handle_join(data):
     # Assign a color to this user
     color = get_next_color()
 
-    # Store session info
-    user_sessions[sid] = {
-        'room': room,
-        'file_id': file_id,
-        'user_id': user_id,
-        'user_name': user_name,
-        'color': color
-    }
+    # Store session info (thread-safe)
+    with user_sessions_lock:
+        user_sessions[sid] = {
+            'room': room,
+            'file_id': file_id,
+            'user_id': user_id,
+            'user_name': user_name,
+            'color': color
+        }
 
     # Join the room
     join_room(room)
@@ -130,8 +134,6 @@ def handle_leave(data):
         'user_id': str
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
 
@@ -147,9 +149,10 @@ def handle_leave(data):
     # Leave the room
     leave_room(room)
 
-    # Clean up session
-    if sid in user_sessions:
-        del user_sessions[sid]
+    # Clean up session (thread-safe)
+    with user_sessions_lock:
+        if sid in user_sessions:
+            del user_sessions[sid]
 
     logger.info(f'User {user_id} left room {room}')
 
@@ -168,8 +171,6 @@ def handle_edit(data):
         'previous_value': any (optional)
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
     sheet = data.get('sheet')
@@ -183,9 +184,10 @@ def handle_edit(data):
     room = f'excel_{file_id}'
     sid = request.sid
 
-    # Get user color
-    session = user_sessions.get(sid, {})
-    color = session.get('color', '#000000')
+    # Get user color (thread-safe read)
+    with user_sessions_lock:
+        session = user_sessions.get(sid, {})
+        color = session.get('color', '#000000')
 
     # Broadcast the edit to all other users in the room
     emit('cell_update', {
@@ -194,7 +196,7 @@ def handle_edit(data):
         'cell': cell,
         'value': value,
         'color': color,
-        'timestamp': __import__('time').time()
+        'timestamp': time.time()
     }, room=room, include_self=False)
 
     logger.debug(f'User {user_id} edited {sheet}!{cell} in {room}')
@@ -216,23 +218,23 @@ def handle_cursor_move(data):
         }
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
     sheet = data.get('sheet')
     cell = data.get('cell')
 
     if not all([file_id, user_id, sheet, cell]):
-        return  # Silently ignore incomplete cursor data
+        logger.warning(f'Incomplete cursor_move data from {request.sid}')
+        return
 
     room = f'excel_{file_id}'
     sid = request.sid
 
-    # Get user info
-    session = user_sessions.get(sid, {})
-    color = session.get('color', '#000000')
-    user_name = session.get('user_name', user_id)
+    # Get user info (thread-safe read)
+    with user_sessions_lock:
+        session = user_sessions.get(sid, {})
+        color = session.get('color', '#000000')
+        user_name = session.get('user_name', user_id)
 
     # Broadcast cursor position to others
     emit('cursor_update', {
@@ -256,12 +258,11 @@ def handle_save_complete(data):
         'version': int (optional)
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
 
     if not file_id or not user_id:
+        logger.warning(f'Incomplete save_complete data from {request.sid}')
         return
 
     room = f'excel_{file_id}'
@@ -272,7 +273,7 @@ def handle_save_complete(data):
         'file_id': file_id,
         'version': data.get('version'),
         'message': f'Document saved by user {user_id}',
-        'timestamp': __import__('time').time()
+        'timestamp': time.time()
     }, room=room)
 
 
@@ -291,23 +292,23 @@ def handle_selection_change(data):
         }
     }
     """
-    from flask import request
-
     file_id = data.get('file_id')
     user_id = data.get('user_id')
     sheet = data.get('sheet')
     selection = data.get('selection')
 
     if not all([file_id, user_id, sheet, selection]):
+        logger.warning(f'Incomplete selection_change data from {request.sid}')
         return
 
     room = f'excel_{file_id}'
     sid = request.sid
 
-    # Get user info
-    session = user_sessions.get(sid, {})
-    color = session.get('color', '#000000')
-    user_name = session.get('user_name', user_id)
+    # Get user info (thread-safe read)
+    with user_sessions_lock:
+        session = user_sessions.get(sid, {})
+        color = session.get('color', '#000000')
+        user_name = session.get('user_name', user_id)
 
     # Broadcast selection to others
     emit('selection_update', {
