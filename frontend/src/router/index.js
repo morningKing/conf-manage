@@ -64,6 +64,11 @@ const routes = [
     path: '/ai-script-writer',
     name: 'AIScriptWriter',
     component: () => import('../views/AIScriptWriter.vue')
+  },
+  {
+    path: '/excel-editor',
+    name: 'ExcelEditor',
+    component: () => import('../views/ExcelEditor.vue')
   }
 ]
 
