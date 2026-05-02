@@ -18,6 +18,7 @@ class Schedule(db.Model):
     enabled = db.Column(db.Boolean, default=True)
     last_run = db.Column(db.DateTime)  # 上次执行时间
     next_run = db.Column(db.DateTime)  # 下次执行时间
+    preserve = db.Column(db.Boolean, default=False, nullable=False)  # 清理白名单标记
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -34,6 +35,7 @@ class Schedule(db.Model):
             'enabled': self.enabled,
             'last_run': self.last_run.isoformat() if self.last_run else None,
             'next_run': self.next_run.isoformat() if self.next_run else None,
+            'preserve': self.preserve,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
