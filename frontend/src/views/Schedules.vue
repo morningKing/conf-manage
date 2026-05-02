@@ -19,6 +19,19 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="preserve" label="保护" width="80">
+          <template #default="{ row }">
+            <el-tooltip :content="row.preserve ? '已加入白名单，不会被清理' : '未保护'" placement="top">
+              <el-icon
+                :style="{ color: row.preserve ? '#E6A23C' : '#C0C4CC', cursor: 'pointer' }"
+                @click="handleTogglePreserve(row)"
+              >
+                <StarFilled v-if="row.preserve" />
+                <Star v-else />
+              </el-icon>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="last_run" label="上次运行" width="180">
           <template #default="{ row }">
             {{ formatTime(row.last_run) }}
@@ -98,13 +111,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Star, StarFilled } from '@element-plus/icons-vue'
 import {
   getSchedules,
   createSchedule,
   updateSchedule,
   deleteSchedule,
   toggleSchedule,
+  toggleSchedulePreserve,
   runScheduleNow,
   getScripts
 } from '../api'
@@ -184,6 +198,20 @@ const handleToggle = async (row) => {
     await toggleSchedule(row.id)
     ElMessage.success(row.enabled ? '已禁用' : '已启用')
     loadSchedules()
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const handleTogglePreserve = async (row) => {
+  try {
+    const res = await toggleSchedulePreserve(row.id)
+    if (res.code === 0) {
+      row.preserve = res.data.preserve
+      ElMessage.success(res.message)
+    } else {
+      ElMessage.error(res.message)
+    }
   } catch (error) {
     console.error(error)
   }
