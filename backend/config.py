@@ -79,6 +79,9 @@ class Config:
     # 脚本执行超时时间（秒）
     EXECUTION_TIMEOUT = 300
 
+    # 清理阈值：保留最近N条执行记录
+    CLEANUP_THRESHOLD = 500
+
     # 跨域配置
     CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:3000']
 
