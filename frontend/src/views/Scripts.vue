@@ -232,68 +232,89 @@
       :title="scriptDialogTitle"
       width="80%"
       :close-on-click-modal="false"
+      :destroy-on-close="false"
       class="script-dialog"
     >
-      <el-form :model="scriptForm" label-width="100px" class="script-form">
-        <el-form-item label="脚本名称">
-          <el-input v-model="scriptForm.name" placeholder="请输入脚本名称" />
-        </el-form-item>
-        <el-form-item label="脚本类型">
-          <el-select v-model="scriptForm.type" placeholder="请选择脚本类型" @change="handleTypeChange">
-            <el-option label="Python" value="python" />
-            <el-option label="JavaScript" value="javascript" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="标签">
-          <el-select
-            v-model="scriptForm.tag_ids"
-            placeholder="选择标签（可选）"
-            multiple
-            clearable
-            collapse-tags
-            collapse-tags-tooltip
-          >
-            <el-option
-              v-for="tag in tags"
-              :key="tag.id"
-              :label="tag.name"
-              :value="tag.id"
-            >
-              <el-tag :color="tag.color" size="small" effect="plain">{{ tag.name }}</el-tag>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="收藏">
-          <el-switch v-model="scriptForm.is_favorite" />
-        </el-form-item>
-        <el-form-item label="执行环境">
-          <el-select v-model="scriptForm.environment_id" placeholder="默认环境（可选）" clearable>
-            <el-option
-              v-for="env in filteredEnvironments"
-              :key="env.id"
-              :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
-              :value="env.id"
+      <el-tabs v-model="scriptActiveTab" class="script-tabs">
+        <!-- 基础信息 -->
+        <el-tab-pane label="基础信息" name="basic">
+          <el-form :model="scriptForm" label-width="100px" class="script-form">
+            <el-form-item label="脚本名称">
+              <el-input v-model="scriptForm.name" placeholder="请输入脚本名称" />
+            </el-form-item>
+            <el-form-item label="脚本类型">
+              <el-select v-model="scriptForm.type" placeholder="请选择脚本类型" @change="handleTypeChange">
+                <el-option label="Python" value="python" />
+                <el-option label="JavaScript" value="javascript" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="标签">
+              <el-select
+                v-model="scriptForm.tag_ids"
+                placeholder="选择标签（可选）"
+                multiple
+                clearable
+                collapse-tags
+                collapse-tags-tooltip
+              >
+                <el-option
+                  v-for="tag in tags"
+                  :key="tag.id"
+                  :label="tag.name"
+                  :value="tag.id"
+                >
+                  <el-tag :color="tag.color" size="small" effect="plain">{{ tag.name }}</el-tag>
+                </el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="收藏">
+              <el-switch v-model="scriptForm.is_favorite" />
+            </el-form-item>
+            <el-form-item label="执行环境">
+              <el-select v-model="scriptForm.environment_id" placeholder="默认环境（可选）" clearable>
+                <el-option
+                  v-for="env in filteredEnvironments"
+                  :key="env.id"
+                  :label="`${env.name}${env.is_default ? ' (默认)' : ''}`"
+                  :value="env.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="描述">
+              <el-input v-model="scriptForm.description" type="textarea" rows="3" placeholder="请输入脚本描述" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 输入信息 -->
+        <el-tab-pane label="输入信息" name="input">
+          <el-form :model="scriptForm" label-width="100px" class="script-form">
+            <el-form-item label="依赖配置">
+              <el-input
+                v-model="scriptForm.dependencies"
+                type="textarea"
+                rows="3"
+                placeholder="多个依赖用逗号分隔，如：requests,numpy,pandas"
+              />
+            </el-form-item>
+            <el-form-item label="参数配置">
+              <ParameterConfig v-model="scriptForm.parameters" />
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 脚本代码 -->
+        <el-tab-pane label="脚本" name="code">
+          <div class="code-editor-wrapper">
+            <CodeEditor
+              v-model="scriptForm.code"
+              :language="scriptForm.type"
+              height="450px"
+              theme="dark"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="scriptForm.description" type="textarea" rows="2" />
-        </el-form-item>
-        <el-form-item label="依赖配置">
-          <el-input v-model="scriptForm.dependencies" type="textarea" rows="2" placeholder="多个依赖用逗号分隔" />
-        </el-form-item>
-        <el-form-item label="参数配置">
-          <ParameterConfig v-model="scriptForm.parameters" />
-        </el-form-item>
-        <el-form-item label="脚本代码">
-          <CodeEditor
-            v-model="scriptForm.code"
-            :language="scriptForm.type"
-            height="400px"
-            theme="dark"
-          />
-        </el-form-item>
-      </el-form>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
         <GlassButton label="取消" type="secondary" @click="scriptDialogVisible = false" />
         <GlassButton label="保存" type="primary" @click="handleSaveScript" />
@@ -509,6 +530,7 @@ const scriptForm = ref({
   folder_id: null, tag_ids: [], is_favorite: false
 })
 const editingScript = ref(null)
+const scriptActiveTab = ref('basic')
 
 // ===== 查看对话框 =====
 const viewDialogVisible = ref(false)
@@ -782,6 +804,7 @@ const handleCreateScript = () => {
     folder_id: currentFolderId.value, tag_ids: [], is_favorite: false
   }
   editingScript.value = null
+  scriptActiveTab.value = 'basic'
   scriptDialogVisible.value = true
 }
 
@@ -793,6 +816,7 @@ const handleEdit = (script) => {
     tag_ids: script.tags ? script.tags.map(t => t.id) : []
   }
   editingScript.value = script
+  scriptActiveTab.value = 'basic'
   scriptDialogVisible.value = true
 }
 
@@ -1377,6 +1401,25 @@ onUnmounted(() => {
 
 .script-form {
   padding-right: 10px;
+}
+
+.script-tabs {
+  margin-bottom: 10px;
+}
+
+.script-tabs :deep(.el-tabs__header) {
+  margin-bottom: 20px;
+}
+
+.script-tabs :deep(.el-tabs__item) {
+  font-size: 14px;
+  padding: 0 20px;
+}
+
+.code-editor-wrapper {
+  border: 1px solid var(--border-low);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 /* ===== 日志样式 ===== */
