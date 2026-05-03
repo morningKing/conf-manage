@@ -87,7 +87,6 @@ import luckysheet from 'luckysheet'
 import 'luckysheet/dist/plugins/css/pluginsCss.css'
 import 'luckysheet/dist/plugins/plugins.css'
 import 'luckysheet/dist/css/luckysheet.css'
-import 'luckysheet/dist/plugins/font/font.css'
 
 const route = useRoute()
 const router = useRouter()

@@ -357,7 +357,7 @@ def get_excel_sheet_data():
 
 
 @api_bp.route('/excel/save', methods=['POST'])
-def save_excel_file():
+def save_excel_editor_file():
     """
     保存 Excel 文件
     支持增量更新和完整保存
