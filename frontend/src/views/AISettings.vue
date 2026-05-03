@@ -44,12 +44,23 @@
         <span class="glass-card-title">清理管理</span>
       </div>
       <div class="glass-card-body">
+        <!-- 白名单说明 -->
+        <div class="whitelist-tip" style="margin-bottom: 15px; padding: 10px; background: var(--glass-base); border-radius: 8px; border: 1px solid var(--border-low)">
+          <span style="color: var(--text-secondary)">
+            <el-icon style="margin-right: 5px"><InfoFilled /></el-icon>
+            白名单功能：
+          </span>
+          <span style="color: var(--text-muted)">
+            在 <router-link to="/schedules" style="color: var(--accent-primary)">定时任务</router-link> 页面，点击任务行的 ⭐ 星标图标可将任务加入白名单，该任务的执行记录将不会被自动清理。
+          </span>
+        </div>
+
         <el-row :gutter="20" style="margin-bottom: 20px">
           <el-col :span="6">
             <el-statistic title="总执行记录" :value="cleanupStats.total_executions" />
           </el-col>
           <el-col :span="6">
-            <el-statistic title="白名单记录" :value="cleanupStats.whitelist_count" />
+            <el-statistic title="白名单任务" :value="cleanupStats.whitelist_count" />
           </el-col>
           <el-col :span="6">
             <el-statistic title="待清理" :value="cleanupStats.to_cleanup" />
@@ -144,6 +155,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 import GlassButton from '../components/GlassButton.vue'
 import request from '@/api/request'
 import { getCleanupStats, executeCleanup, getCleanupConfig, updateCleanupConfig } from '../api'
