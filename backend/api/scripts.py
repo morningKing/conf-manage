@@ -504,3 +504,81 @@ def clean_script_executions(script_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/<int:script_id>/preserve', methods=['POST'])
+def toggle_script_preserve(script_id):
+    """
+    切换脚本的清理白名单状态
+
+    Args:
+        script_id: 脚本ID
+
+    Returns:
+        {
+            'code': 0,
+            'message': '操作成功',
+            'data': {'preserve': True/False}
+        }
+    """
+    try:
+        script = Script.query.get_or_404(script_id)
+
+        # 切换preserve状态
+        script.preserve = not script.preserve
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': f'已{"加入" if script.preserve else "移出"}白名单',
+            'data': {'preserve': script.preserve}
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/scripts/batch/preserve', methods=['POST'])
+def batch_toggle_script_preserve():
+    """
+    批量设置脚本的清理白名单状态
+
+    Body:
+        {
+            'script_ids': [1, 2, 3],
+            'preserve': True/False
+        }
+
+    Returns:
+        {
+            'code': 0,
+            'message': '批量操作成功',
+            'data': {'updated_count': N}
+        }
+    """
+    try:
+        data = request.get_json() or {}
+        script_ids = data.get('script_ids', [])
+        preserve = data.get('preserve', True)
+
+        if not script_ids:
+            return jsonify({'code': 1, 'message': '未提供脚本ID列表'}), 400
+
+        # 批量更新
+        updated_count = Script.query.filter(
+            Script.id.in_(script_ids)
+        ).update(
+            {'preserve': preserve},
+            synchronize_session=False
+        )
+
+        db.session.commit()
+
+        return jsonify({
+            'code': 0,
+            'message': f'已批量{"加入" if preserve else "移出"}白名单',
+            'data': {'updated_count': updated_count}
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'code': 1, 'message': str(e)}), 500

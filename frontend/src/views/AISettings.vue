@@ -51,7 +51,7 @@
             白名单功能：
           </span>
           <span style="color: var(--text-muted)">
-            在 <router-link to="/schedules" style="color: var(--accent-primary)">定时任务</router-link> 页面，点击任务行的 ⭐ 星标图标可将任务加入白名单，该任务的执行记录将不会被自动清理。
+            在 <router-link to="/schedules" style="color: var(--accent-primary)">定时任务</router-link> 页面或 <router-link to="/scripts" style="color: var(--accent-primary)">脚本管理</router-link> 页面，点击 ⭐ 星标图标可将任务或脚本加入白名单，其执行记录将不会被自动清理。
           </span>
         </div>
 

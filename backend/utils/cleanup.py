@@ -5,7 +5,7 @@
 import os
 import shutil
 from datetime import datetime
-from models import db, Execution, Schedule, WorkflowExecution, WorkflowNodeExecution
+from models import db, Execution, Schedule, WorkflowExecution, WorkflowNodeExecution, Script
 from config import Config
 
 
@@ -52,10 +52,19 @@ def get_cleanup_stats():
             - workflow_spaces_size_mb: 工作流执行空间目录大小（MB）
             - threshold: 清理阈值
     """
-    # 获取白名单脚本ID
-    whitelisted_script_ids = set(
+    # 获取白名单脚本ID（两个来源）
+    # 1. Script.preserve=True的脚本
+    script_whitelist_ids = set(
+        s.id for s in Script.query.filter_by(preserve=True).all()
+    )
+
+    # 2. Schedule.preserve=True的定时任务脚本
+    schedule_whitelist_ids = set(
         s.script_id for s in Schedule.query.filter_by(preserve=True).all()
     )
+
+    # 合并白名单脚本ID
+    whitelisted_script_ids = script_whitelist_ids | schedule_whitelist_ids
 
     # 获取所有执行记录
     total_executions = Execution.query.count()
@@ -92,7 +101,7 @@ def run_cleanup():
     执行清理操作
 
     清理逻辑：
-    1. 获取白名单脚本ID（Schedule.preserve=True）
+    1. 获取白名单脚本ID（Script.preserve=True 或 Schedule.preserve=True）
     2. 获取所有Execution记录，按创建时间倒序排列
     3. 构建保留ID集合：白名单执行 + 最近CLEANUP_THRESHOLD条非白名单执行
     4. 删除不在保留集合中的执行记录（数据库记录 + 目录 + 日志）
@@ -113,11 +122,20 @@ def run_cleanup():
         get_directory_size(Config.WORKFLOW_EXECUTION_SPACES_DIR)
     )
 
-    # 1. 获取白名单脚本ID
-    whitelisted_script_ids = set(
+    # 1. 获取白名单脚本ID（两个来源）
+    # Script.preserve=True的脚本
+    script_whitelist_ids = set(
+        s.id for s in Script.query.filter_by(preserve=True).all()
+    )
+    # Schedule.preserve=True的定时任务脚本
+    schedule_whitelist_ids = set(
         s.script_id for s in Schedule.query.filter_by(preserve=True).all()
     )
+    # 合并白名单脚本ID
+    whitelisted_script_ids = script_whitelist_ids | schedule_whitelist_ids
     print(f"[Cleanup] 白名单脚本ID: {whitelisted_script_ids}")
+    print(f"[Cleanup] - Script白名单: {script_whitelist_ids}")
+    print(f"[Cleanup] - Schedule白名单: {schedule_whitelist_ids}")
 
     # 2. 获取所有Execution记录，按创建时间倒序
     all_executions = Execution.query.order_by(Execution.created_at.desc()).all()

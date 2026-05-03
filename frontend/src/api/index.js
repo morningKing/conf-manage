@@ -13,6 +13,8 @@ export const executeScriptWithFiles = (id, formData) => request.post(`/scripts/$
   headers: { 'Content-Type': 'multipart/form-data' }
 })
 export const toggleScriptFavorite = (id) => request.post(`/scripts/${id}/favorite`)
+export const toggleScriptPreserve = (id) => request.post(`/scripts/${id}/preserve`)
+export const batchToggleScriptPreserve = (data) => request.post('/scripts/batch/preserve', data)
 export const cleanScriptVersions = (id, data) => request.delete(`/scripts/${id}/versions/clean`, { data })
 export const cleanScriptExecutions = (id, data) => request.delete(`/scripts/${id}/executions/clean`, { data })
 export const moveScript = (id, data) => request.post(`/scripts/${id}/move`, data)

@@ -171,6 +171,13 @@
           <el-icon><View /></el-icon>
           <span>查看</span>
         </div>
+        <div class="context-menu-item" @click="handleTogglePreserve(contextMenu.target)">
+          <el-icon :style="{ color: contextMenu.target.preserve ? '#E6A23C' : '#C0C4CC' }">
+            <StarFilled v-if="contextMenu.target.preserve" />
+            <Star v-else />
+          </el-icon>
+          <span>{{ contextMenu.target.preserve ? '取消保护' : '加入白名单' }}</span>
+        </div>
         <div class="context-menu-divider"></div>
         <div class="context-menu-item danger" @click="handleDeleteScript(contextMenu.target)">
           <el-icon><Delete /></el-icon>
@@ -448,7 +455,8 @@ import {
   updateFolder,
   deleteScriptFolder,
   getFolderPath,
-  moveScript
+  moveScript,
+  toggleScriptPreserve
 } from '../api'
 import FileUpload from '../components/FileUpload.vue'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -460,7 +468,7 @@ import GlassCard from '../components/GlassCard.vue'
 import GlassButton from '../components/GlassButton.vue'
 import {
   Plus, Search, Folder, FolderOpened, FolderAdd, Document, Edit, EditPen,
-  Delete, VideoPlay, View, Loading
+  Delete, VideoPlay, View, Loading, Star, StarFilled
 } from '@element-plus/icons-vue'
 
 // ===== 文件夹树 =====
@@ -809,6 +817,27 @@ const handleSaveScript = async () => {
   } catch (error) {
     console.error(error)
     ElMessage.error('保存失败: ' + (error.message || error))
+  }
+}
+
+const handleTogglePreserve = async (script) => {
+  hideContextMenu()
+  try {
+    const res = await toggleScriptPreserve(script.id)
+    if (res.code === 0) {
+      script.preserve = res.data.preserve
+      ElMessage.success(res.message)
+      // 更新本地数据
+      const localScript = currentScripts.value.find(s => s.id === script.id)
+      if (localScript) {
+        localScript.preserve = res.data.preserve
+      }
+    } else {
+      ElMessage.error(res.message)
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('操作失败')
   }
 }
 

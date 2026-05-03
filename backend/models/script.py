@@ -19,6 +19,7 @@ class Script(db.Model):
     environment_id = db.Column(db.Integer, db.ForeignKey('environments.id'), nullable=True)  # 执行环境ID
     folder_id = db.Column(db.Integer, db.ForeignKey('folders.id'), nullable=True)  # 文件夹ID
     is_favorite = db.Column(db.Boolean, default=False)  # 是否收藏
+    preserve = db.Column(db.Boolean, default=False, nullable=False)  # 清理白名单标记
     version = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -44,6 +45,7 @@ class Script(db.Model):
             'environment_id': self.environment_id,
             'folder_id': self.folder_id,
             'is_favorite': self.is_favorite,
+            'preserve': self.preserve,
             'folder': self.folder.to_dict() if self.folder else None,
             'tags': [tag.to_dict() for tag in self.tags] if self.tags else [],
             'version': self.version,
