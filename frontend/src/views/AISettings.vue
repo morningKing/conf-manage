@@ -2,9 +2,11 @@
   <div class="ai-settings">
     <div class="glass-card">
       <div class="glass-card-header">
-        <span class="glass-card-title">AI配置管理</span>
-        <GlassButton label="添加配置" type="primary" size="small" @click="showAddDialog" />
+        <span class="glass-card-title">系统设置</span>
+        <GlassButton label="添加AI配置" type="primary" size="small" @click="showAddDialog" />
       </div>
+
+      <div class="section-title" style="margin: 20px 0 10px; font-weight: 600; color: var(--text-primary)">AI配置管理</div>
 
       <el-table :data="configs" style="width: 100%">
         <el-table-column prop="provider" label="提供商" width="120" />

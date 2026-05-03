@@ -54,7 +54,8 @@ import {
   MagicStick,
   Sunny,
   Moon,
-  QuestionFilled
+  QuestionFilled,
+  Tools
 } from '@element-plus/icons-vue'
 
 // Props
@@ -80,6 +81,7 @@ const navItems = [
   { path: '/workflows', icon: Share, title: '工作流' },
   { path: '/files', icon: Folder, title: '文件管理' },
   { path: '/environments', icon: Setting, title: '环境配置' },
+  { path: '/ai-settings', icon: Tools, title: '系统设置' },
   { path: '/ai-script-writer', icon: MagicStick, title: 'AI脚本助手' }
 ]
 
