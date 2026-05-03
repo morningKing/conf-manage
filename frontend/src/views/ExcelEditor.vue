@@ -80,6 +80,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshLeft, RefreshRight, Check, Plus, Delete, User, Loading } from '@element-plus/icons-vue'
 import { getExcelInfo, getExcelSheet, saveExcel, addExcelSheet, deleteExcelSheet, renameExcelSheet } from '../api'
+import excelSocket from '../utils/excel-socket'
 
 // Import Luckysheet
 import luckysheet from 'luckysheet'
@@ -103,6 +104,10 @@ const lastSaveTime = ref(null)
 const collaboratorCount = ref(0)
 const canUndo = ref(false)
 const canRedo = ref(false)
+
+// Collaboration state
+const collaborators = ref([])
+const myUserInfo = ref({ name: '', color: '' })
 
 // Dialog state
 const addSheetVisible = ref(false)
@@ -248,12 +253,21 @@ const handleCellUpdated = (r, c, oldValue, newValue, isRefresh) => {
       col: c,
       value: newValue
     })
+
+    // Send edit to other collaborators via WebSocket
+    if (excelSocket.isConnected() && filePath.value) {
+      const cellRef = `${String.fromCharCode(65 + c)}${r + 1}` // e.g., 'A1'
+      excelSocket.sendEdit(filePath.value, String(currentSheetIndex.value), cellRef, newValue)
+    }
   }
 }
 
-// Handle range select event
+// Handle range select event - send cursor position
 const handleRangeSelect = (range) => {
-  // Can be used for collaboration features
+  if (excelSocket.isConnected() && filePath.value && range) {
+    const cellRef = range[0]?.row ? `${String.fromCharCode(65 + range[0].column[0])}${range[0].row[0] + 1}` : 'A1'
+    excelSocket.sendCursor(filePath.value, String(currentSheetIndex.value), cellRef)
+  }
 }
 
 // Handle sheet activate event
@@ -405,6 +419,11 @@ const handleSave = async () => {
     hasUnsavedChanges.value = false
     pendingChanges.value = []
     lastSaveTime.value = new Date()
+
+    // Notify other collaborators via WebSocket
+    if (excelSocket.isConnected() && filePath.value) {
+      excelSocket.notifySaved(filePath.value)
+    }
   } catch (error) {
     console.error('Save error:', error)
     ElMessage.error('保存失败')
@@ -498,21 +517,93 @@ const handleKeydown = (e) => {
   }
 }
 
+// Connect to WebSocket for collaboration
+const connectWebSocket = () => {
+  const path = route.query.path
+  if (!path) return
+
+  // Generate user name
+  const userName = '用户' + Math.floor(Math.random() * 10000)
+
+  excelSocket.connect(path, userName)
+
+  excelSocket.on('joined', (data) => {
+    myUserInfo.value = {
+      name: data.user_id,
+      color: data.color
+    }
+    collaboratorCount.value = collaborators.value.length + 1
+  })
+
+  excelSocket.on('user_joined', (data) => {
+    collaborators.value.push({
+      id: data.user_id,
+      name: data.user_name,
+      color: data.color
+    })
+    collaboratorCount.value = collaborators.value.length + 1
+    ElMessage.info(`${data.user_name} 加入了编辑`)
+  })
+
+  excelSocket.on('user_left', (data) => {
+    const idx = collaborators.value.findIndex(u => u.id === data.user_id)
+    if (idx !== -1) {
+      collaborators.value.splice(idx, 1)
+    }
+    collaboratorCount.value = collaborators.value.length + 1
+    ElMessage.info(`${data.user_id} 离开了编辑`)
+  })
+
+  excelSocket.on('cell_update', (data) => {
+    // Apply other user's edit to Luckysheet
+    if (initialized.value && data.cell) {
+      // Parse cell reference (e.g., 'A1' -> row 0, col 0)
+      const colLetter = data.cell.match(/[A-Z]+/)[0]
+      const rowNum = parseInt(data.cell.match(/\d+/)[0])
+      const colNum = colLetter.charCodeAt(0) - 65 // A=0, B=1...
+
+      // Update cell value (row-1 because cell reference is 1-based)
+      try {
+        luckysheet.setCellValue(rowNum - 1, colNum, data.value)
+      } catch (e) {
+        console.warn('Failed to sync cell update:', e)
+      }
+    }
+  })
+
+  excelSocket.on('file_saved', (data) => {
+    ElMessage.info(`${data.user_id} 保存了文档`)
+    lastSaveTime.value = new Date()
+  })
+
+  excelSocket.on('error', (data) => {
+    console.error('WebSocket error:', data.message)
+  })
+}
+
 // Watch for route changes
 watch(() => route.query.path, (newPath, oldPath) => {
   if (newPath && newPath !== oldPath) {
     initialized.value = false
+    // Disconnect old WebSocket connection
+    excelSocket.disconnect()
     loadFileInfo()
+    // Reconnect WebSocket for new file
+    setTimeout(() => connectWebSocket(), 500)
   }
 })
 
 onMounted(() => {
   loadFileInfo()
   window.addEventListener('keydown', handleKeydown)
+  // Connect WebSocket after a short delay
+  setTimeout(() => connectWebSocket(), 1000)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  // Disconnect WebSocket
+  excelSocket.disconnect()
   // Destroy Luckysheet instance
   if (initialized.value) {
     try {
