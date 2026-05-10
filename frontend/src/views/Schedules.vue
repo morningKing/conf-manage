@@ -23,6 +23,7 @@
           <template #default="{ row }">
             <el-tooltip :content="row.preserve ? '已加入白名单，不会被清理' : '未保护'" placement="top">
               <el-icon
+                :size="18"
                 :style="{ color: row.preserve ? '#E6A23C' : '#C0C4CC', cursor: 'pointer' }"
                 @click="handleTogglePreserve(row)"
               >

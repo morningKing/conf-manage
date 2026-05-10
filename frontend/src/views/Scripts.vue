@@ -172,7 +172,7 @@
           <span>查看</span>
         </div>
         <div class="context-menu-item" @click="handleTogglePreserve(contextMenu.target)">
-          <el-icon :style="{ color: contextMenu.target.preserve ? '#E6A23C' : '#C0C4CC' }">
+          <el-icon :size="16" :style="{ color: contextMenu.target.preserve ? '#E6A23C' : '#C0C4CC' }">
             <StarFilled v-if="contextMenu.target.preserve" />
             <Star v-else />
           </el-icon>
