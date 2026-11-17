@@ -1,7 +1,7 @@
 """
 脚本标签模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -12,7 +12,7 @@ class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
     color = db.Column(db.String(20), default='#67C23A')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     def to_dict(self):
         """转换为字典"""
@@ -28,5 +28,5 @@ class Tag(db.Model):
 script_tags = db.Table('script_tags',
     db.Column('script_id', db.Integer, db.ForeignKey('scripts.id', ondelete='CASCADE'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=datetime.now(timezone.utc))
 )

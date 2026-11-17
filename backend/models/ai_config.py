@@ -1,7 +1,7 @@
 """
 AI配置模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -15,14 +15,15 @@ class AIConfig(db.Model):
     base_url = db.Column(db.String(500))
     model = db.Column(db.String(100), default='gpt-4')
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
             'id': self.id,
             'provider': self.provider,
-            'api_key': self.api_key[:10] + '...' if self.api_key else '',  # 只返回前10位
+            'api_key': ('...' + self.api_key[-4:]) if self.api_key else '',  # 仅返回尾 4 位掩码
+            'is_configured': bool(self.api_key),
             'base_url': self.base_url,
             'model': self.model,
             'is_active': self.is_active,

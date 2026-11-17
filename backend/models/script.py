@@ -1,7 +1,7 @@
 """
 脚本模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -21,8 +21,8 @@ class Script(db.Model):
     is_favorite = db.Column(db.Boolean, default=False)  # 是否收藏
     preserve = db.Column(db.Boolean, default=False, nullable=False)  # 清理白名单标记
     version = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     # 关系
     environment = db.relationship('Environment', backref='scripts', foreign_keys=[environment_id])
@@ -64,7 +64,7 @@ class ScriptVersion(db.Model):
     code = db.Column(db.Text, nullable=False)
     dependencies = db.Column(db.Text)  # JSON格式存储依赖
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     def to_dict(self):
         """转换为字典"""

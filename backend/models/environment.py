@@ -1,5 +1,5 @@
 from . import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Environment(db.Model):
     """执行环境模型"""
@@ -12,8 +12,8 @@ class Environment(db.Model):
     description = db.Column(db.Text)  # 描述
     is_default = db.Column(db.Boolean, default=False)  # 是否为默认环境
     version = db.Column(db.String(50))  # 版本信息（自动检测）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def to_dict(self):
         return {

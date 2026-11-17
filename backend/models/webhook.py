@@ -1,7 +1,7 @@
 """
 Webhook模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 import secrets
 
@@ -36,8 +36,8 @@ class Webhook(db.Model):
     failed_count = db.Column(db.Integer, default=0)  # 失败次数
     last_called_at = db.Column(db.DateTime)  # 最后调用时间
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     # 关系
     script = db.relationship('Script', backref='webhooks')
@@ -89,7 +89,7 @@ class WebhookLog(db.Model):
     __tablename__ = 'webhook_logs'
 
     id = db.Column(db.Integer, primary_key=True)
-    webhook_id = db.Column(db.Integer, db.ForeignKey('webhooks.id'), nullable=False)
+    webhook_id = db.Column(db.Integer, db.ForeignKey('webhooks.id'), nullable=False, index=True)
     execution_id = db.Column(db.Integer, db.ForeignKey('executions.id'), nullable=True)
 
     # 请求信息
@@ -107,7 +107,7 @@ class WebhookLog(db.Model):
 
     # 执行时间
     duration_ms = db.Column(db.Integer)  # 执行耗时（毫秒）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # 关系
     webhook = db.relationship('Webhook', backref='logs')

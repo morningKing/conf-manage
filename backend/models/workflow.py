@@ -1,7 +1,7 @@
 """
 工作流数据模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db
 import json
 
@@ -15,8 +15,8 @@ class Workflow(db.Model):
     description = db.Column(db.Text)
     config = db.Column(db.Text, nullable=False)  # JSON格式的工作流配置
     enabled = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     # 关系
     nodes = db.relationship('WorkflowNode', backref='workflow', lazy='dynamic', cascade='all, delete-orphan')
@@ -50,7 +50,7 @@ class WorkflowNode(db.Model):
     config = db.Column(db.Text)  # JSON格式的节点配置
     position_x = db.Column(db.Integer, default=0)  # 节点X坐标
     position_y = db.Column(db.Integer, default=0)  # 节点Y坐标
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # 关系
     script = db.relationship('Script', backref='workflow_nodes')
@@ -84,7 +84,7 @@ class WorkflowEdge(db.Model):
     source_node_id = db.Column(db.String(50), nullable=False)  # 源节点ID
     target_node_id = db.Column(db.String(50), nullable=False)  # 目标节点ID
     condition = db.Column(db.Text)  # JSON格式的条件配置
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     def to_dict(self):
         """转换为字典"""
@@ -111,18 +111,18 @@ class WorkflowExecution(db.Model):
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
     error = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # 关系
     node_executions = db.relationship('WorkflowNodeExecution', backref='workflow_execution', lazy='dynamic', cascade='all, delete-orphan')
 
-    def to_dict(self):
-        """转换为字典"""
+    def to_dict(self, include_workflow=True):
+        """转换为字典；列表场景传 include_workflow=False 避免深嵌套序列化"""
         params = json.loads(self.params) if self.params else {}
-        return {
+        d = {
             'id': self.id,
             'workflow_id': self.workflow_id,
-            'workflow': self.workflow.to_dict() if self.workflow else None,
+            'workflow': self.workflow.to_dict() if (include_workflow and self.workflow) else None,
             'status': self.status,
             'params': params,
             'start_time': self.start_time.isoformat() if self.start_time else None,
@@ -138,7 +138,7 @@ class WorkflowNodeExecution(db.Model):
     __tablename__ = 'workflow_node_executions'
 
     id = db.Column(db.Integer, primary_key=True)
-    workflow_execution_id = db.Column(db.Integer, db.ForeignKey('workflow_executions.id'), nullable=False)
+    workflow_execution_id = db.Column(db.Integer, db.ForeignKey('workflow_executions.id'), nullable=False, index=True)
     node_id = db.Column(db.String(50), nullable=False)
     execution_id = db.Column(db.Integer, db.ForeignKey('executions.id'), nullable=True)  # 关联的脚本执行记录
     status = db.Column(db.String(20), nullable=False)  # pending, running, success, failed, skipped
@@ -146,7 +146,7 @@ class WorkflowNodeExecution(db.Model):
     error = db.Column(db.Text)
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # 关系
     execution = db.relationship('Execution', backref='workflow_node_executions')

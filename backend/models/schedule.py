@@ -1,7 +1,7 @@
 """
 定时任务模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -19,8 +19,8 @@ class Schedule(db.Model):
     last_run = db.Column(db.DateTime)  # 上次执行时间
     next_run = db.Column(db.DateTime)  # 下次执行时间
     preserve = db.Column(db.Boolean, default=False, nullable=False)  # 清理白名单标记
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def to_dict(self):
         """转换为字典"""

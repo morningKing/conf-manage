@@ -1,7 +1,7 @@
 """
 文件夹模型（替代分类）
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -14,8 +14,8 @@ class Folder(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('folders.id'), nullable=True)
     color = db.Column(db.String(20), default='#E6A23C')
     sort_order = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     parent = db.relationship('Folder', remote_side=[id], backref=db.backref('children', lazy='dynamic'))
 

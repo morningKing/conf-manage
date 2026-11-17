@@ -1,7 +1,7 @@
 """
 选择会话模型 - 用于批量操作的状态管理
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 import json
 
@@ -14,8 +14,8 @@ class SelectionSession(db.Model):
     session_id = db.Column(db.String(32), unique=True, nullable=False)  # UUID
     execution_ids = db.Column(db.Text, default='[]')  # JSON数组存储选中ID
     count = db.Column(db.Integer, default=0)  # 选中数量
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     # 最大选择数量
     MAX_SELECTIONS = 1000

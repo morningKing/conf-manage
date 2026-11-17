@@ -1,7 +1,7 @@
 """
 全局变量数据模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db
 
 
@@ -14,8 +14,8 @@ class GlobalVariable(db.Model):
     value = db.Column(db.Text, nullable=False)  # 变量值
     description = db.Column(db.Text)  # 描述
     is_encrypted = db.Column(db.Boolean, default=False)  # 是否加密存储
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def to_dict(self, show_value=True):
         """转换为字典"""

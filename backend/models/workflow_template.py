@@ -1,7 +1,7 @@
 """
 工作流模板数据模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db
 import json
 
@@ -17,8 +17,8 @@ class WorkflowTemplate(db.Model):
     icon = db.Column(db.String(50))  # 图标名称
     template_config = db.Column(db.Text, nullable=False)  # JSON格式的模板配置（节点和边）
     is_builtin = db.Column(db.Boolean, default=False)  # 是否为内置模板
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def to_dict(self):
         """转换为字典"""

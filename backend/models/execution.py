@@ -1,7 +1,7 @@
 """
 执行记录模型
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from . import db
 
 
@@ -10,9 +10,9 @@ class Execution(db.Model):
     __tablename__ = 'executions'
 
     id = db.Column(db.Integer, primary_key=True)
-    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id'), nullable=False)
+    script_id = db.Column(db.Integer, db.ForeignKey('scripts.id'), nullable=False, index=True)
     environment_id = db.Column(db.Integer, db.ForeignKey('environments.id'), nullable=True)  # 实际使用的执行环境
-    status = db.Column(db.String(20), nullable=False)  # pending, running, success, failed
+    status = db.Column(db.String(20), nullable=False, index=True)  # pending, running, success, failed
     progress = db.Column(db.Integer, default=0)  # 执行进度 0-100
     stage = db.Column(db.String(50), default='pending')  # 执行阶段: pending, preparing, installing_deps, running, finishing
     pid = db.Column(db.Integer)  # 进程ID，用于中断执行
@@ -22,7 +22,7 @@ class Execution(db.Model):
     log_file = db.Column(db.String(255))  # 日志文件路径
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # 关系
     environment = db.relationship('Environment', backref='executions', foreign_keys=[environment_id])
