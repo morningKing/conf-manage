@@ -61,3 +61,42 @@ def safe_filename(filename):
     safe_name = name + ext
 
     return safe_name
+
+
+# 文本文件扩展名（executions 与 workflows 两处旧实现的并集）
+TEXT_EXTENSIONS = {
+    '.txt', '.py', '.js', '.json', '.xml', '.html', '.css', '.md',
+    '.yml', '.yaml', '.ini', '.conf', '.log', '.csv', '.sql',
+    '.sh', '.bat', '.c', '.cpp', '.h', '.hpp', '.java', '.go', '.rs',
+    '.ts', '.tsx', '.jsx', '.vue', '.php', '.rb', '.pl', '.r'
+}
+
+
+def is_text_file(filepath):
+    """判断文件是否为文本文件"""
+    ext = os.path.splitext(filepath)[1].lower()
+    return ext in TEXT_EXTENSIONS
+
+
+def get_directory_size(path):
+    """
+    获取目录大小（字节）；目录不存在或不可访问时返回 0
+    """
+    if not os.path.exists(path):
+        return 0
+
+    total_size = 0
+    try:
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                try:
+                    total_size += os.path.getsize(file_path)
+                except (OSError, IOError):
+                    # 忽略无法访问的文件
+                    pass
+    except (OSError, IOError):
+        # 忽略无法访问的目录
+        pass
+
+    return total_size

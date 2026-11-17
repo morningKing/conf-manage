@@ -48,6 +48,39 @@ def get_workflow(workflow_id):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
+
+def _sync_workflow_graph(workflow, nodes_data, edges_data):
+    """
+    同步工作流的节点与边：替换式写入（先删旧，再建新）。
+    create 与 update 两个路由共用，节点/边构建逻辑保持单一来源。
+    """
+    if nodes_data is not None:
+        WorkflowNode.query.filter_by(workflow_id=workflow.id).delete()
+        for node_data in nodes_data:
+            node = WorkflowNode(
+                workflow_id=workflow.id,
+                node_id=node_data['node_id'],
+                node_type=node_data['node_type'],
+                script_id=node_data.get('script_id'),
+                config=json.dumps(node_data.get('config', {})),
+                position_x=node_data.get('position', {}).get('x', 0),
+                position_y=node_data.get('position', {}).get('y', 0)
+            )
+            db.session.add(node)
+
+    if edges_data is not None:
+        WorkflowEdge.query.filter_by(workflow_id=workflow.id).delete()
+        for edge_data in edges_data:
+            edge = WorkflowEdge(
+                workflow_id=workflow.id,
+                edge_id=edge_data['edge_id'],
+                source_node_id=edge_data['source'],
+                target_node_id=edge_data['target'],
+                condition=json.dumps(edge_data.get('condition')) if edge_data.get('condition') else None
+            )
+            db.session.add(edge)
+
+
 @api_bp.route('/workflows', methods=['POST'])
 def create_workflow():
     """创建工作流"""
@@ -71,31 +104,8 @@ def create_workflow():
         db.session.add(workflow)
         db.session.flush()
 
-        # 创建节点
-        nodes_data = data.get('nodes', [])
-        for node_data in nodes_data:
-            node = WorkflowNode(
-                workflow_id=workflow.id,
-                node_id=node_data['node_id'],
-                node_type=node_data['node_type'],
-                script_id=node_data.get('script_id'),
-                config=json.dumps(node_data.get('config', {})),
-                position_x=node_data.get('position', {}).get('x', 0),
-                position_y=node_data.get('position', {}).get('y', 0)
-            )
-            db.session.add(node)
-
-        # 创建边
-        edges_data = data.get('edges', [])
-        for edge_data in edges_data:
-            edge = WorkflowEdge(
-                workflow_id=workflow.id,
-                edge_id=edge_data['edge_id'],
-                source_node_id=edge_data['source'],
-                target_node_id=edge_data['target'],
-                condition=json.dumps(edge_data.get('condition')) if edge_data.get('condition') else None
-            )
-            db.session.add(edge)
+        # 创建节点与边
+        _sync_workflow_graph(workflow, data.get('nodes', []), data.get('edges', []))
 
         db.session.commit()
 
@@ -131,38 +141,12 @@ def update_workflow(workflow_id):
 
         workflow.updated_at = datetime.utcnow()
 
-        # 更新节点和边
-        if 'nodes' in data:
-            # 删除旧节点
-            WorkflowNode.query.filter_by(workflow_id=workflow_id).delete()
-
-            # 创建新节点
-            for node_data in data['nodes']:
-                node = WorkflowNode(
-                    workflow_id=workflow.id,
-                    node_id=node_data['node_id'],
-                    node_type=node_data['node_type'],
-                    script_id=node_data.get('script_id'),
-                    config=json.dumps(node_data.get('config', {})),
-                    position_x=node_data.get('position', {}).get('x', 0),
-                    position_y=node_data.get('position', {}).get('y', 0)
-                )
-                db.session.add(node)
-
-        if 'edges' in data:
-            # 删除旧边
-            WorkflowEdge.query.filter_by(workflow_id=workflow_id).delete()
-
-            # 创建新边
-            for edge_data in data['edges']:
-                edge = WorkflowEdge(
-                    workflow_id=workflow.id,
-                    edge_id=edge_data['edge_id'],
-                    source_node_id=edge_data['source'],
-                    target_node_id=edge_data['target'],
-                    condition=json.dumps(edge_data.get('condition')) if edge_data.get('condition') else None
-                )
-                db.session.add(edge)
+        # 更新节点与边（传入 None 表示不修改该部分）
+        _sync_workflow_graph(
+            workflow,
+            data.get('nodes') if 'nodes' in data else None,
+            data.get('edges') if 'edges' in data else None,
+        )
 
         db.session.commit()
 

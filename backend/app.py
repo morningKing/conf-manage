@@ -11,7 +11,7 @@ from config import Config
 from models import db
 from api import api_bp
 from services.scheduler import scheduler_manager
-from utils.cleanup import run_cleanup_if_needed
+from services.cleanup_service import run_cleanup_if_needed
 from websocket import socketio
 
 

@@ -3,7 +3,7 @@
 """
 from flask import jsonify, request
 from api import api_bp
-from utils.cleanup import get_cleanup_stats, run_cleanup
+from services.cleanup_service import get_cleanup_stats, run_cleanup
 from config import Config
 
 

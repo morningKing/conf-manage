@@ -39,6 +39,46 @@ def get_global_variables_dict():
         return {}
 
 
+def build_exec_env(script, params, execution_files):
+    """
+    构建子进程环境变量：全局变量 < 执行参数（按参数类型转换）< 文件清单。
+    执行参数优先级高于全局变量。
+    """
+    env = os.environ.copy()
+
+    # 注入全局变量
+    for key, value in get_global_variables_dict().items():
+        env[key] = str(value)
+
+    # 注入执行参数
+    script_params = json.loads(script.parameters) if script.parameters else []
+    for key, value in params.items():
+        param_def = next((p for p in script_params if p['key'] == key), None)
+        param_type = param_def.get('type', 'text') if param_def else 'text'
+
+        if param_type == 'file':
+            # 文件类型 - 值为文件路径，直接传入
+            env[key] = str(value)
+        elif param_type in ['multiselect', 'checkbox']:
+            # 多选类型 - 值为数组，转为逗号分隔字符串
+            env[key] = ','.join(str(v) for v in value) if isinstance(value, list) else str(value)
+        elif param_type == 'switch':
+            # 开关类型 - 值为布尔，转为true/false字符串
+            env[key] = 'true' if value else 'false'
+        elif param_type == 'number':
+            env[key] = str(value)
+        elif param_type == 'date':
+            env[key] = str(value) if value else ''
+        else:
+            env[key] = str(value) if value else ''
+
+    # 添加文件路径环境变量（使用相对路径）
+    if execution_files:
+        env['FILES'] = json.dumps([f['name'] for f in execution_files])
+
+    return env
+
+
 def stream_output_to_file(pipe, log_file_path):
     """
     实时读取进程输出并写入日志文件
@@ -166,119 +206,24 @@ def execute_script(execution_id, custom_cwd=None):
                     print(f"使用{source}的环境 '{environment.name}' 的解释器: {environment.executable_path}")
 
             # 准备执行命令
-            if script.type == 'python':
-                # 安装依赖
+            def _install_deps(installer, executable):
                 if script.dependencies:
                     execution.stage = 'installing_deps'
                     execution.progress = 30
                     db.session.commit()
-                    install_dependencies_python(script.dependencies, python_executable)
+                    installer(script.dependencies, executable)
 
+            if script.type == 'python':
+                _install_deps(install_dependencies_python, python_executable)
                 # 构建命令 (-u 参数禁用输出缓冲，确保实时输出)
                 cmd = [python_executable, '-u', script_filename]
-
-                # 准备环境变量，包含所有参数
-                env = os.environ.copy()
-
-                # 注入全局变量
-                global_vars = get_global_variables_dict()
-                for key, value in global_vars.items():
-                    env[key] = str(value)
-
-                # 注入执行参数（执行参数优先级高于全局变量）
-                # 处理不同类型的参数
-                script_params = json.loads(script.parameters) if script.parameters else []
-
-                for key, value in params.items():
-                    # 找到参数定义，获取type
-                    param_def = next((p for p in script_params if p['key'] == key), None)
-                    param_type = param_def.get('type', 'text') if param_def else 'text'
-
-                    # 根据类型处理参数值
-                    if param_type == 'file':
-                        # 文件类型 - 值为文件路径，直接传入
-                        env[key] = str(value)
-                    elif param_type in ['multiselect', 'checkbox']:
-                        # 多选类型 - 值为数组，转为逗号分隔字符串
-                        if isinstance(value, list):
-                            env[key] = ','.join(str(v) for v in value)
-                        else:
-                            env[key] = str(value)
-                    elif param_type == 'switch':
-                        # 开关类型 - 值为布尔，转为true/false字符串
-                        env[key] = 'true' if value else 'false'
-                    elif param_type == 'number':
-                        # 数字类型 - 转为字符串
-                        env[key] = str(value)
-                    elif param_type == 'date':
-                        # 日期类型 - 确保转为字符串格式
-                        env[key] = str(value) if value else ''
-                    else:
-                        # 其他类型 - 直接转为字符串
-                        env[key] = str(value) if value else ''
-
-                # 添加文件路径环境变量（使用相对路径）
-                if execution_files:
-                    file_names = [f['name'] for f in execution_files]
-                    env['FILES'] = json.dumps(file_names)
-
             elif script.type == 'javascript':
-                # 安装依赖
-                if script.dependencies:
-                    execution.stage = 'installing_deps'
-                    execution.progress = 30
-                    db.session.commit()
-                    install_dependencies_node(script.dependencies, node_executable)
-
-                # 构建命令
+                _install_deps(install_dependencies_node, node_executable)
                 cmd = [node_executable, script_filename]
-
-                # 准备环境变量，包含所有参数
-                env = os.environ.copy()
-
-                # 注入全局变量
-                global_vars = get_global_variables_dict()
-                for key, value in global_vars.items():
-                    env[key] = str(value)
-
-                # 注入执行参数（执行参数优先级高于全局变量）
-                # 处理不同类型的参数
-                script_params = json.loads(script.parameters) if script.parameters else []
-
-                for key, value in params.items():
-                    # 找到参数定义，获取type
-                    param_def = next((p for p in script_params if p['key'] == key), None)
-                    param_type = param_def.get('type', 'text') if param_def else 'text'
-
-                    # 根据类型处理参数值
-                    if param_type == 'file':
-                        # 文件类型 - 值为文件路径，直接传入
-                        env[key] = str(value)
-                    elif param_type in ['multiselect', 'checkbox']:
-                        # 多选类型 - 值为数组，转为逗号分隔字符串
-                        if isinstance(value, list):
-                            env[key] = ','.join(str(v) for v in value)
-                        else:
-                            env[key] = str(value)
-                    elif param_type == 'switch':
-                        # 开关类型 - 值为布尔，转为true/false字符串
-                        env[key] = 'true' if value else 'false'
-                    elif param_type == 'number':
-                        # 数字类型 - 转为字符串
-                        env[key] = str(value)
-                    elif param_type == 'date':
-                        # 日期类型 - 确保转为字符串格式
-                        env[key] = str(value) if value else ''
-                    else:
-                        # 其他类型 - 直接转为字符串
-                        env[key] = str(value) if value else ''
-
-                # 添加文件路径环境变量（使用相对路径）
-                if execution_files:
-                    file_names = [f['name'] for f in execution_files]
-                    env['FILES'] = json.dumps(file_names)
             else:
                 raise Exception(f'不支持的脚本类型: {script.type}')
+
+            env = build_exec_env(script, params, execution_files)
 
             # 执行脚本（在工作目录中执行）
             execution.stage = 'running'

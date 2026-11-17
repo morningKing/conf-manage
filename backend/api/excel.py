@@ -6,11 +6,14 @@ from flask import request, jsonify
 from . import api_bp
 from config import Config
 from utils.safe_io import ensure_contained, PathEscapeError
+from utils import safe_filename
+from models import db, Execution
+from utils.excel_converter import excel_to_luckysheet, get_excel_info, luckysheet_to_excel
 import os
+import shutil
 import openpyxl
 from openpyxl.utils import get_column_letter
 from datetime import datetime
-from utils import safe_filename
 
 # 文件大小限制 (10MB)
 MAX_EXCEL_SIZE = 10 * 1024 * 1024
@@ -60,6 +63,24 @@ def get_excel_path(file_path):
         return None, "文件路径不在允许的目录范围内"
 
     return None, "文件不存在"
+
+def _resolve_sheet(workbook, sheet_identifier):
+    """
+    按索引或名称解析 openpyxl 工作表（原 4 处重复逻辑的单一来源）。
+
+    Returns:
+        tuple: (sheet, sheet_name, error) - 成功时 error 为 None；
+               失败时 sheet/sheet_name 为 None，error 为 (message, status_code)
+    """
+    if sheet_identifier.isdigit():
+        sheet_idx = int(sheet_identifier)
+        if sheet_idx < 0 or sheet_idx >= len(workbook.sheetnames):
+            return None, None, ('工作表索引超出范围', 400)
+        sheet_name = workbook.sheetnames[sheet_idx]
+        return workbook[sheet_name], sheet_name, None
+    if sheet_identifier not in workbook.sheetnames:
+        return None, None, (f'工作表 "{sheet_identifier}" 不存在', 400)
+    return workbook[sheet_identifier], sheet_identifier, None
 
 
 def validate_excel_file(file_path):
@@ -289,19 +310,10 @@ def get_excel_sheet_data():
             workbook = openpyxl.load_workbook(full_path, read_only=True, data_only=True)
 
             # 获取工作表
-            if sheet_identifier.isdigit():
-                sheet_idx = int(sheet_identifier)
-                if sheet_idx < 0 or sheet_idx >= len(workbook.sheetnames):
-                    workbook.close()
-                    return jsonify({'code': 1, 'message': '工作表索引超出范围'}), 400
-                sheet_name = workbook.sheetnames[sheet_idx]
-                sheet = workbook[sheet_name]
-            else:
-                if sheet_identifier not in workbook.sheetnames:
-                    workbook.close()
-                    return jsonify({'code': 1, 'message': f'工作表 "{sheet_identifier}" 不存在'}), 400
-                sheet = workbook[sheet_identifier]
-                sheet_name = sheet_identifier
+            sheet, sheet_name, err = _resolve_sheet(workbook, sheet_identifier)
+            if err:
+                workbook.close()
+                return jsonify({'code': 1, 'message': err[0]}), err[1]
 
             total_rows = sheet.max_row
             total_cols = sheet.max_column
@@ -411,19 +423,10 @@ def save_excel_editor_file():
         workbook = openpyxl.load_workbook(full_path)
 
         # 获取工作表
-        if sheet_identifier.isdigit():
-            sheet_idx = int(sheet_identifier)
-            if sheet_idx < 0 or sheet_idx >= len(workbook.sheetnames):
-                workbook.close()
-                return jsonify({'code': 1, 'message': '工作表索引超出范围'}), 400
-            sheet = workbook.worksheets[sheet_idx]
-            sheet_name = sheet.title
-        else:
-            if sheet_identifier not in workbook.sheetnames:
-                workbook.close()
-                return jsonify({'code': 1, 'message': f'工作表 "{sheet_identifier}" 不存在'}), 400
-            sheet = workbook[sheet_identifier]
-            sheet_name = sheet_identifier
+        sheet, sheet_name, err = _resolve_sheet(workbook, sheet_identifier)
+        if err:
+            workbook.close()
+            return jsonify({'code': 1, 'message': err[0]}), err[1]
 
         # 增量更新：更新指定单元格
         if cells:
@@ -611,18 +614,11 @@ def delete_excel_sheet():
             workbook.close()
             return jsonify({'code': 1, 'message': '无法删除最后一个工作表'}), 400
 
-        # 获取工作表
-        if sheet_identifier.isdigit():
-            sheet_idx = int(sheet_identifier)
-            if sheet_idx < 0 or sheet_idx >= len(workbook.sheetnames):
-                workbook.close()
-                return jsonify({'code': 1, 'message': '工作表索引超出范围'}), 400
-            sheet_name = workbook.sheetnames[sheet_idx]
-        else:
-            if sheet_identifier not in workbook.sheetnames:
-                workbook.close()
-                return jsonify({'code': 1, 'message': f'工作表 "{sheet_identifier}" 不存在'}), 400
-            sheet_name = sheet_identifier
+        # 获取工作表（删除场景仅需要表名）
+        _, sheet_name, err = _resolve_sheet(workbook, sheet_identifier)
+        if err:
+            workbook.close()
+            return jsonify({'code': 1, 'message': err[0]}), err[1]
 
         # 删除工作表
         del workbook[sheet_name]
@@ -703,17 +699,10 @@ def rename_excel_sheet():
             return jsonify({'code': 1, 'message': f'工作表 "{new_name}" 已存在'}), 400
 
         # 获取工作表
-        if sheet_identifier.isdigit():
-            sheet_idx = int(sheet_identifier)
-            if sheet_idx < 0 or sheet_idx >= len(workbook.sheetnames):
-                workbook.close()
-                return jsonify({'code': 1, 'message': '工作表索引超出范围'}), 400
-            sheet = workbook.worksheets[sheet_idx]
-        else:
-            if sheet_identifier not in workbook.sheetnames:
-                workbook.close()
-                return jsonify({'code': 1, 'message': f'工作表 "{sheet_identifier}" 不存在'}), 400
-            sheet = workbook[sheet_identifier]
+        sheet, _, err = _resolve_sheet(workbook, sheet_identifier)
+        if err:
+            workbook.close()
+            return jsonify({'code': 1, 'message': err[0]}), err[1]
 
         # 重命名工作表
         sheet.title = new_name
@@ -729,3 +718,99 @@ def rename_excel_sheet():
 
     except Exception as e:
         return jsonify({'code': 1, 'message': f'重命名工作表失败: {str(e)}'}), 500
+
+
+def _resolve_execution_space_file(execution_id, file_path):
+    """
+    解析执行空间内文件的真实路径（Excel 读取/保存端点共用）。
+
+    Returns:
+        tuple: (full_path, error_response) - 成功时 error_response 为 None
+    """
+    execution_space = Config.get_execution_space(execution_id)
+    safe_path = os.path.normpath(file_path)
+    full_path = os.path.join(execution_space, safe_path)
+    try:
+        return ensure_contained(full_path, execution_space), None
+    except PathEscapeError:
+        return None, (jsonify({'code': 1, 'message': '非法的文件路径'}), 400)
+
+
+def get_excel_file_internal(execution_id, file_path):
+    """获取执行空间中的 Excel 文件内容（Luckysheet 格式）"""
+    try:
+        full_path, error = _resolve_execution_space_file(execution_id, file_path)
+        if error:
+            return error
+
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        ext = os.path.splitext(full_path)[1].lower()
+        if ext not in ['.xlsx', '.xls']:
+            return jsonify({'code': 1, 'message': '不是有效的 Excel 文件'}), 400
+
+        try:
+            grid_data = excel_to_luckysheet(full_path)
+            info = get_excel_info(full_path)
+
+            return jsonify({
+                'code': 0,
+                'data': {
+                    'gridData': grid_data,
+                    'filename': info.get('filename', os.path.basename(full_path)),
+                    'sheets': info.get('sheets', []),
+                    'sheet_count': info.get('sheet_count', 0),
+                    'size': info.get('size', 0)
+                }
+            })
+        except Exception as e:
+            return jsonify({
+                'code': 1,
+                'message': f'Excel 文件解析失败: {str(e)}'
+            }), 500
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['GET'])
+def get_execution_excel_file(execution_id, file_path):
+    """获取执行空间中的 Excel 文件内容（Luckysheet 格式）"""
+    return get_excel_file_internal(execution_id, file_path)
+
+
+@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>', methods=['POST'])
+def save_execution_excel_file(execution_id, file_path):
+    """保存执行空间中的 Excel 文件（从 Luckysheet 格式）- 使用 ?excel=true 查询参数"""
+    try:
+        if request.args.get('excel', 'false').lower() != 'true':
+            return jsonify({'code': 1, 'message': '不支持的请求'}), 400
+
+        full_path, error = _resolve_execution_space_file(execution_id, file_path)
+        if error:
+            return error
+
+        if not os.path.exists(full_path):
+            return jsonify({'code': 1, 'message': '文件不存在'}), 404
+
+        data = request.get_json()
+        grid_data = data.get('gridData', [])
+        if not grid_data:
+            return jsonify({'code': 1, 'message': '无数据'}), 400
+
+        # 备份原文件
+        backup_path = full_path + '.bak'
+        shutil.copy2(full_path, backup_path)
+
+        try:
+            luckysheet_to_excel(grid_data, full_path)
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+            return jsonify({'code': 0, 'message': '保存成功'})
+        except Exception:
+            # 恢复备份
+            if os.path.exists(backup_path):
+                shutil.move(backup_path, full_path)
+            raise
+    except Exception as e:
+        return jsonify({'code': 1, 'message': f'保存失败: {str(e)}'}), 500

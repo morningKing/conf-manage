@@ -4,6 +4,7 @@
 from flask import request, jsonify
 from . import api_bp
 from models import db, SelectionSession, Execution
+from services.execution_service import delete_execution_record
 import uuid
 import json
 import os
@@ -191,16 +192,7 @@ def delete_selection_batch(session_id):
                 continue
 
             try:
-                # 删除日志文件
-                if execution.log_file and os.path.exists(execution.log_file):
-                    os.remove(execution.log_file)
-
-                # 删除执行空间
-                execution_space = Config.get_execution_space(eid)
-                if os.path.exists(execution_space):
-                    shutil.rmtree(execution_space)
-
-                db.session.delete(execution)
+                delete_execution_record(execution)
                 result['success'] += 1
                 result['details'].append({
                     'id': eid,

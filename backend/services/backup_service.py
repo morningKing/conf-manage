@@ -4,30 +4,16 @@
 
 功能：备份脚本文件、执行空间、工作流目录、日志文件等
 """
+import logging
 import os
-import sys
 import shutil
 import datetime
 import tarfile
 
-# 将backend目录添加到Python路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from config import Config
+from utils.file_utils import get_directory_size
 
-
-def get_directory_size(path):
-    """计算目录大小"""
-    total_size = 0
-    try:
-        for dirpath, dirnames, filenames in os.walk(path):
-            for filename in filenames:
-                filepath = os.path.join(dirpath, filename)
-                if os.path.exists(filepath):
-                    total_size += os.path.getsize(filepath)
-    except Exception as e:
-        print(f"  ⚠ 计算大小失败: {e}")
-    return total_size
+logger = logging.getLogger(__name__)
 
 
 def count_files(path):
@@ -65,10 +51,10 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
     # 确保备份目录存在
     os.makedirs(Config.BACKUPS_DIR, exist_ok=True)
 
-    print("=" * 70)
-    print("系统备份工具")
-    print("=" * 70)
-    print()
+    logger.info("=" * 70)
+    logger.info("系统备份工具")
+    logger.info("=" * 70)
+    logger.info()
 
     # 定义需要备份的目录
     backup_items = []
@@ -128,10 +114,10 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
         from utils.export_database import export_database
         db_export_file = export_database()
     except Exception as e:
-        print(f"  ⚠ 数据库导出跳过: {e}")
+        logger.info(f"  ⚠ 数据库导出跳过: {e}")
 
     # 显示备份项统计
-    print("备份项目统计:")
+    logger.info("备份项目统计:")
     total_size = 0
     total_files = 0
 
@@ -147,41 +133,41 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
         total_files += files
 
         size_mb = size / (1024 * 1024)
-        print(f"  ✓ {item['name']}: {files} 个文件, {size_mb:.2f} MB")
+        logger.info(f"  ✓ {item['name']}: {files} 个文件, {size_mb:.2f} MB")
 
-    print(f"\n总计: {total_files} 个文件, {total_size / (1024*1024):.2f} MB")
-    print()
+    logger.info(f"\n总计: {total_files} 个文件, {total_size / (1024*1024):.2f} MB")
+    logger.info()
 
     # 创建备份
-    print(f"开始创建备份: {backup_file}")
-    print("-" * 70)
+    logger.info(f"开始创建备份: {backup_file}")
+    logger.info("-" * 70)
 
     with tarfile.open(backup_file, 'w:gz') as tar:
         for item in backup_items:
-            print(f"  正在备份: {item['name']}...")
+            logger.info(f"  正在备份: {item['name']}...")
             try:
                 tar.add(item['path'], arcname=item['arcname'])
             except Exception as e:
-                print(f"  ⚠ 备份失败: {e}")
+                logger.info(f"  ⚠ 备份失败: {e}")
 
         # 数据库导出文件纳入备份包
         if db_export_file and os.path.exists(db_export_file):
             try:
                 tar.add(db_export_file, arcname=os.path.join('database', os.path.basename(db_export_file)))
             except Exception as e:
-                print(f"  ⚠ 数据库导出纳入备份失败: {e}")
+                logger.info(f"  ⚠ 数据库导出纳入备份失败: {e}")
 
     # 获取备份文件大小
     backup_size = os.path.getsize(backup_file)
     backup_size_mb = backup_size / (1024 * 1024)
     compression_ratio = (1 - backup_size / total_size) * 100 if total_size > 0 else 0
 
-    print("-" * 70)
-    print(f"✓ 备份完成")
-    print(f"✓ 备份文件: {backup_file}")
-    print(f"✓ 备份大小: {backup_size_mb:.2f} MB ({backup_size:,} 字节)")
-    print(f"✓ 压缩率: {compression_ratio:.1f}%")
-    print()
+    logger.info("-" * 70)
+    logger.info(f"✓ 备份完成")
+    logger.info(f"✓ 备份文件: {backup_file}")
+    logger.info(f"✓ 备份大小: {backup_size_mb:.2f} MB ({backup_size:,} 字节)")
+    logger.info(f"✓ 压缩率: {compression_ratio:.1f}%")
+    logger.info()
 
     return backup_file
 
@@ -225,9 +211,9 @@ def delete_old_backups(keep_days=30):
                 try:
                     os.remove(filepath)
                     deleted_count += 1
-                    print(f"  ✓ 已删除旧备份: {filename}")
+                    logger.info(f"  ✓ 已删除旧备份: {filename}")
                 except Exception as e:
-                    print(f"  ✗ 删除失败: {filename} - {e}")
+                    logger.info(f"  ✗ 删除失败: {filename} - {e}")
 
     return deleted_count
 
@@ -250,25 +236,25 @@ def main():
         if args.list:
             backups = list_backups()
             if not backups:
-                print("没有找到备份文件")
+                logger.info("没有找到备份文件")
                 return 0
 
-            print("=" * 70)
-            print("备份文件列表")
-            print("=" * 70)
+            logger.info("=" * 70)
+            logger.info("备份文件列表")
+            logger.info("=" * 70)
             for backup in backups:
                 size_mb = backup['size'] / (1024 * 1024)
                 created = backup['created'].strftime('%Y-%m-%d %H:%M:%S')
-                print(f"\n文件名: {backup['name']}")
-                print(f"  大小: {size_mb:.2f} MB")
-                print(f"  创建时间: {created}")
+                logger.info(f"\n文件名: {backup['name']}")
+                logger.info(f"  大小: {size_mb:.2f} MB")
+                logger.info(f"  创建时间: {created}")
             return 0
 
         # 清理旧备份
         if args.clean:
-            print(f"清理 {args.clean} 天前的旧备份...")
+            logger.info(f"清理 {args.clean} 天前的旧备份...")
             deleted = delete_old_backups(args.clean)
-            print(f"\n✓ 已删除 {deleted} 个旧备份文件")
+            logger.info(f"\n✓ 已删除 {deleted} 个旧备份文件")
             return 0
 
         # 执行备份
@@ -278,14 +264,14 @@ def main():
             include_execution_spaces=not args.exclude_executions
         )
 
-        print("=" * 70)
-        print("备份成功完成!")
-        print("=" * 70)
+        logger.info("=" * 70)
+        logger.info("备份成功完成!")
+        logger.info("=" * 70)
 
         return 0
 
     except Exception as e:
-        print(f"\n✗ 备份失败: {e}")
+        logger.info(f"\n✗ 备份失败: {e}")
         import traceback
         traceback.print_exc()
         return 1

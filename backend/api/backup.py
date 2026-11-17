@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from . import api_bp
 from utils.export_database import export_database, get_database_info
-from utils.backup_system import backup_system, list_backups, delete_old_backups
+from services.backup_service import backup_system, list_backups, delete_old_backups
 from config import Config
 
 

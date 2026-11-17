@@ -1,14 +1,18 @@
 """
 执行记录API
 """
-from flask import request, jsonify, Response, stream_with_context
+from flask import request, jsonify, Response, stream_with_context, current_app
 from utils import safe_filename
+from utils.file_utils import is_text_file
 from . import api_bp
 from models import db, Execution, Script
 from services.executor import execute_script
+from services.execution_service import delete_execution_record, kill_process_tree, retry_execution
 import json
 import os
 import time
+import psutil
+from threading import Thread
 from datetime import datetime
 
 
@@ -188,14 +192,17 @@ def get_executions():
         script_id = request.args.get('script_id', type=int)
         exec_type = request.args.get('type', '')  # 'script', 'workflow', 或空字符串表示全部
 
+        # 有界查询：两张表各取前 page*per_page 条（按创建时间倒序），
+        # 合并排序后切片分页，避免全表加载
+        fetch_limit = page * per_page
+
         # 获取脚本执行记录
         script_executions = []
         if exec_type != 'workflow':
-            query = Execution.query
+            query = Execution.query.order_by(Execution.created_at.desc())
             if script_id:
                 query = query.filter_by(script_id=script_id)
-
-            for execution in query.all():
+            for execution in query.limit(fetch_limit).all():
                 item = execution.to_dict()
                 item['execution_type'] = 'script'
                 item['type_name'] = '脚本执行'
@@ -204,7 +211,8 @@ def get_executions():
         # 获取工作流执行记录
         workflow_executions = []
         if exec_type != 'script':
-            for wf_execution in WorkflowExecution.query.all():
+            for wf_execution in WorkflowExecution.query.order_by(
+                    WorkflowExecution.created_at.desc()).limit(fetch_limit).all():
                 item = wf_execution.to_dict()
                 item['execution_type'] = 'workflow'
                 item['type_name'] = '工作流执行'
@@ -212,15 +220,22 @@ def get_executions():
                 item['script_name'] = item.get('workflow', {}).get('name', '未知工作流')
                 workflow_executions.append(item)
 
-        # 合并并按创建时间排序
+        # 合并并按创建时间排序后分页
         all_executions = script_executions + workflow_executions
         all_executions.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-
-        # 手动分页
-        total = len(all_executions)
         start = (page - 1) * per_page
-        end = start + per_page
-        items = all_executions[start:end]
+        items = all_executions[start:start + per_page]
+
+        # 真实总数用于分页元信息（COUNT 查询，代价远小于全表加载）
+        if exec_type == 'workflow':
+            total = WorkflowExecution.query.count()
+        else:
+            count_q = Execution.query
+            if script_id:
+                count_q = count_q.filter_by(script_id=script_id)
+            total = count_q.count()
+            if exec_type != 'script':
+                total += WorkflowExecution.query.count()
 
         return jsonify({
             'code': 0,
@@ -357,23 +372,8 @@ def stream_execution_logs(execution_id):
 def delete_execution(execution_id):
     """删除执行记录"""
     try:
-        from config import Config
-        import shutil
-
         execution = Execution.query.get_or_404(execution_id)
-
-        # 删除日志文件
-        if execution.log_file and os.path.exists(execution.log_file):
-            os.remove(execution.log_file)
-
-        # 删除执行空间（包含所有上传的文件和输出文件）
-        execution_space = Config.get_execution_space(execution_id)
-        if os.path.exists(execution_space):
-            shutil.rmtree(execution_space)
-            print(f"删除执行 {execution_id} 的执行空间: {execution_space}")
-
-        db.session.delete(execution)
-        db.session.commit()
+        delete_execution_record(execution)
 
         return jsonify({
             'code': 0,
@@ -386,7 +386,7 @@ def delete_execution(execution_id):
 
 @api_bp.route('/executions/batch', methods=['POST'])
 def batch_manage_executions():
-    """批量管理执行记录"""
+    """批量管理执行记录（delete / cancel / retry）"""
     try:
         data = request.get_json()
         if not data:
@@ -397,23 +397,16 @@ def batch_manage_executions():
 
         if not action:
             return jsonify({'code': 1, 'message': '操作类型不能为空'}), 400
-
         if not execution_ids:
             return jsonify({'code': 1, 'message': '执行ID列表不能为空'}), 400
-
         if not isinstance(execution_ids, list):
             return jsonify({'code': 1, 'message': '执行ID必须是数组格式'}), 400
 
-        # 验证ID是否存在
         executions = Execution.query.filter(Execution.id.in_(execution_ids)).all()
-        found_ids = [exec.id for exec in executions]
+        found_ids = [e.id for e in executions]
         missing_ids = [eid for eid in execution_ids if eid not in found_ids]
-
         if missing_ids:
-            return jsonify({
-                'code': 1,
-                'message': f'以下执行记录不存在: {missing_ids}'
-            }), 404
+            return jsonify({'code': 1, 'message': f'以下执行记录不存在: {missing_ids}'}), 404
 
         result = {
             'action': action,
@@ -424,202 +417,108 @@ def batch_manage_executions():
         }
 
         if action == 'delete':
-            # 批量删除
-            from config import Config
-            import shutil
-
-            for execution in executions:
-                try:
-                    # 删除日志文件
-                    if execution.log_file and os.path.exists(execution.log_file):
-                        os.remove(execution.log_file)
-
-                    # 删除执行空间
-                    execution_space = Config.get_execution_space(execution.id)
-                    if os.path.exists(execution_space):
-                        shutil.rmtree(execution_space)
-
-                    db.session.delete(execution)
-                    result['success'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'success',
-                        'message': '删除成功'
-                    })
-
-                except Exception as e:
-                    result['failed'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'failed',
-                        'message': str(e)
-                    })
-
-            if result['success'] > 0:
-                db.session.commit()
-
+            _batch_delete(executions, result)
         elif action == 'cancel':
-            # 批量取消
-            import signal
-            import psutil
-
-            for execution in executions:
-                if execution.status != 'running':
-                    result['failed'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'failed',
-                        'message': f'只能取消正在运行的执行，当前状态: {execution.status}'
-                    })
-                    continue
-
-                try:
-                    if execution.pid:
-                        # 终止进程
-                        try:
-                            parent = psutil.Process(execution.pid)
-                            children = parent.children(recursive=True)
-
-                            for child in children:
-                                try:
-                                    child.terminate()
-                                except psutil.NoSuchProcess:
-                                    pass
-
-                            gone, alive = psutil.wait_procs(children, timeout=3)
-
-                            for p in alive:
-                                try:
-                                    p.kill()
-                                except psutil.NoSuchProcess:
-                                    pass
-
-                            parent.terminate()
-                            parent.wait(timeout=3)
-
-                        except psutil.NoSuchProcess:
-                            pass
-                        except psutil.TimeoutExpired:
-                            try:
-                                parent.kill()
-                            except:
-                                pass
-
-                    # 更新状态
-                    execution.status = 'failed'
-                    execution.stage = 'cancelled'
-                    execution.progress = 100
-                    execution.error = '执行已被批量取消'
-                    execution.end_time = datetime.utcnow()
-
-                    result['success'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'success',
-                        'message': '取消成功'
-                    })
-
-                except Exception as e:
-                    result['failed'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'failed',
-                        'message': str(e)
-                    })
-
-            if result['success'] > 0:
-                db.session.commit()
-
+            _batch_cancel(executions, result)
         elif action == 'retry':
-            # 批量重试
-            for execution in executions:
-                if execution.status not in ['failed', 'cancelled']:
-                    result['failed'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'failed',
-                        'message': f'只能重试失败或取消的执行，当前状态: {execution.status}'
-                    })
-                    continue
-
-                try:
-                    # 创建新的执行记录
-                    original_params = {}
-                    if execution.params:
-                        try:
-                            original_params = json.loads(execution.params)
-                        except json.JSONDecodeError:
-                            original_params = {}
-
-                    new_execution = Execution(
-                        script_id=execution.script_id,
-                        environment_id=execution.environment_id,
-                        status='pending',
-                        params=json.dumps(original_params) if original_params else None
-                    )
-                    db.session.add(new_execution)
-                    db.session.flush()
-
-                    # 复制执行空间的文件（如果有）
-                    from config import Config
-                    old_space = Config.get_execution_space(execution.id)
-                    new_space = Config.ensure_execution_space(new_execution.id)
-
-                    if os.path.exists(old_space):
-                        import shutil
-                        for item in os.listdir(old_space):
-                            s = os.path.join(old_space, item)
-                            d = os.path.join(new_space, item)
-                            if os.path.isdir(s):
-                                shutil.copytree(s, d)
-                            else:
-                                shutil.copy2(s, d)
-
-                    # 异步执行
-                    from threading import Thread
-                    from flask import current_app
-                    app = current_app._get_current_object()
-
-                    def run_script_with_context():
-                        with app.app_context():
-                            execute_script(new_execution.id)
-
-                    thread = Thread(target=run_script_with_context)
-                    thread.start()
-
-                    result['success'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'success',
-                        'message': f'重试成功，新执行ID: {new_execution.id}'
-                    })
-
-                except Exception as e:
-                    result['failed'] += 1
-                    result['details'].append({
-                        'id': execution.id,
-                        'status': 'failed',
-                        'message': str(e)
-                    })
-
-            if result['success'] > 0:
-                db.session.commit()
-
+            _batch_retry(executions, result)
         else:
-            return jsonify({
-                'code': 1,
-                'message': f'不支持的操作类型: {action}'
-            }), 400
+            return jsonify({'code': 1, 'message': f'不支持的操作类型: {action}'}), 400
 
         return jsonify({
             'code': 0,
             'data': result,
             'message': f'批量{action}操作完成: 成功{result["success"]}个，失败{result["failed"]}个'
         })
-
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+def _batch_delete(executions, result):
+    """批量删除执行记录"""
+    for execution in executions:
+        try:
+            delete_execution_record(execution)
+            result['success'] += 1
+            result['details'].append({'id': execution.id, 'status': 'success', 'message': '删除成功'})
+        except Exception as e:
+            result['failed'] += 1
+            result['details'].append({'id': execution.id, 'status': 'failed', 'message': str(e)})
+
+
+def _batch_cancel(executions, result):
+    """批量取消运行中的执行"""
+    for execution in executions:
+        if execution.status != 'running':
+            result['failed'] += 1
+            result['details'].append({
+                'id': execution.id,
+                'status': 'failed',
+                'message': f'只能取消正在运行的执行，当前状态: {execution.status}'
+            })
+            continue
+
+        try:
+            if execution.pid:
+                try:
+                    kill_process_tree(execution.pid)
+                except psutil.NoSuchProcess:
+                    pass
+
+            execution.status = 'failed'
+            execution.stage = 'cancelled'
+            execution.progress = 100
+            execution.error = '执行已被批量取消'
+            execution.end_time = datetime.utcnow()
+
+            result['success'] += 1
+            result['details'].append({'id': execution.id, 'status': 'success', 'message': '取消成功'})
+        except Exception as e:
+            result['failed'] += 1
+            result['details'].append({'id': execution.id, 'status': 'failed', 'message': str(e)})
+
+    if result['success'] > 0:
+        db.session.commit()
+
+
+def _batch_retry(executions, result):
+    """批量重试失败/取消的执行"""
+    for execution in executions:
+        if execution.status not in ['failed', 'cancelled']:
+            result['failed'] += 1
+            result['details'].append({
+                'id': execution.id,
+                'status': 'failed',
+                'message': f'只能重试失败或取消的执行，当前状态: {execution.status}'
+            })
+            continue
+
+        try:
+            new_execution = retry_execution(execution)
+            new_exec_id = new_execution.id
+            # 先提交，确保新线程能查到这条记录
+            db.session.commit()
+
+            app = current_app._get_current_object()
+            thread = Thread(target=_run_script_with_context, args=(app, new_exec_id))
+            thread.start()
+
+            result['success'] += 1
+            result['details'].append({
+                'id': execution.id,
+                'status': 'success',
+                'message': f'重试成功，新执行ID: {new_exec_id}'
+            })
+        except Exception as e:
+            result['failed'] += 1
+            result['details'].append({'id': execution.id, 'status': 'failed', 'message': str(e)})
+
+
+def _run_script_with_context(app, execution_id):
+    """在新线程中以应用上下文执行脚本"""
+    with app.app_context():
+        execute_script(execution_id)
 
 
 @api_bp.route('/executions/statistics', methods=['GET'])
@@ -745,40 +644,11 @@ def cancel_execution(execution_id):
             }), 400
 
         try:
-            # 使用 psutil 终止进程及其子进程
-            parent = psutil.Process(execution.pid)
-            children = parent.children(recursive=True)
-
-            # 先终止子进程
-            for child in children:
-                try:
-                    child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
-
-            # 等待子进程结束
-            gone, alive = psutil.wait_procs(children, timeout=3)
-
-            # 强制杀死仍存活的子进程
-            for p in alive:
-                try:
-                    p.kill()
-                except psutil.NoSuchProcess:
-                    pass
-
-            # 终止主进程
-            parent.terminate()
-            parent.wait(timeout=3)
-
+            # 终止进程及其全部子进程（先温和终止，超时后强杀）
+            kill_process_tree(execution.pid)
         except psutil.NoSuchProcess:
             # 进程已经不存在
             pass
-        except psutil.TimeoutExpired:
-            # 超时后强制杀死
-            try:
-                parent.kill()
-            except:
-                pass
 
         # 更新执行状态
         execution.status = 'failed'
@@ -859,11 +729,9 @@ def get_execution_file(execution_id, file_path):
         from flask import send_file
 
         # 检查是否是Excel API请求（通过查询参数）
-        excel_param = request.args.get('excel', 'false').lower()
-        print(f"[DEBUG] Excel API check: excel={excel_param}, file_path={file_path}")
-        if excel_param == 'true':
-            print(f"[DEBUG] Calling Excel API for: {file_path}")
-            return _get_excel_file_internal(execution_id, file_path)
+        if request.args.get('excel', 'false').lower() == 'true':
+            from api.excel import get_excel_file_internal
+            return get_excel_file_internal(execution_id, file_path)
 
         execution = Execution.query.get_or_404(execution_id)
         execution_space = Config.get_execution_space(execution_id)
@@ -952,28 +820,10 @@ def get_execution_file(execution_id, file_path):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
-def is_text_file(filepath):
-    """判断文件是否为文本文件"""
-    text_extensions = {
-        '.txt', '.py', '.js', '.json', '.xml', '.html', '.css', '.md',
-        '.yml', '.yaml', '.ini', '.conf', '.log', '.csv', '.sql',
-        '.sh', '.bat', '.c', '.cpp', '.h', '.java', '.go', '.rs',
-        '.ts', '.tsx', '.jsx', '.vue', '.php', '.rb', '.pl', '.r'
-    }
-
-    ext = os.path.splitext(filepath)[1].lower()
-    return ext in text_extensions
-
-
 @api_bp.route('/executions/<int:execution_id>/re-execute', methods=['POST'])
 def re_execute_script(execution_id):
     """重新执行脚本（支持所有非运行状态）"""
     try:
-        import shutil
-        from threading import Thread
-        from flask import current_app
-        from config import Config
-
         execution = Execution.query.get_or_404(execution_id)
 
         # 检查状态（running状态不能重新执行）
@@ -983,38 +833,8 @@ def re_execute_script(execution_id):
                 'message': '正在运行的执行不能重新执行，请先中断'
             }), 400
 
-        # 获取原执行参数
-        original_params = {}
-        if execution.params:
-            try:
-                original_params = json.loads(execution.params)
-            except json.JSONDecodeError:
-                original_params = {}
-
-        # 创建新执行记录
-        new_execution = Execution(
-            script_id=execution.script_id,
-            environment_id=execution.environment_id,
-            status='pending',
-            params=json.dumps(original_params) if original_params else None
-        )
-        db.session.add(new_execution)
-        db.session.flush()  # 获取新execution.id
-
-        # 复制执行空间的文件（如果有）
-        old_space = Config.get_execution_space(execution.id)
-        new_space = Config.ensure_execution_space(new_execution.id)
-
-        if os.path.exists(old_space):
-            for item in os.listdir(old_space):
-                src = os.path.join(old_space, item)
-                dst = os.path.join(new_space, item)
-                if os.path.isdir(src):
-                    shutil.copytree(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-
-        # 在 commit 前提取返回值，避免 commit 后懒加载与新线程竞争会话
+        # 新建执行记录并复制原执行空间的文件
+        new_execution = retry_execution(execution)
         new_exec_id = new_execution.id
         original_exec_id = execution.id
         script_name = execution.script.name if execution.script else None
@@ -1024,12 +844,7 @@ def re_execute_script(execution_id):
 
         # 异步执行脚本
         app = current_app._get_current_object()
-
-        def run_script_with_context():
-            with app.app_context():
-                execute_script(new_exec_id)
-
-        thread = Thread(target=run_script_with_context)
+        thread = Thread(target=_run_script_with_context, args=(app, new_exec_id))
         thread.start()
 
         return jsonify({
@@ -1046,126 +861,4 @@ def re_execute_script(execution_id):
         return jsonify({'code': 1, 'message': str(e)}), 500
 
 
-def _get_excel_file_internal(execution_id, file_path):
-    """内部函数：获取 Excel 文件内容（Luckysheet 格式）"""
-    try:
-        from config import Config
-        from utils.excel_converter import excel_to_luckysheet, get_excel_info
-
-        execution = Execution.query.get_or_404(execution_id)
-        execution_space = Config.get_execution_space(execution_id)
-
-        # 安全检查：使用 realpath 防止路径遍历攻击
-        safe_path = os.path.normpath(file_path)
-        full_path = os.path.join(execution_space, safe_path)
-        real_path = os.path.realpath(full_path)
-        space_real = os.path.realpath(execution_space)
-
-        # 确保解析后的路径在执行空间内
-        if not real_path.startswith(space_real + os.sep) and real_path != space_real:
-            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
-
-        if not os.path.exists(full_path) or not os.path.isfile(full_path):
-            return jsonify({'code': 1, 'message': '文件不存在'}), 404
-
-        # 检查文件类型
-        ext = os.path.splitext(full_path)[1].lower()
-        if ext not in ['.xlsx', '.xls']:
-            return jsonify({'code': 1, 'message': '不是有效的 Excel 文件'}), 400
-
-        # 转换为 Luckysheet 格式
-        try:
-            grid_data = excel_to_luckysheet(full_path)
-            info = get_excel_info(full_path)
-
-            return jsonify({
-                'code': 0,
-                'data': {
-                    'gridData': grid_data,
-                    'filename': info.get('filename', os.path.basename(full_path)),
-                    'sheets': info.get('sheets', []),
-                    'sheet_count': info.get('sheet_count', 0),
-                    'size': info.get('size', 0)
-                }
-            })
-        except Exception as e:
-            return jsonify({
-                'code': 1,
-                'message': f'Excel 文件解析失败: {str(e)}'
-            }), 500
-
-    except Exception as e:
-        return jsonify({'code': 1, 'message': str(e)}), 500
-
-
-@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>/excel', methods=['GET'])
-def get_excel_file(execution_id, file_path):
-    """获取 Excel 文件内容（Luckysheet 格式）"""
-    return _get_excel_file_internal(execution_id, file_path)
-
-
-@api_bp.route('/executions/<int:execution_id>/files/<path:file_path>', methods=['POST'])
-def save_excel_file(execution_id, file_path):
-    """保存 Excel 文件（从 Luckysheet 格式）- 使用 ?excel=true 查询参数"""
-    try:
-        # 检查是否是Excel API请求
-        if request.args.get('excel', 'false').lower() != 'true':
-            return jsonify({'code': 1, 'message': '不支持的请求'}), 400
-
-        import shutil
-        from config import Config
-        from utils.excel_converter import luckysheet_to_excel
-
-        execution = Execution.query.get_or_404(execution_id)
-        execution_space = Config.get_execution_space(execution_id)
-
-        # 安全检查：使用 realpath 防止路径遍历攻击
-        safe_path = os.path.normpath(file_path)
-        full_path = os.path.join(execution_space, safe_path)
-        real_path = os.path.realpath(full_path)
-        space_real = os.path.realpath(execution_space)
-
-        # 确保解析后的路径在执行空间内
-        if not real_path.startswith(space_real + os.sep) and real_path != space_real:
-            return jsonify({'code': 1, 'message': '非法的文件路径'}), 400
-
-        if not os.path.exists(full_path):
-            return jsonify({'code': 1, 'message': '文件不存在'}), 404
-
-        # 获取 Luckysheet 数据
-        data = request.get_json()
-        grid_data = data.get('gridData', [])
-
-        if not grid_data:
-            return jsonify({'code': 1, 'message': '无数据'}), 400
-
-        # 备份原文件
-        backup_path = full_path + '.bak'
-        if os.path.exists(full_path):
-            shutil.copy2(full_path, backup_path)
-
-        # 保存
-        try:
-            luckysheet_to_excel(grid_data, full_path)
-
-            # 删除备份
-            if os.path.exists(backup_path):
-                os.remove(backup_path)
-
-            return jsonify({
-                'code': 0,
-                'message': '保存成功'
-            })
-        except Exception as e:
-            # 恢复备份
-            if os.path.exists(backup_path):
-                shutil.move(backup_path, full_path)
-
-            return jsonify({
-                'code': 1,
-                'message': f'保存失败: {str(e)}'
-            }), 500
-
-    except Exception as e:
-        return jsonify({'code': 1, 'message': str(e)}), 500
 
