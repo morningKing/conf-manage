@@ -4,7 +4,7 @@ Webhook执行服务
 import os
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db, Webhook, WebhookLog, Execution
 from services.executor import execute_script
 from config import Config
@@ -44,7 +44,7 @@ def execute_webhook(webhook_id, request_data, request_context):
 
         # 更新统计信息
         webhook.call_count += 1
-        webhook.last_called_at = datetime.utcnow()
+        webhook.last_called_at = datetime.now(timezone.utc)()
 
         # 准备执行参数
         params = prepare_execution_params(webhook, request_data)

@@ -5,7 +5,7 @@ from flask import request, jsonify
 from werkzeug.exceptions import HTTPException
 from models import db
 from models.workflow_template import WorkflowTemplate
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from . import api_bp
 
@@ -115,7 +115,7 @@ def update_workflow_template(template_id):
         if 'template_config' in data:
             template.template_config = json.dumps(data['template_config'])
 
-        template.updated_at = datetime.utcnow()
+        template.updated_at = datetime.now(timezone.utc)()
         db.session.commit()
 
         return jsonify({

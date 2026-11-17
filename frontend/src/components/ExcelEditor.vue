@@ -154,8 +154,6 @@ const initUniver = (sheetsData) => {
         // 转换数据格式并创建工作簿
         const workbookData = convertToUniverFormat(sheetsData)
         workbook = univer.createUniverSheet(workbookData)
-
-        console.log('Univer initialized successfully')
       } catch (e) {
         error.value = 'Excel编辑器初始化失败: ' + e.message
         ElMessage.error('Excel编辑器初始化失败')

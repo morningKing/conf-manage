@@ -29,9 +29,9 @@
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <GlassButton label="编辑" type="secondary" size="small" @click="editWorkflow(row)" />
-            <GlassButton label="执行" type="success" size="small" @click="executeWorkflow(row)" />
-            <GlassButton :label="row.enabled ? '禁用' : '启用'" type="primary" size="small" @click="toggleWorkflow(row)" />
-            <GlassButton label="删除" type="danger" size="small" @click="deleteWorkflow(row)" />
+            <GlassButton label="执行" type="success" size="small" @click="handleExecuteWorkflow(row)" />
+            <GlassButton :label="row.enabled ? '禁用' : '启用'" type="primary" size="small" @click="handleToggleWorkflow(row)" />
+            <GlassButton label="删除" type="danger" size="small" @click="handleDeleteWorkflow(row)" />
           </template>
         </el-table-column>
       </el-table>
@@ -311,17 +311,18 @@ import {
 } from '@/api/workflow'
 import {
   getScripts,
-  getWorkflows as getWorkflowsApi,
-  getWorkflow as getWorkflowApi,
-  createWorkflow as createWorkflowApi,
-  updateWorkflow as updateWorkflowApi,
-  deleteWorkflow as deleteWorkflowApi,
-  executeWorkflow as executeWorkflowApi,
-  toggleWorkflow as toggleWorkflowApi,
+  getWorkflows,
+  getWorkflow,
+  createWorkflow,
+  updateWorkflow,
+  deleteWorkflow,
+  executeWorkflow,
+  toggleWorkflow,
   cancelWorkflowExecution
 } from '@/api'
 import request from '@/api/request'
 import WorkflowEditor from '@/components/WorkflowEditor.vue'
+import { useEventSource } from '@/composables/useEventSource'
 import ExecutionFiles from '@/components/ExecutionFiles.vue'
 
 const workflows = ref([])
@@ -348,7 +349,7 @@ const statusEdges = ref([])
 const activeNodeLogs = ref([])  // 当前展开的日志节点
 const activeDetailTab = ref('logs')  // 当前激活的详情标签页
 const workflowExecutionFilesRef = ref(null)  // 工作流执行文件组件引用
-let statusEventSource = null
+const { connect: connectStatusStream, disconnect: disconnectStatusStream } = useEventSource()
 
 const form = ref({
   name: '',
@@ -360,7 +361,7 @@ const form = ref({
 // 加载工作流列表
 const loadWorkflows = async () => {
   try {
-    const res = await getWorkflowsApi()
+    const res = await getWorkflows()
     workflows.value = res.data  // 修复：响应拦截器已经返回了 response.data
   } catch (error) {
     ElMessage.error('加载工作流列表失败')
@@ -381,7 +382,6 @@ const loadScripts = async () => {
 const loadTemplates = async () => {
   try {
     const res = await getWorkflowTemplates()
-    console.log('Templates response:', res)
     templates.value = res.data  // 修复
     // 提取分类
     const cats = new Set()
@@ -389,7 +389,6 @@ const loadTemplates = async () => {
       if (t.category) cats.add(t.category)
     })
     categories.value = Array.from(cats)
-    console.log('Templates loaded:', templates.value.length)
   } catch (error) {
     console.error('加载模板失败:', error)
     ElMessage.error(`加载模板列表失败: ${error.message || error}`)
@@ -461,7 +460,7 @@ const showCreateDialog = () => {
 // 编辑工作流
 const editWorkflow = async (workflow) => {
   try {
-    const res = await getWorkflowApi(workflow.id)
+    const res = await getWorkflow(workflow.id)
     const data = res.data
 
     currentWorkflow.value = workflow
@@ -486,10 +485,10 @@ const handleSave = async () => {
 
   try {
     if (currentWorkflow.value) {
-      await updateWorkflowApi(currentWorkflow.value.id, form.value)
+      await updateWorkflow(currentWorkflow.value.id, form.value)
       ElMessage.success('更新成功')
     } else {
-      await createWorkflowApi(form.value)
+      await createWorkflow(form.value)
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -500,13 +499,13 @@ const handleSave = async () => {
 }
 
 // 删除工作流
-const deleteWorkflow = async (workflow) => {
+const handleDeleteWorkflow = async (workflow) => {
   try {
     await ElMessageBox.confirm('确定要删除该工作流吗？', '提示', {
       type: 'warning'
     })
 
-    await deleteWorkflowApi(workflow.id)
+    await deleteWorkflow(workflow.id)
     ElMessage.success('删除成功')
     loadWorkflows()
   } catch (error) {
@@ -516,8 +515,8 @@ const deleteWorkflow = async (workflow) => {
   }
 }
 
-// 执行工作流
-const executeWorkflow = (workflow) => {
+// 执行工作流（打开参数对话框）
+const handleExecuteWorkflow = (workflow) => {
   currentWorkflow.value = workflow
   executeParams.value = ''
   uploadFileList.value = []
@@ -550,7 +549,7 @@ const handleExecute = async () => {
     executing.value = true
 
     // 先创建执行记录
-    const res = await executeWorkflowApi(currentWorkflow.value.id, params)
+    const res = await executeWorkflow(currentWorkflow.value.id, params)
     const executionId = res.data.id
 
     // 如果有文件需要上传，上传到工作流执行空间
@@ -580,7 +579,7 @@ const handleExecute = async () => {
     executing.value = false
 
     // 获取工作流详情用于状态显示
-    const workflowRes = await getWorkflowApi(currentWorkflow.value.id)
+    const workflowRes = await getWorkflow(currentWorkflow.value.id)
     statusNodes.value = workflowRes.data.nodes || []
     statusEdges.value = workflowRes.data.edges || []
 
@@ -594,79 +593,49 @@ const handleExecute = async () => {
 
 // 打开状态监控
 const openStatusStream = (executionId) => {
-  console.log('[SSE] 打开状态监控, executionId:', executionId)
   currentExecutionId.value = executionId
   executionStatus.value = 'pending'
   nodeStatuses.value = {}
   activeDetailTab.value = 'logs'  // 重置为日志标签页
   statusVisible.value = true
-  console.log('[SSE] statusNodes数量:', statusNodes.value.length)
-  console.log('[SSE] statusNodes:', statusNodes.value)
-
   // 关闭已有的连接
-  if (statusEventSource) {
-    console.log('[SSE] 关闭已有连接')
-    statusEventSource.close()
-  }
+  disconnectStatusStream()
 
   // 创建 SSE 连接
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
   const sseUrl = `${apiUrl}/workflow-executions/${executionId}/stream`
-  console.log('[SSE] 创建连接:', sseUrl)
-  statusEventSource = new EventSource(sseUrl)
-
-  statusEventSource.onmessage = (event) => {
+  connectStatusStream(sseUrl, {
+    onMessage: (event) => {
     try {
-      console.log('[SSE] 收到消息:', event.data)
       const data = JSON.parse(event.data)
-      console.log('[SSE] 解析后的数据:', data)
-
       if (data.type === 'nodes') {
         // 更新节点状态 - 存储完整的节点数据（包括日志）
-        console.log('[SSE] 更新节点状态, 节点数量:', data.nodes.length)
         data.nodes.forEach(node => {
           nodeStatuses.value[node.node_id] = node
-          console.log('[SSE] 更新节点:', node.node_id, '状态:', node.status)
         })
-        console.log('[SSE] nodeStatuses:', nodeStatuses.value)
       } else if (data.type === 'status') {
         // 更新总体状态
-        console.log('[SSE] 更新总体状态:', data.status)
         executionStatus.value = data.status
       } else if (data.type === 'complete') {
         // 执行完成
-        console.log('[SSE] 工作流执行完成:', data.status)
         executionStatus.value = data.status
-        if (statusEventSource) {
-          statusEventSource.close()
-          statusEventSource = null
-        }
+        disconnectStatusStream()
       }
     } catch (error) {
       console.error('解析状态数据失败:', error, event.data)
     }
-  }
-
-  statusEventSource.onerror = (error) => {
-    console.error('[SSE] 状态流连接错误:', error)
-    console.error('[SSE] EventSource readyState:', statusEventSource?.readyState)
-    if (statusEventSource) {
-      statusEventSource.close()
-      statusEventSource = null
-    }
-  }
-
-  statusEventSource.onopen = () => {
-    console.log('[SSE] 连接已建立')
-  }
+    },
+    onError: () => {
+      console.error('[SSE] 状态流连接错误')
+      disconnectStatusStream()
+    },
+    onOpen: () => {}
+  })
 }
 
 // 关闭状态监控
 const closeStatusStream = () => {
-  if (statusEventSource) {
-    statusEventSource.close()
-    statusEventSource = null
-  }
+  disconnectStatusStream()
   statusVisible.value = false
 }
 
@@ -713,7 +682,6 @@ const getStatusText = (status) => {
 // 计算工作流整体进度
 const totalNodes = computed(() => {
   const count = statusNodes.value.length
-  console.log('[Progress] totalNodes:', count)
   return count
 })
 
@@ -721,7 +689,6 @@ const completedNodes = computed(() => {
   const count = Object.values(nodeStatuses.value).filter(
     node => node.status === 'success' || node.status === 'failed' || node.status === 'skipped'
   ).length
-  console.log('[Progress] completedNodes:', count, 'nodeStatuses:', nodeStatuses.value)
   return count
 })
 
@@ -729,7 +696,6 @@ const runningNodes = computed(() => {
   const count = Object.values(nodeStatuses.value).filter(
     node => node.status === 'running'
   ).length
-  console.log('[Progress] runningNodes:', count)
   return count
 })
 
@@ -737,17 +703,14 @@ const pendingNodes = computed(() => {
   const count = Object.values(nodeStatuses.value).filter(
     node => node.status === 'pending' || !node.status
   ).length
-  console.log('[Progress] pendingNodes:', count)
   return count
 })
 
 const workflowProgress = computed(() => {
   if (totalNodes.value === 0) {
-    console.log('[Progress] workflowProgress: 0 (totalNodes is 0)')
     return 0
   }
   const progress = Math.round((completedNodes.value / totalNodes.value) * 100)
-  console.log('[Progress] workflowProgress:', progress, '=', completedNodes.value, '/', totalNodes.value)
   return progress
 })
 
@@ -758,9 +721,9 @@ const progressStatus = computed(() => {
 })
 
 // 启用/禁用工作流
-const toggleWorkflow = async (workflow) => {
+const handleToggleWorkflow = async (workflow) => {
   try {
-    await toggleWorkflowApi(workflow.id)
+    await toggleWorkflow(workflow.id)
     ElMessage.success(workflow.enabled ? '已禁用' : '已启用')
     loadWorkflows()
   } catch (error) {

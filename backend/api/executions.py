@@ -14,7 +14,7 @@ import os
 import time
 import psutil
 from threading import Thread
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @api_bp.route('/scripts/<int:script_id>/execute', methods=['POST'])
@@ -483,7 +483,7 @@ def _batch_cancel(executions, result):
             execution.stage = 'cancelled'
             execution.progress = 100
             execution.error = '执行已被批量取消'
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(timezone.utc)()
 
             result['success'] += 1
             result['details'].append({'id': execution.id, 'status': 'success', 'message': '取消成功'})
@@ -566,7 +566,7 @@ def get_executions_statistics():
 
         # 按日期统计（最近7天）
         from datetime import datetime, timedelta
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = datetime.now(timezone.utc)() - timedelta(days=7)
 
         daily_stats = db.session.query(
             db.func.date(Execution.created_at).label('date'),
@@ -670,7 +670,7 @@ def cancel_execution(execution_id):
         execution.stage = 'cancelled'
         execution.progress = 100
         execution.error = '执行已被用户中断'
-        execution.end_time = datetime.utcnow()
+        execution.end_time = datetime.now(timezone.utc)()
         db.session.commit()
 
         return jsonify({

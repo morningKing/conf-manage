@@ -456,6 +456,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { useEventSource } from '@/composables/useEventSource'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getScripts,
@@ -551,7 +552,7 @@ const logProgress = ref(0)
 const logStage = ref('pending')
 const currentExecutionId = ref(null)
 const logContainer = ref(null)
-let eventSource = null
+const { connect: connectLogStream, disconnect: disconnectLogStream } = useEventSource()
 
 // ===== 执行文件 =====
 const executionFiles = ref([])
@@ -934,12 +935,11 @@ const openLogStream = (executionId) => {
   currentExecutionId.value = executionId
   logVisible.value = true
 
-  if (eventSource) eventSource.close()
+  disconnectLogStream()
 
   const apiUrl = import.meta.env.VITE_API_URL || '/api'
-  eventSource = new EventSource(`${apiUrl}/executions/${executionId}/logs/stream`)
-
-  eventSource.onmessage = (event) => {
+  connectLogStream(`${apiUrl}/executions/${executionId}/logs/stream`, {
+    onMessage: (event) => {
     try {
       const data = JSON.parse(event.data)
       if (data.type === 'log') {
@@ -958,19 +958,18 @@ const openLogStream = (executionId) => {
         logProgress.value = data.progress || 100
         logStage.value = data.stage || (data.status === 'success' ? 'completed' : 'failed')
         if (data.error) logError.value = data.error
-        eventSource.close()
-        eventSource = null
+        disconnectLogStream()
         loadExecutionFiles()
       }
     } catch (error) {
       console.error('解析日志数据失败:', error)
     }
-  }
-
-  eventSource.onerror = () => {
-    ElMessage.error('日志流连接中断')
-    if (eventSource) { eventSource.close(); eventSource = null }
-  }
+    },
+    onError: () => {
+      ElMessage.error('日志流连接中断')
+      disconnectLogStream()
+    }
+  })
 }
 
 const loadExecutionFiles = async () => {
@@ -987,7 +986,7 @@ const loadExecutionFiles = async () => {
 }
 
 const closeLogStream = () => {
-  if (eventSource) { eventSource.close(); eventSource = null }
+  disconnectLogStream()
   logVisible.value = false
   executionFiles.value = []
 }
@@ -1124,7 +1123,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
-  if (eventSource) { eventSource.close(); eventSource = null }
+  disconnectLogStream()
 })
 </script>
 

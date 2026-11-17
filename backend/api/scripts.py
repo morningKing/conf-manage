@@ -6,7 +6,7 @@ from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Script, ScriptVersion, Tag
 from config import Config
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 import shutil
@@ -192,7 +192,7 @@ def update_script(script_id):
             tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
             script.tags = tags
 
-        script.updated_at = datetime.utcnow()
+        script.updated_at = datetime.now(timezone.utc)()
 
         # 如果代码或依赖有变化，创建新版本
         if code_changed or dependencies_changed:
@@ -323,7 +323,7 @@ def rollback_script(script_id, version_num):
         script.code = version.code
         script.dependencies = version.dependencies
         script.version += 1
-        script.updated_at = datetime.utcnow()
+        script.updated_at = datetime.now(timezone.utc)()
 
         # 创建新版本记录
         new_version = ScriptVersion(
@@ -354,7 +354,7 @@ def toggle_favorite(script_id):
     try:
         script = Script.query.get_or_404(script_id)
         script.is_favorite = not script.is_favorite
-        script.updated_at = datetime.utcnow()
+        script.updated_at = datetime.now(timezone.utc)()
         db.session.commit()
 
         return jsonify({
@@ -477,7 +477,7 @@ def clean_script_executions(script_id):
         # 按时间过滤
         if before_days:
             from datetime import timedelta
-            cutoff_date = datetime.utcnow() - timedelta(days=before_days)
+            cutoff_date = datetime.now(timezone.utc)() - timedelta(days=before_days)
             query = query.filter(Execution.created_at < cutoff_date)
 
         # 获取所有符合条件的执行记录

@@ -6,7 +6,7 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 logger = logging.getLogger(__name__)
@@ -116,7 +116,7 @@ class SchedulerManager:
                 logger.info(f'[定时任务] 开始执行任务 {schedule_id} - {schedule.name}')
 
                 # 更新上次执行时间
-                schedule.last_run = datetime.utcnow()
+                schedule.last_run = datetime.now(timezone.utc)()
 
                 # 更新下次执行时间
                 job = self.scheduler.get_job(f'schedule_{schedule_id}')

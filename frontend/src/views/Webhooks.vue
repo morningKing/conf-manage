@@ -342,11 +342,12 @@ import {
   Document, Plus, Search, Link, VideoPlay, Check, Close,
   CopyDocument, Refresh
 } from '@element-plus/icons-vue'
-import axios from 'axios'
+import axios from 'axios'  // 仅 webhook 测试面板使用：需要展示原始响应与错误体
 import {
   getWebhooks, createWebhook, updateWebhook,
   deleteWebhook, regenerateWebhookToken
 } from '@/api/webhooks'
+import { getScripts } from '@/api'
 import GlassButton from '../components/GlassButton.vue'
 
 // 数据
@@ -418,8 +419,8 @@ const loadWebhooks = async () => {
 
 const loadScripts = async () => {
   try {
-    const response = await axios.get('/api/scripts')
-    scripts.value = response.data.data
+    const res = await getScripts()
+    scripts.value = res.data
   } catch (error) {
     ElMessage.error('加载脚本列表失败')
   }
@@ -557,7 +558,7 @@ const regenerateToken = async () => {
     })
 
     const response = await regenerateWebhookToken(currentWebhook.value.id)
-    currentWebhook.value.token = response.data.data.token
+    currentWebhook.value.token = response.data.token
     ElMessage.success('Token已重新生成')
     loadWebhooks()
   } catch (error) {

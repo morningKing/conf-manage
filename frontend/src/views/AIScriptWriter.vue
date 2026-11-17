@@ -236,15 +236,10 @@ const improveScript = async () => {
 
   generating.value = true
   try {
-    console.log('[improveScript] 发送改进请求, 原脚本长度:', generatedScript.value.length)
-
     const response = await request.post('/ai/improve-script', {
       script: generatedScript.value,
       request: improvementRequest
     })
-
-    console.log('[improveScript] 收到改进后的脚本, 长度:', response.script?.length || 0)
-
     const oldScript = generatedScript.value
     generatedScript.value = response.script || ''
 
@@ -288,9 +283,6 @@ const previewExecute = async () => {
   executionFiles.value = []
 
   try {
-    console.log('[previewExecute] 开始执行脚本, 脚本长度:', generatedScript.value.length)
-    console.log('[previewExecute] 脚本前100字符:', generatedScript.value.substring(0, 100))
-
     // 解析参数
     let params = {}
     if (executionParams.value.trim()) {
@@ -307,7 +299,6 @@ const previewExecute = async () => {
 
     // 检查是否有文件上传
     if (uploadedFiles.value && uploadedFiles.value.length > 0) {
-      console.log('[previewExecute] 使用FormData格式, 文件数量:', uploadedFiles.value.length)
       // 有文件：使用FormData格式
       const formData = new FormData()
       formData.append('code', generatedScript.value)
@@ -316,22 +307,17 @@ const previewExecute = async () => {
       // 添加上传的文件
       uploadedFiles.value.forEach((file) => {
         formData.append('files', file)
-        console.log('[previewExecute] 添加文件:', file.name)
       })
 
       // 不设置Content-Type，让浏览器自动设置（包含boundary）
       response = await request.post('/ai/preview-execute', formData)
     } else {
-      console.log('[previewExecute] 使用JSON格式')
       // 无文件：使用JSON格式
       response = await request.post('/ai/preview-execute', {
         code: generatedScript.value,
         params: params
       })
     }
-
-    console.log('[previewExecute] 执行完成, 状态:', response.status)
-
     // 显示执行结果
     executionLog.value = response.output || ''
 

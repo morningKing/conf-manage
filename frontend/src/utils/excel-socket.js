@@ -29,29 +29,24 @@ class ExcelSocket {
     })
 
     this.socket.on('connect', () => {
-      console.log('[ExcelSocket] Connected')
       this.connected = true
       this.userId = this.socket.id
       this.joinRoom(fileId, userName)
     })
 
-    this.socket.on('connected', (data) => {
-      console.log('[ExcelSocket] Server acknowledged connection:', data)
+    this.socket.on('connected', () => {
     })
 
     this.socket.on('joined', (data) => {
-      console.log('[ExcelSocket] Joined room:', data.room)
       this.roomId = data.room
       this.trigger('joined', data)
     })
 
     this.socket.on('user_joined', (data) => {
-      console.log('[ExcelSocket] User joined:', data.user_name)
       this.trigger('user_joined', data)
     })
 
     this.socket.on('user_left', (data) => {
-      console.log('[ExcelSocket] User left:', data.user_id)
       this.trigger('user_left', data)
     })
 
@@ -64,7 +59,6 @@ class ExcelSocket {
     })
 
     this.socket.on('file_saved', (data) => {
-      console.log('[ExcelSocket] File saved:', data)
       this.trigger('file_saved', data)
     })
 
@@ -78,7 +72,6 @@ class ExcelSocket {
     })
 
     this.socket.on('disconnect', () => {
-      console.log('[ExcelSocket] Disconnected')
       this.connected = false
       this.trigger('disconnect')
     })

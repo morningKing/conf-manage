@@ -54,6 +54,11 @@ export const getWorkflowExecution = (id) => request.get(`/workflow-executions/${
  */
 export const cancelWorkflowExecution = (id) => request.post(`/workflow-executions/${id}/cancel`)
 
+/**
+ * 删除工作流执行记录
+ */
+export const deleteWorkflowExecution = (id) => request.delete(`/workflow-executions/${id}`)
+
 // ========== 工作流模板 ==========
 
 /**

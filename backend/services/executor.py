@@ -6,7 +6,7 @@ import subprocess
 import json
 import shutil
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db, Execution, Script, Environment, GlobalVariable
 from config import Config
 from utils.file_utils import safe_filename
@@ -127,7 +127,7 @@ def execute_script(execution_id, custom_cwd=None):
         execution.status = 'running'
         execution.stage = 'preparing'
         execution.progress = 10
-        execution.start_time = datetime.utcnow()
+        execution.start_time = datetime.now(timezone.utc)()
         db.session.commit()
 
         # 解析参数
@@ -297,7 +297,7 @@ def execute_script(execution_id, custom_cwd=None):
             # 对于普通执行，文件在执行空间；对于工作流节点，文件在工作流空间
 
             # 更新结束时间
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(timezone.utc)()
             db.session.commit()
 
     except Exception as e:
@@ -305,7 +305,7 @@ def execute_script(execution_id, custom_cwd=None):
         try:
             execution.status = 'failed'
             execution.error = str(e)
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(timezone.utc)()
             db.session.commit()
         except:
             pass
