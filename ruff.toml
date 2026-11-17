@@ -1,0 +1,8 @@
+# Root-level ruff config: applies when running `ruff check` from repo root.
+# backend/pyproject.toml governs files under backend/ (closest config wins).
+include = ["backend/**", "example_scripts/**"]
+exclude = ["frontend", "node_modules", "execution_spaces", "workflow_execution_spaces"]
+
+[lint]
+# Initial gate: undefined names / redefinitions / syntax-level errors
+select = ["F821", "F811", "E9"]

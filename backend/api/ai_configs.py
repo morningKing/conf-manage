@@ -77,7 +77,8 @@ def update_ai_config(config_id):
 
     if 'provider' in data:
         config.provider = data['provider']
-    if 'api_key' in data:
+    # 编辑时前端不回显 api_key（空串），仅在有新值时更新
+    if data.get('api_key'):
         config.api_key = data['api_key']
     if 'base_url' in data:
         # SSRF 边界校验：非法协议或受限 IP 直接拒绝保存
