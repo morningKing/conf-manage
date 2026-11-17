@@ -1,214 +1,84 @@
 # 脚本工具管理系统
 
-## 系统简介
-
-这是一个基于Vue3 + Flask的脚本工具管理系统,支持Python和JavaScript脚本的管理、执行、定时调度和版本管理。
+基于 Vue 3 + Flask 的脚本工具管理系统：Python / JavaScript 脚本的管理、执行、定时调度、工作流编排、Webhook 触发与 AI 辅助编写。
 
 ## 技术栈
 
-### 前端
-- Vue 3
-- Vue Router
-- Axios
-- Element Plus (UI组件库)
-- CodeMirror (代码编辑器)
+| 层 | 技术 |
+|---|---|
+| 后端 | Flask 3 + Flask-SQLAlchemy 3 + PostgreSQL + APScheduler + Flask-SocketIO |
+| 前端 | Vue 3 + Element Plus + CodeMirror 6 + Vue Flow + Univer（弹窗预览）/ Luckysheet（独立编辑页） |
+| 构建 | Vite 5（前端 dev 端口 5177，`/api` 代理到 5001） |
 
-### 后端
-- Flask
-- SQLAlchemy (ORM)
-- APScheduler (定时任务)
-- SQLite (数据库)
+## 快速开始
 
-## 核心功能
+```bash
+# 1. 准备 PostgreSQL（默认库 confmanage / 用户 postgres）
+cp .env.example .env   # 修改 DB_PASSWORD、SECRET_KEY 等
 
-1. **脚本管理**
-   - 脚本的增删改查
-   - 支持Python和JavaScript脚本
-   - 脚本版本管理
-   - 脚本依赖管理
+# 2. 后端（端口 5001）
+cd backend
+pip install -r ../requirements.txt
+python app.py
 
-2. **脚本执行**
-   - 手动执行脚本
-   - 参数输入支持
-   - 实时日志输出
-   - 执行历史记录
+# 3. 前端
+cd frontend
+npm install
+npm run dev
+```
 
-3. **定时任务**
-   - 定时任务配置
-   - Cron表达式支持
-   - 任务启用/禁用
-   - 执行日志查看
+### 数据库迁移（Alembic）
 
-4. **文件处理**
-   - 文件上传下载
-   - 脚本读写文件
-   - 文件列表管理
+```bash
+cd backend
+python -m alembic upgrade head          # 新库建表 / 存量库补列补索引
+python -m alembic stamp 0001_baseline   # 已由 db.create_all() 建过表的存量库先盖章再 upgrade
+```
+
+### 工具链
+
+```bash
+cd backend && python -m pytest tests/ -q    # 冒烟测试（SQLite 内存库，无需 PG）
+python -m ruff check .                      # 后端 lint
+cd ../frontend && npm run lint              # 前端 lint
+npm run build                               # 前端构建
+```
+
+## 环境变量
+
+见 [.env.example](.env.example)：数据库连接（或整串 `DATABASE_URL`）、`SECRET_KEY`、监听 `HOST_BIND/HOST_PORT/HOST_DEBUG`、`CORS_ORIGINS`、`ALLOW_PRIVATE_API_TARGETS`（AI 接口私网边界，默认允许以兼容本地大模型，加固部署设 false）。
 
 ## 目录结构
 
 ```
-.
-├── backend/              # 后端服务
-│   ├── app.py           # Flask应用入口
-│   ├── config.py        # 配置文件
-│   ├── models/          # 数据模型
-│   ├── api/             # API路由
-│   ├── services/        # 业务逻辑层
-│   ├── executor/        # 脚本执行引擎
-│   ├── scheduler/       # 定时任务调度
-│   └── utils/           # 工具函数
-├── frontend/            # 前端应用
-│   ├── src/
-│   │   ├── components/  # Vue组件
-│   │   ├── views/       # 页面视图
-│   │   ├── api/         # API接口
-│   │   ├── router/      # 路由配置
-│   │   └── App.vue      # 根组件
-│   └── package.json
-├── scripts/             # 脚本存储目录
-├── logs/                # 执行日志目录
-├── data/                # 数据文件目录
-└── requirements.txt     # Python依赖
-
+backend/
+  api/          # 路由层（errors.py 统一错误处理）
+  services/     # 业务服务：executor / execution_service / cleanup_service /
+                # backup_service / scheduler / workflow_executor / webhook_executor
+  models/       # SQLAlchemy 模型
+  migrations/   # Alembic 迁移（0001 基线 / 0002 preserve 列 / 0003 索引）
+  utils/        # 纯工具：safe_io / http_utils / expr_eval / file_utils / excel_converter
+  websocket/    # Excel 协同 SocketIO
+  tests/        # pytest 冒烟测试
+frontend/src/
+  views/        # 13 个页面
+  components/   # 通用组件（含 workflow-nodes）
+  api/          # 统一 API 层（request.js 拦截器 + 按域模块）
+  composables/  # useEventSource 等
+docs/           # Nginx 部署指南 + archive/（历史过程文档）
 ```
 
-## 快速开始
+## 核心功能
 
-### 后端启动
+1. **脚本管理**：CRUD、版本与回滚、收藏、文件夹/标签、依赖管理
+2. **脚本执行**：独立执行空间（每次执行隔离目录）、实时日志 SSE、参数注入（环境变量）、执行环境管理
+3. **定时任务**：APScheduler Cron、清理白名单（script/schedule.preserve）
+4. **工作流**：DAG 编辑器、条件分支（AST 白名单表达式求值）、节点级日志与状态流
+5. **Webhook**：Token 校验（恒定时间比较）、同步/异步触发、调用日志
+6. **Excel**：执行空间文件预览（Univer）与独立编辑页（Luckysheet + socket.io 协同）
+7. **备份**：pg_dump 数据库导出 + 文件系统 tar 包
+8. **系统设置**：AI 配置（api_key 掩码存储显示）、清理策略
 
-```bash
-# 安装Python依赖
-pip install -r requirements.txt
+## 部署
 
-# 启动后端服务
-python backend/app.py
-```
-
-后端服务将运行在 http://localhost:5000
-
-### 前端启动
-
-```bash
-# 进入前端目录
-cd frontend
-
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-```
-
-前端应用将运行在 http://localhost:5173
-
-## 数据库迁移
-
-当从旧版本升级时，需要迁移数据库数据。系统提供了完整的数据库迁移工具。
-
-### 快速迁移（推荐）
-
-```bash
-cd backend
-./quick_migrate.sh /path/to/old_database.db
-```
-
-### 手动迁移
-
-```bash
-cd backend
-
-# 1. 备份当前数据库
-cp ../data/database.db ../data/database_backup.db
-
-# 2. 执行迁移
-python migrate_database.py /path/to/old_database.db
-
-# 3. 验证迁移结果
-python view_database.py
-```
-
-### 测试迁移工具
-
-```bash
-cd backend
-python test_migration.py
-```
-
-详细说明请参考：
-- [数据库迁移详细文档](backend/DATABASE_MIGRATION.md)
-- [快速参考指南](backend/MIGRATION_QUICKSTART.md)
-
-## API文档
-
-### 脚本管理
-
-- `GET /api/scripts` - 获取脚本列表
-- `GET /api/scripts/<id>` - 获取脚本详情
-- `POST /api/scripts` - 创建脚本
-- `PUT /api/scripts/<id>` - 更新脚本
-- `DELETE /api/scripts/<id>` - 删除脚本
-- `GET /api/scripts/<id>/versions` - 获取脚本版本列表
-
-### 脚本执行
-
-- `POST /api/scripts/<id>/execute` - 执行脚本
-- `GET /api/executions` - 获取执行历史
-- `GET /api/executions/<id>` - 获取执行详情
-- `GET /api/executions/<id>/logs` - 获取执行日志
-
-### 定时任务
-
-- `GET /api/schedules` - 获取定时任务列表
-- `POST /api/schedules` - 创建定时任务
-- `PUT /api/schedules/<id>` - 更新定时任务
-- `DELETE /api/schedules/<id>` - 删除定时任务
-- `POST /api/schedules/<id>/toggle` - 启用/禁用任务
-
-### 文件管理
-
-- `GET /api/files` - 获取文件列表
-- `POST /api/files/upload` - 上传文件
-- `GET /api/files/<path>` - 下载文件
-- `DELETE /api/files/<path>` - 删除文件
-
-## 数据库模型
-
-### Script (脚本表)
-- id: 主键
-- name: 脚本名称
-- type: 脚本类型 (python/javascript)
-- code: 脚本代码
-- dependencies: 依赖配置
-- version: 当前版本号
-- created_at: 创建时间
-- updated_at: 更新时间
-
-### ScriptVersion (脚本版本表)
-- id: 主键
-- script_id: 脚本ID
-- version: 版本号
-- code: 代码内容
-- dependencies: 依赖配置
-- created_at: 创建时间
-
-### Execution (执行记录表)
-- id: 主键
-- script_id: 脚本ID
-- status: 执行状态
-- params: 执行参数
-- start_time: 开始时间
-- end_time: 结束时间
-- log_file: 日志文件路径
-
-### Schedule (定时任务表)
-- id: 主键
-- script_id: 脚本ID
-- name: 任务名称
-- cron: Cron表达式
-- params: 执行参数
-- enabled: 是否启用
-- created_at: 创建时间
-
-## 许可证
-
-MIT
+Nginx 反代部署见 [docs/NGINX_DEPLOYMENT.md](docs/NGINX_DEPLOYMENT.md)。生产环境注意：`SECRET_KEY` 必须更换、`HOST_DEBUG=false`、数据库密码不使用默认值。
