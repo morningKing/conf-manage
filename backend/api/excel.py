@@ -5,6 +5,7 @@ Excel 文件操作 API
 from flask import request, jsonify
 from . import api_bp
 from config import Config
+from utils.safe_io import ensure_contained, PathEscapeError
 import os
 import openpyxl
 from openpyxl.utils import get_column_letter
@@ -33,35 +34,29 @@ def get_excel_path(file_path):
     if not file_path:
         return None, "文件路径不能为空"
 
-    # 安全检查：防止路径遍历攻击
-    if '..' in file_path or file_path.startswith('/') or ':' in file_path.split('/')[0] if '/' in file_path else ':' in file_path:
-        # 允许 Windows 盘符路径，但需要进一步验证
-        pass
-
-    # 尝试不同的基础目录
+    # 允许的基础目录
     base_dirs = [
         Config.UPLOAD_FOLDER,  # 上传目录
         Config.EXECUTION_SPACES_DIR,  # 执行空间目录
         Config.WORKFLOW_EXECUTION_SPACES_DIR,  # 工作流执行空间目录
     ]
 
+    # 安全检查：真实路径必须位于允许目录内（realpath 消解 ../ 与符号链接）
     for base_dir in base_dirs:
         full_path = os.path.join(base_dir, file_path)
         if os.path.exists(full_path):
-            # 安全检查：确保路径在允许的目录内
-            abs_path = os.path.abspath(full_path)
-            abs_base = os.path.abspath(base_dir)
-            if abs_path.startswith(abs_base):
-                return abs_path, None
+            try:
+                return ensure_contained(full_path, base_dir), None
+            except PathEscapeError:
+                return None, "文件路径不在允许的目录范围内"
 
     # 如果提供了绝对路径，检查是否有效
     if os.path.isabs(file_path) and os.path.exists(file_path):
-        # 验证是否在允许的目录内
-        abs_path = os.path.abspath(file_path)
         for base_dir in base_dirs:
-            abs_base = os.path.abspath(base_dir)
-            if abs_path.startswith(abs_base):
-                return abs_path, None
+            try:
+                return ensure_contained(file_path, base_dir), None
+            except PathEscapeError:
+                continue
         return None, "文件路径不在允许的目录范围内"
 
     return None, "文件不存在"

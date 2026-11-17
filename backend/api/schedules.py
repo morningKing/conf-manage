@@ -190,7 +190,15 @@ def run_schedule_now(schedule_id):
         db.session.add(execution)
         db.session.commit()
 
-        thread = Thread(target=execute_script, args=(execution.id,))
+        # 线程必须携带应用上下文，否则 Flask-SQLAlchemy 的会话不可用
+        from flask import current_app
+        app = current_app._get_current_object()
+
+        def _run_with_context():
+            with app.app_context():
+                execute_script(execution.id)
+
+        thread = Thread(target=_run_with_context)
         thread.start()
 
         return jsonify({

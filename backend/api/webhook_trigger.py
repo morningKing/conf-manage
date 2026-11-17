@@ -5,6 +5,7 @@ from flask import request, jsonify
 from . import api_bp
 from models import db, Webhook
 from services.webhook_executor import execute_webhook
+import hmac
 import json
 
 
@@ -43,8 +44,8 @@ def trigger_webhook(webhook_key):
             if not token:
                 token = request.args.get('token', '')
 
-            # 验证Token
-            if not token or token != webhook.token:
+            # 验证Token（恒定时间比较，防止时序侧信道）
+            if not token or not hmac.compare_digest(str(token), str(webhook.token)):
                 return jsonify({
                     'code': 1,
                     'message': 'Token验证失败'

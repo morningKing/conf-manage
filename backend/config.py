@@ -27,8 +27,9 @@ class Config:
     HOST_PORT = int(os.environ.get('HOST_PORT', '5001'))
     HOST_DEBUG = os.environ.get('HOST_DEBUG', 'true').strip().lower() in ('1', 'true', 'yes')
 
-    # PostgreSQL数据库配置
-    SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    # PostgreSQL数据库配置（DATABASE_URL 整串覆盖优先，便于测试与容器部署）
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # PostgreSQL连接池配置
