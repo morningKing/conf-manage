@@ -402,12 +402,12 @@ def evaluate_condition(condition, context):
         return False
 
     elif condition_type == 'expression':
-        # 表达式条件（简单实现）
+        # 表达式条件：AST 白名单求值，替代 eval
         expr = condition.get('expression', '')
         try:
-            # 安全的表达式评估
-            return eval(expr, {"__builtins__": {}}, context)
-        except:
+            from utils.expr_eval import safe_eval
+            return bool(safe_eval(expr, context))
+        except Exception:
             return False
 
     return True

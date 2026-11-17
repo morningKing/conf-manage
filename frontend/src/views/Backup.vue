@@ -66,11 +66,11 @@
 
           <div v-if="databaseInfo" class="database-info">
             <el-descriptions :column="2" border style="margin-top: 20px">
-              <el-descriptions-item label="数据库路径">
+              <el-descriptions-item label="数据库">
                 {{ databaseInfo.path }}
               </el-descriptions-item>
-              <el-descriptions-item label="数据库大小">
-                {{ databaseInfo.size_mb }} MB
+              <el-descriptions-item label="总记录数">
+                {{ databaseInfo.total_records }}
               </el-descriptions-item>
             </el-descriptions>
 

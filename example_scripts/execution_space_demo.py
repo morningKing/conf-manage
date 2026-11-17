@@ -37,7 +37,9 @@ if args.files:
     file_list = json.loads(args.files)
     print(f"\n📤 处理上传的文件 (共 {len(file_list)} 个):")
 
-    for i, filename in enumerate(file_list, 1):
+    for i, raw_name in enumerate(file_list, 1):
+        # 只使用文件名部分，防止路径穿越
+        filename = os.path.basename(raw_name)
         if os.path.exists(filename):
             size = os.path.getsize(filename)
             print(f"\n[{i}] 📄 {filename}")
@@ -58,7 +60,7 @@ else:
 
 # 创建一个输出文件
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-output_filename = f'output_{timestamp}.txt'
+output_filename = os.path.basename(f'output_{timestamp}.txt')
 
 print(f"\n📝 创建输出文件: {output_filename}")
 with open(output_filename, 'w', encoding='utf-8') as f:
@@ -76,7 +78,7 @@ subdir = 'results'
 os.makedirs(subdir, exist_ok=True)
 print(f"\n📁 创建子目录: {subdir}/")
 
-result_file = os.path.join(subdir, f'result_{timestamp}.json')
+result_file = os.path.join(subdir, os.path.basename(f'result_{timestamp}.json'))
 with open(result_file, 'w', encoding='utf-8') as f:
     json.dump({
         'execution_time': datetime.now().isoformat(),

@@ -9,7 +9,24 @@ import threading
 from datetime import datetime
 from models import db, Execution, Script, Environment, GlobalVariable
 from config import Config
+from utils.file_utils import safe_filename
+from utils.safe_io import safe_open, safe_write_text
 import tempfile
+
+
+def _validate_working_dir(working_dir):
+    """
+    校验工作目录必须位于受控根目录（执行空间/工作流执行空间）内，
+    防止通过执行参数注入任意路径。
+    """
+    allowed_roots = [
+        os.path.realpath(Config.EXECUTION_SPACES_DIR),
+        os.path.realpath(Config.WORKFLOW_EXECUTION_SPACES_DIR),
+    ]
+    real = os.path.realpath(working_dir)
+    if not any(real == root or real.startswith(root + os.sep) for root in allowed_roots):
+        raise ValueError(f'非法的工作目录: {working_dir}')
+    return real
 
 
 def get_global_variables_dict():
@@ -28,7 +45,7 @@ def stream_output_to_file(pipe, log_file_path):
     这个函数在单独的线程中运行，确保日志实时刷新到磁盘
     """
     try:
-        with open(log_file_path, 'a', encoding='utf-8', buffering=1) as log_f:
+        with safe_open(log_file_path, 'a', base_dir=Config.LOGS_DIR, encoding='utf-8', buffering=1) as log_f:
             for line in iter(pipe.readline, b''):
                 if line:
                     decoded_line = line.decode('utf-8', errors='replace')
@@ -95,6 +112,8 @@ def execute_script(execution_id, custom_cwd=None):
 
         # 确定工作目录：优先使用自定义目录，其次使用工作流空间，最后使用执行空间
         working_dir = custom_cwd or workflow_space or execution_space
+        # 校验工作目录位于受控根目录内，防止路径穿越
+        working_dir = _validate_working_dir(working_dir)
         if working_dir != execution_space:
             print(f"使用自定义工作目录: {working_dir}")
             # 确保自定义工作目录存在
@@ -103,7 +122,8 @@ def execute_script(execution_id, custom_cwd=None):
         # 准备文件列表（文件已在执行空间中，无需复制）
         execution_files = []
         for file_info in uploaded_files:
-            filename = file_info['original_name']
+            # 消毒上传文件名，防止路径穿越
+            filename = safe_filename(file_info['original_name'])
             # 对于工作流节点，文件在工作流空间中；对于普通执行，文件在执行空间中
             file_path = os.path.join(working_dir, filename)
             if os.path.exists(file_path):
@@ -117,8 +137,7 @@ def execute_script(execution_id, custom_cwd=None):
         script_ext = '.py' if script.type == 'python' else '.js'
         script_filename = f'script_{execution_id}{script_ext}'
         script_file = os.path.join(working_dir, script_filename)
-        with open(script_file, 'w', encoding='utf-8') as f:
-            f.write(script.code)
+        safe_write_text(script_file, script.code, base_dir=working_dir)
 
         # 创建日志文件
         log_dir = Config.LOGS_DIR
@@ -267,8 +286,7 @@ def execute_script(execution_id, custom_cwd=None):
             db.session.commit()
 
             # 创建空的日志文件
-            with open(log_file, 'w', encoding='utf-8') as f:
-                pass  # 只是创建文件
+            safe_write_text(log_file, '', base_dir=log_dir)
 
             # 使用 PIPE 捕获输出，通过线程实时写入日志文件
             process = subprocess.Popen(

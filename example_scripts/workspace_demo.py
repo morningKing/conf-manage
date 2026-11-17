@@ -66,8 +66,9 @@ def process_uploaded_files(file_names):
 
     print(f"接收到 {len(file_names)} 个文件:\n")
 
-    for i, filename in enumerate(file_names, 1):
-        # 文件已经在当前工作目录中，直接使用文件名
+    for i, raw_name in enumerate(file_names, 1):
+        # 文件已在当前工作目录中，只使用文件名部分，防止路径穿越
+        filename = os.path.basename(raw_name)
         if not os.path.exists(filename):
             print(f"[{i}] ❌ 文件不存在: {filename}")
             continue
@@ -98,7 +99,7 @@ def create_output_file():
     print_section("✍️  创建输出文件")
 
     # 在当前工作目录创建文件
-    output_filename = f"output_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    output_filename = os.path.basename(f"output_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
 
     content = f"""脚本执行报告
 =============
@@ -134,29 +135,28 @@ def demonstrate_file_operations():
     print_section("🔧 文件操作演示")
 
     # 创建一个测试文件
-    test_file = "test_data.txt"
-    print(f"1. 创建测试文件: {test_file}")
-    with open(test_file, 'w', encoding='utf-8') as f:
+    print("1. 创建测试文件: test_data.txt")
+    with open("test_data.txt", 'w', encoding='utf-8') as f:
         f.write("这是一个测试文件\n")
         f.write("用于演示工作目录功能\n")
         f.write("所有文件操作都在独立的工作目录中进行\n")
 
     # 读取文件
     print(f"\n2. 读取测试文件:")
-    with open(test_file, 'r', encoding='utf-8') as f:
+    with open("test_data.txt", 'r', encoding='utf-8') as f:
         content = f.read()
         print(f"   内容: {content.strip()}")
 
     # 追加内容
     print(f"\n3. 追加内容到文件:")
-    with open(test_file, 'a', encoding='utf-8') as f:
+    with open("test_data.txt", 'a', encoding='utf-8') as f:
         f.write(f"追加时间: {datetime.now()}\n")
 
     # 检查文件
     print(f"\n4. 文件信息:")
-    print(f"   存在: {os.path.exists(test_file)}")
-    print(f"   大小: {os.path.getsize(test_file)} 字节")
-    print(f"   绝对路径: {os.path.abspath(test_file)}")
+    print(f"   存在: {os.path.exists('test_data.txt')}")
+    print(f"   大小: {os.path.getsize('test_data.txt')} 字节")
+    print(f"   绝对路径: {os.path.abspath('test_data.txt')}")
 
 
 def main():

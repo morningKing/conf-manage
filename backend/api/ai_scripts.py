@@ -2,7 +2,6 @@
 AI脚本生成API
 """
 import json
-import requests
 import tempfile
 import os
 import subprocess
@@ -10,6 +9,8 @@ import sys
 from flask import request, jsonify, stream_with_context, Response
 from . import api_bp
 from models import AIConfig
+from utils.http_utils import safe_post_json, validate_http_url
+from utils.safe_io import safe_write_text
 
 
 def get_active_ai_config():
@@ -36,7 +37,9 @@ def call_openai_api(config, messages, stream=False):
         'stream': stream
     }
 
-    response = requests.post(url, headers=headers, json=data, stream=stream)
+    # SSRF 边界校验（协议白名单 + 解析 IP 边界）后再发起请求
+    validate_http_url(url)
+    response = safe_post_json(url, json_payload=data, headers=headers, stream=stream)
     response.raise_for_status()
 
     return response
@@ -367,8 +370,7 @@ def preview_execute_script():
         logger.info(f"[preview-execute] Temp dir: {temp_dir}")
         temp_script_path = os.path.join(temp_dir, 'temp_script.py')
 
-        with open(temp_script_path, 'w', encoding='utf-8') as f:
-            f.write(script_code)
+        safe_write_text(temp_script_path, script_code, base_dir=temp_dir)
 
         # 保存上传的文件到临时目录
         uploaded_file_paths = []

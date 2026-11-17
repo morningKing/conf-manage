@@ -3,6 +3,7 @@
 """
 from flask import request, jsonify, send_file, send_from_directory
 from utils import safe_filename
+from utils.safe_io import safe_write_text
 from . import api_bp
 import os
 from config import Config
@@ -90,9 +91,12 @@ def download_file():
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         file_path = os.path.join(base_dir, path)
 
-        # 安全检查
-        if not os.path.abspath(file_path).startswith(os.path.abspath(base_dir)):
+        # 安全检查：真实路径必须位于上传目录内（realpath 消解符号链接与 ../）
+        real_base = os.path.realpath(base_dir)
+        real_file = os.path.realpath(file_path)
+        if not (real_file == real_base or real_file.startswith(real_base + os.sep)):
             return jsonify({'code': 1, 'message': '非法路径'}), 400
+        file_path = real_file
 
         if not os.path.exists(file_path) or not os.path.isfile(file_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
@@ -110,9 +114,12 @@ def preview_file():
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         file_path = os.path.join(base_dir, path)
 
-        # 安全检查
-        if not os.path.abspath(file_path).startswith(os.path.abspath(base_dir)):
+        # 安全检查：真实路径必须位于上传目录内（realpath 消解符号链接与 ../）
+        real_base = os.path.realpath(base_dir)
+        real_file = os.path.realpath(file_path)
+        if not (real_file == real_base or real_file.startswith(real_base + os.sep)):
             return jsonify({'code': 1, 'message': '非法路径'}), 400
+        file_path = real_file
 
         if not os.path.exists(file_path) or not os.path.isfile(file_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
@@ -285,9 +292,12 @@ def delete_file():
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         file_path = os.path.join(base_dir, path)
 
-        # 安全检查
-        if not os.path.abspath(file_path).startswith(os.path.abspath(base_dir)):
+        # 安全检查：真实路径必须位于上传目录内（realpath 消解符号链接与 ../）
+        real_base = os.path.realpath(base_dir)
+        real_file = os.path.realpath(file_path)
+        if not (real_file == real_base or real_file.startswith(real_base + os.sep)):
             return jsonify({'code': 1, 'message': '非法路径'}), 400
+        file_path = real_file
 
         if not os.path.exists(file_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
@@ -356,9 +366,12 @@ def update_file():
         base_dir = os.path.join(Config.DATA_DIR, 'uploads')
         file_path = os.path.join(base_dir, path)
 
-        # 安全检查
-        if not os.path.abspath(file_path).startswith(os.path.abspath(base_dir)):
+        # 安全检查：真实路径必须位于上传目录内（realpath 消解符号链接与 ../）
+        real_base = os.path.realpath(base_dir)
+        real_file = os.path.realpath(file_path)
+        if not (real_file == real_base or real_file.startswith(real_base + os.sep)):
             return jsonify({'code': 1, 'message': '非法路径'}), 400
+        file_path = real_file
 
         if not os.path.exists(file_path):
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
@@ -383,9 +396,8 @@ def update_file():
             shutil.copy2(file_path, backup_path)
 
         try:
-            # 写入新内容
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+            # 写入新内容（受控目录内写入）
+            safe_write_text(file_path, content, base_dir=base_dir)
 
             # 删除备份
             if os.path.exists(backup_path):

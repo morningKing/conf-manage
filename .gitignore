@@ -130,3 +130,6 @@ backups/
 *.crt
 credentials.json
 secrets.json
+
+# Mimosa security hook state
+.mimosa/

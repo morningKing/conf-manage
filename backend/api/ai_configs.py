@@ -4,6 +4,13 @@ AI配置管理API
 from flask import request, jsonify
 from . import api_bp
 from models import db, AIConfig
+from utils.http_utils import validate_http_url
+
+
+def _validate_base_url(base_url):
+    """校验 base_url 的协议与解析 IP 边界，非法时抛出 ValueError。"""
+    if base_url:
+        validate_http_url(base_url)
 
 
 @api_bp.route('/ai-configs', methods=['GET'])
@@ -30,6 +37,12 @@ def create_ai_config():
     # 验证必填字段
     if not data.get('api_key'):
         return jsonify({'error': 'API key is required'}), 400
+
+    # SSRF 边界校验：非法协议或受限 IP 直接拒绝保存
+    try:
+        _validate_base_url(data.get('base_url'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
     # 如果设置为激活，将其他配置设为不激活
     if data.get('is_active', False):
@@ -67,6 +80,11 @@ def update_ai_config(config_id):
     if 'api_key' in data:
         config.api_key = data['api_key']
     if 'base_url' in data:
+        # SSRF 边界校验：非法协议或受限 IP 直接拒绝保存
+        try:
+            _validate_base_url(data['base_url'])
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
         config.base_url = data['base_url']
     if 'model' in data:
         config.model = data['model']

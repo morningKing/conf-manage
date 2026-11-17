@@ -260,9 +260,8 @@ def get_db_info():
             'code': 0,
             'message': '获取成功',
             'data': {
-                'path': info['path'],
-                'size': info['size'],
-                'size_mb': round(info['size'] / (1024 * 1024), 2),
+                'path': f"{info['database']}@{info['host']}:{info['port']}",
+                'total_records': info['total_records'],
                 'tables': info['tables']
             }
         })

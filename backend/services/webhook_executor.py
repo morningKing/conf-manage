@@ -8,6 +8,7 @@ from datetime import datetime
 from models import db, Webhook, WebhookLog, Execution
 from services.executor import execute_script
 from config import Config
+from utils.safe_io import safe_write_text
 from threading import Thread, Event
 from flask import current_app
 
@@ -187,8 +188,8 @@ def save_request_info(execution_id, request_data):
     execution_space = Config.ensure_execution_space(execution_id)
     request_file = os.path.join(execution_space, 'webhook_request.json')
 
-    with open(request_file, 'w', encoding='utf-8') as f:
-        json.dump(request_data, f, ensure_ascii=False, indent=2)
+    safe_write_text(request_file, json.dumps(request_data, ensure_ascii=False, indent=2),
+                    base_dir=execution_space)
 
 
 def execute_webhook_sync(execution_id, timeout):

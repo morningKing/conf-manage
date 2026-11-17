@@ -53,7 +53,9 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
     Returns:
         str: 备份文件路径
     """
-    # 生成备份文件名
+    # 生成备份文件名（用户提供的名称只保留文件名部分并去除首尾点空格，防止路径穿越）
+    if backup_name:
+        backup_name = os.path.basename(backup_name.strip()).strip('. ')
     if not backup_name:
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_name = f'system_backup_{timestamp}'
@@ -97,19 +99,17 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
             })
 
         # 工作流执行空间
-        workflow_spaces = os.path.join(os.path.dirname(Config.BASE_DIR), 'workflow_execution_spaces')
-        if os.path.exists(workflow_spaces):
+        if os.path.exists(Config.WORKFLOW_EXECUTION_SPACES_DIR):
             backup_items.append({
-                'path': workflow_spaces,
+                'path': Config.WORKFLOW_EXECUTION_SPACES_DIR,
                 'arcname': 'workflow_execution_spaces',
                 'name': '工作流执行空间'
             })
 
         # 工作空间
-        workspaces = os.path.join(os.path.dirname(Config.BASE_DIR), 'workspaces')
-        if os.path.exists(workspaces):
+        if os.path.exists(Config.WORKSPACES_DIR):
             backup_items.append({
-                'path': workspaces,
+                'path': Config.WORKSPACES_DIR,
                 'arcname': 'workspaces',
                 'name': '工作空间'
             })
@@ -122,13 +122,13 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
             'name': '日志文件'
         })
 
-    # 5. 数据库文件
-    if os.path.exists(Config.DATABASE_PATH):
-        backup_items.append({
-            'path': Config.DATABASE_PATH,
-            'arcname': 'database/database.db',
-            'name': '数据库文件'
-        })
+    # 5. 数据库导出（PostgreSQL，通过 pg_dump 生成 SQL 后纳入备份包）
+    db_export_file = None
+    try:
+        from utils.export_database import export_database
+        db_export_file = export_database()
+    except Exception as e:
+        print(f"  ⚠ 数据库导出跳过: {e}")
 
     # 显示备份项统计
     print("备份项目统计:")
@@ -163,6 +163,13 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
                 tar.add(item['path'], arcname=item['arcname'])
             except Exception as e:
                 print(f"  ⚠ 备份失败: {e}")
+
+        # 数据库导出文件纳入备份包
+        if db_export_file and os.path.exists(db_export_file):
+            try:
+                tar.add(db_export_file, arcname=os.path.join('database', os.path.basename(db_export_file)))
+            except Exception as e:
+                print(f"  ⚠ 数据库导出纳入备份失败: {e}")
 
     # 获取备份文件大小
     backup_size = os.path.getsize(backup_file)
