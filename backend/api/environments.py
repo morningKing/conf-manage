@@ -2,6 +2,7 @@
 环境管理 API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Environment
 import subprocess
@@ -18,6 +19,8 @@ def get_environments():
             'data': [env.to_dict() for env in environments],
             'message': '获取成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -78,6 +81,8 @@ def create_environment():
             'data': environment.to_dict(),
             'message': '创建成功'
         }), 201
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -120,6 +125,8 @@ def update_environment(env_id):
             'data': environment.to_dict(),
             'message': '更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -145,6 +152,8 @@ def delete_environment(env_id):
             'code': 0,
             'message': '删除成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -171,6 +180,8 @@ def set_default_environment(env_id):
             'data': environment.to_dict(),
             'message': '设置成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -197,6 +208,8 @@ def detect_environment():
             'data': {'version': version},
             'message': '检测成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 

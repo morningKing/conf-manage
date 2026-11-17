@@ -2,6 +2,7 @@
 定时任务API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Schedule, Script
 from services.scheduler import scheduler_manager
@@ -17,6 +18,8 @@ def get_schedules():
             'code': 0,
             'data': [schedule.to_dict() for schedule in schedules]
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -30,6 +33,8 @@ def get_schedule(schedule_id):
             'code': 0,
             'data': schedule.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -75,6 +80,8 @@ def create_schedule():
             'data': schedule.to_dict(),
             'message': '定时任务创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -121,6 +128,8 @@ def update_schedule(schedule_id):
             'data': schedule.to_dict(),
             'message': '定时任务更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -142,6 +151,8 @@ def delete_schedule(schedule_id):
             'code': 0,
             'message': '定时任务已删除'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -166,6 +177,8 @@ def toggle_schedule(schedule_id):
             'data': schedule.to_dict(),
             'message': f'任务已{"启用" if schedule.enabled else "禁用"}'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -206,6 +219,8 @@ def run_schedule_now(schedule_id):
             'data': execution.to_dict(),
             'message': '任务已启动执行'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -224,6 +239,8 @@ def toggle_schedule_preserve(id):
             'data': schedule.to_dict(),
             'message': f'任务白名单状态已{"开启" if schedule.preserve else "关闭"}'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -251,6 +268,8 @@ def batch_toggle_preserve():
             'code': 0,
             'message': f'已{"开启" if preserve else "关闭"} {len(ids)} 个任务的白名单状态'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500

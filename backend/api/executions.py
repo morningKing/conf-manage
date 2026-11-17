@@ -2,6 +2,7 @@
 执行记录API
 """
 from flask import request, jsonify, Response, stream_with_context, current_app
+from werkzeug.exceptions import HTTPException
 from utils import safe_filename
 from utils.file_utils import is_text_file
 from . import api_bp
@@ -176,6 +177,8 @@ def execute_script_api(script_id):
             'data': execution_data,
             'message': '脚本执行已启动'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -247,6 +250,8 @@ def get_executions():
                 'pages': (total + per_page - 1) // per_page
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -260,6 +265,8 @@ def get_execution(execution_id):
             'code': 0,
             'data': execution.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -290,6 +297,8 @@ def get_execution_logs(execution_id):
                 'error': execution.error or ''
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -379,6 +388,8 @@ def delete_execution(execution_id):
             'code': 0,
             'message': '执行记录已删除'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -430,6 +441,8 @@ def batch_manage_executions():
             'data': result,
             'message': f'批量{action}操作完成: 成功{result["success"]}个，失败{result["failed"]}个'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -618,6 +631,8 @@ def get_executions_statistics():
             }
         })
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -662,6 +677,8 @@ def cancel_execution(execution_id):
             'code': 0,
             'message': '执行已中断'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -717,6 +734,8 @@ def get_execution_files(execution_id):
                 'execution_id': execution_id
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -816,6 +835,8 @@ def get_execution_file(execution_id, file_path):
                         'size': os.path.getsize(full_path)
                     }
                 })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -856,6 +877,8 @@ def re_execute_script(execution_id):
             },
             'message': '已创建新执行记录并启动执行'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500

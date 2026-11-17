@@ -1,11 +1,15 @@
 """
 定时任务调度器
 """
+import logging
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
 from datetime import datetime
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class SchedulerManager:
@@ -60,13 +64,13 @@ class SchedulerManager:
                     from models import db
                     schedule.next_run = job.next_run_time
                     db.session.commit()
-                    print(f'[调度器] 任务 {schedule.id} ({schedule.name}) 已添加，下次执行: {job.next_run_time}')
+                    logger.info(f'[调度器] 任务 {schedule.id} ({schedule.name}) 已添加，下次执行: {job.next_run_time}')
                 except Exception as e:
-                    print(f'[调度器] 更新下次执行时间失败: {str(e)}')
+                    logger.info(f'[调度器] 更新下次执行时间失败: {str(e)}')
 
             return True
         except Exception as e:
-            print(f'[调度器] 添加定时任务失败: {str(e)}')
+            logger.info(f'[调度器] 添加定时任务失败: {str(e)}')
             import traceback
             traceback.print_exc()
             return False
@@ -77,10 +81,10 @@ class SchedulerManager:
             job_id = f'schedule_{schedule_id}'
             if self.scheduler.get_job(job_id):
                 self.scheduler.remove_job(job_id)
-                print(f'[调度器] 任务 {schedule_id} 已移除')
+                logger.info(f'[调度器] 任务 {schedule_id} 已移除')
             return True
         except Exception as e:
-            print(f'[调度器] 移除定时任务失败: {str(e)}')
+            logger.info(f'[调度器] 移除定时任务失败: {str(e)}')
             return False
 
     def _execute_scheduled_task(self, schedule_id):
@@ -89,11 +93,11 @@ class SchedulerManager:
         from services.executor import execute_script
         from threading import Thread
 
-        print(f'[定时任务] 准备执行任务 {schedule_id}')
+        logger.info(f'[定时任务] 准备执行任务 {schedule_id}')
         
         # 如果没有应用实例，无法执行
         if not self.app:
-            print(f'[定时任务] 错误: 应用未初始化，无法执行任务 {schedule_id}')
+            logger.info(f'[定时任务] 错误: 应用未初始化，无法执行任务 {schedule_id}')
             return
 
         def run_task_in_context():
@@ -102,14 +106,14 @@ class SchedulerManager:
                 # 获取任务配置
                 schedule = Schedule.query.get(schedule_id)
                 if not schedule:
-                    print(f'[定时任务] 任务 {schedule_id} 不存在')
+                    logger.info(f'[定时任务] 任务 {schedule_id} 不存在')
                     return
                 
                 if not schedule.enabled:
-                    print(f'[定时任务] 任务 {schedule_id} 已禁用，跳过执行')
+                    logger.info(f'[定时任务] 任务 {schedule_id} 已禁用，跳过执行')
                     return
 
-                print(f'[定时任务] 开始执行任务 {schedule_id} - {schedule.name}')
+                logger.info(f'[定时任务] 开始执行任务 {schedule_id} - {schedule.name}')
 
                 # 更新上次执行时间
                 schedule.last_run = datetime.utcnow()
@@ -118,7 +122,7 @@ class SchedulerManager:
                 job = self.scheduler.get_job(f'schedule_{schedule_id}')
                 if job:
                     schedule.next_run = job.next_run_time
-                    print(f'[定时任务] 下次执行时间: {schedule.next_run}')
+                    logger.info(f'[定时任务] 下次执行时间: {schedule.next_run}')
 
                 db.session.commit()
 
@@ -131,7 +135,7 @@ class SchedulerManager:
                 db.session.add(execution)
                 db.session.commit()
 
-                print(f'[定时任务] 创建执行记录成功, 执行ID: {execution.id}')
+                logger.info(f'[定时任务] 创建执行记录成功, 执行ID: {execution.id}')
 
                 # 异步执行脚本（在应用上下文中执行）
                 def run_script_with_context():
@@ -142,10 +146,10 @@ class SchedulerManager:
                 thread = Thread(target=run_script_with_context)
                 thread.daemon = True
                 thread.start()
-                print(f'[定时任务] 脚本执行线程已启动')
+                logger.info(f'[定时任务] 脚本执行线程已启动')
 
             except Exception as e:
-                print(f'[定时任务] 执行定时任务 {schedule_id} 失败: {str(e)}')
+                logger.info(f'[定时任务] 执行定时任务 {schedule_id} 失败: {str(e)}')
                 import traceback
                 traceback.print_exc()
             finally:
@@ -160,7 +164,7 @@ class SchedulerManager:
             with self.app.app_context():
                 run_task_in_context()
         except Exception as e:
-            print(f'[定时任务] 在应用上下文中执行任务失败: {str(e)}')
+            logger.info(f'[定时任务] 在应用上下文中执行任务失败: {str(e)}')
             import traceback
             traceback.print_exc()
 
@@ -171,17 +175,17 @@ class SchedulerManager:
         try:
             # 清空现有任务
             self.scheduler.remove_all_jobs()
-            print(f'[调度器] 已清空现有任务')
+            logger.info(f'[调度器] 已清空现有任务')
 
             # 加载启用的任务
             schedules = Schedule.query.filter_by(enabled=True).all()
             for schedule in schedules:
                 self.add_job(schedule)
 
-            print(f'[调度器] 已加载 {len(schedules)} 个定时任务')
+            logger.info(f'[调度器] 已加载 {len(schedules)} 个定时任务')
             return True
         except Exception as e:
-            print(f'[调度器] 重新加载定时任务失败: {str(e)}')
+            logger.info(f'[调度器] 重新加载定时任务失败: {str(e)}')
             import traceback
             traceback.print_exc()
             return False

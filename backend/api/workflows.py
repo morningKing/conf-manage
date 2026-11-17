@@ -2,6 +2,7 @@
 工作流管理API
 """
 from flask import request, jsonify, Response, stream_with_context
+from werkzeug.exceptions import HTTPException
 from models import db
 from models.workflow import Workflow, WorkflowNode, WorkflowEdge, WorkflowExecution, WorkflowNodeExecution
 from models.script import Script
@@ -22,6 +23,8 @@ def get_workflows():
             'code': 0,
             'data': [w.to_dict() for w in workflows]
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -44,6 +47,8 @@ def get_workflow(workflow_id):
             'code': 0,
             'data': data
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -114,6 +119,8 @@ def create_workflow():
             'data': workflow.to_dict(),
             'message': '工作流创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -155,6 +162,8 @@ def update_workflow(workflow_id):
             'data': workflow.to_dict(),
             'message': '工作流更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -225,6 +234,8 @@ def execute_workflow(workflow_id):
             'data': execution.to_dict(),
             'message': '工作流执行已启动'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -244,6 +255,8 @@ def toggle_workflow(workflow_id):
             'data': workflow.to_dict(),
             'message': f'工作流已{"启用" if workflow.enabled else "禁用"}'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -276,6 +289,8 @@ def get_workflow_executions():
                 'pages': pagination.pages
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -298,6 +313,8 @@ def get_workflow_execution(execution_id):
             'code': 0,
             'data': data
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -320,6 +337,8 @@ def cancel_workflow_execution(execution_id):
             'data': execution.to_dict(),
             'message': '工作流执行已取消'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -458,6 +477,8 @@ def upload_workflow_execution_file(execution_id):
             },
             'message': '文件上传成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -513,6 +534,8 @@ def get_workflow_execution_files(execution_id):
                 'workflow_execution_id': execution_id
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -564,6 +587,8 @@ def get_workflow_execution_file(execution_id, file_path):
             else:
                 # 非文本文件，返回二进制数据或提示下载
                 return send_file(full_path)
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -601,6 +626,8 @@ def delete_workflow_execution(execution_id):
             'code': 0,
             'message': '工作流执行记录已删除'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500

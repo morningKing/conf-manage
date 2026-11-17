@@ -3,6 +3,7 @@ Excel 文件操作 API
 提供 Excel 文件的读取、编辑、保存等功能
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from config import Config
 from utils.safe_io import ensure_contained, PathEscapeError
@@ -769,6 +770,8 @@ def get_excel_file_internal(execution_id, file_path):
                 'code': 1,
                 'message': f'Excel 文件解析失败: {str(e)}'
             }), 500
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 

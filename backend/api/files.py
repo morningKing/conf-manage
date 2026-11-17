@@ -2,6 +2,7 @@
 文件管理API
 """
 from flask import request, jsonify, send_file, send_from_directory
+from werkzeug.exceptions import HTTPException
 from utils import safe_filename
 from utils.safe_io import safe_write_text
 from . import api_bp
@@ -41,6 +42,8 @@ def list_files():
             'code': 0,
             'data': sorted(files, key=lambda x: (not x['is_dir'], x['name']))
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -79,6 +82,8 @@ def upload_file():
             },
             'message': '文件上传成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -102,6 +107,8 @@ def download_file():
             return jsonify({'code': 1, 'message': '文件不存在'}), 404
 
         return send_file(file_path, as_attachment=True)
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -280,6 +287,8 @@ def preview_file():
         else:
             return jsonify({'code': 1, 'message': f'不支持的文件类型: {ext}'}), 400
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -312,6 +321,8 @@ def delete_file():
             'code': 0,
             'message': '删除成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -348,6 +359,8 @@ def create_folder():
             },
             'message': '文件夹创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -414,5 +427,7 @@ def update_file():
                 shutil.move(backup_path, file_path)
             raise e
 
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500

@@ -2,6 +2,7 @@
 Webhook管理API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Webhook, WebhookLog, Script
 from datetime import datetime
@@ -40,6 +41,8 @@ def get_webhooks():
                 'pages': pagination.pages
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -98,6 +101,8 @@ def create_webhook():
             'data': webhook.to_dict(),
             'message': 'Webhook创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -112,6 +117,8 @@ def get_webhook(webhook_id):
             'code': 0,
             'data': webhook.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -154,6 +161,8 @@ def update_webhook(webhook_id):
             'data': webhook.to_dict(),
             'message': 'Webhook更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -171,6 +180,8 @@ def delete_webhook(webhook_id):
             'code': 0,
             'message': 'Webhook删除成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -194,6 +205,8 @@ def regenerate_webhook_token(webhook_id):
             'data': {'token': webhook.token},
             'message': 'Token重新生成成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -213,6 +226,8 @@ def toggle_webhook(webhook_id):
             'data': {'enabled': webhook.enabled},
             'message': '已启用' if webhook.enabled else '已禁用'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -241,6 +256,8 @@ def get_webhook_logs(webhook_id):
                 'pages': pagination.pages
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -272,5 +289,7 @@ def get_webhook_statistics(webhook_id):
                 'recent_logs': [log.to_dict() for log in recent_logs]
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500

@@ -2,6 +2,7 @@
 选择会话API - 用于批量操作的状态管理
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, SelectionSession, Execution
 from services.execution_service import delete_execution_record
@@ -27,6 +28,8 @@ def create_selection_session():
             },
             'message': '选择会话已创建'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -63,6 +66,8 @@ def get_selection_session(session_id):
                 'items': items
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -99,6 +104,8 @@ def add_to_selection(session_id):
             },
             'message': f'已添加{len(valid_ids)}项'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -129,6 +136,8 @@ def remove_from_selection(session_id):
             },
             'message': f'已移除{len(execution_ids)}项'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -153,6 +162,8 @@ def clear_selection(session_id):
             },
             'message': '选择已清空'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -217,6 +228,8 @@ def delete_selection_batch(session_id):
             'data': result,
             'message': f'批量删除完成: 成功{result["success"]}个，失败{result["failed"]}个'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500

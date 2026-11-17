@@ -2,6 +2,7 @@
 脚本管理API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Script, ScriptVersion, Tag
 from config import Config
@@ -58,6 +59,8 @@ def get_scripts():
             'code': 0,
             'data': [script.to_dict() for script in scripts]
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -71,6 +74,8 @@ def get_script(script_id):
             'code': 0,
             'data': script.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -139,6 +144,8 @@ def create_script():
             'data': script.to_dict(),
             'message': '脚本创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -206,6 +213,8 @@ def update_script(script_id):
             'data': script.to_dict(),
             'message': '脚本更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -257,6 +266,8 @@ def delete_script(script_id):
             'code': 0,
             'message': '脚本删除成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -273,6 +284,8 @@ def get_script_versions(script_id):
             'code': 0,
             'data': [version.to_dict() for version in versions]
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -290,6 +303,8 @@ def get_script_version(script_id, version_id):
             'code': 0,
             'data': version.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -326,6 +341,8 @@ def rollback_script(script_id, version_num):
             'data': script.to_dict(),
             'message': f'已回滚到版本 {version_num}'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -348,6 +365,8 @@ def toggle_favorite(script_id):
             },
             'message': '已收藏' if script.is_favorite else '已取消收藏'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -397,6 +416,8 @@ def clean_script_versions(script_id):
                 'kept_count': keep_latest
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -424,6 +445,8 @@ def move_script(script_id):
             'data': script.to_dict(),
             'message': '脚本移动成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -501,6 +524,8 @@ def clean_script_executions(script_id):
                 'kept_count': keep_latest
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -533,6 +558,8 @@ def toggle_script_preserve(script_id):
             'message': f'已{"加入" if script.preserve else "移出"}白名单',
             'data': {'preserve': script.preserve}
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -579,6 +606,8 @@ def batch_toggle_script_preserve():
             'message': f'已批量{"加入" if preserve else "移出"}白名单',
             'data': {'updated_count': updated_count}
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500

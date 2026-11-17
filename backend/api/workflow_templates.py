@@ -2,6 +2,7 @@
 工作流模板管理API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from models import db
 from models.workflow_template import WorkflowTemplate
 from datetime import datetime
@@ -28,6 +29,8 @@ def get_workflow_templates():
             'code': 0,
             'data': [t.to_dict() for t in templates]
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -41,6 +44,8 @@ def get_workflow_template(template_id):
             'code': 0,
             'data': template.to_dict()
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -77,6 +82,8 @@ def create_workflow_template():
             'data': template.to_dict(),
             'message': '模板创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -116,6 +123,8 @@ def update_workflow_template(template_id):
             'data': template.to_dict(),
             'message': '模板更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -138,6 +147,8 @@ def delete_workflow_template(template_id):
             'code': 0,
             'message': '模板删除成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -164,6 +175,8 @@ def use_workflow_template(template_id):
             },
             'message': '模板加载成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -179,5 +192,7 @@ def get_template_categories():
             'code': 0,
             'data': categories
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500

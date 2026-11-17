@@ -16,7 +16,6 @@ import json
 import logging
 
 # 配置日志
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +26,7 @@ def execute_workflow_async(workflow_execution_id):
         try:
             execution = WorkflowExecution.query.get(workflow_execution_id)
             if not execution:
-                print(f'工作流执行记录不存在: {workflow_execution_id}')
+                logger.info(f'工作流执行记录不存在: {workflow_execution_id}')
                 return
 
             # 更新状态为运行中
@@ -39,7 +38,6 @@ def execute_workflow_async(workflow_execution_id):
             from config import Config
             workflow_space = Config.ensure_workflow_execution_space(workflow_execution_id)
             logger.info(f"[工作流执行] 工作流执行空间: {workflow_space}")
-            sys.stdout.flush()
 
             # 获取工作流定义
             workflow = execution.workflow
@@ -77,10 +75,9 @@ def execute_workflow_async(workflow_execution_id):
                 execution.end_time = datetime.utcnow()
                 db.session.commit()
                 logger.info(f"[工作流执行] 工作流状态已更新为{execution.status}")
-                sys.stdout.flush()
 
         except Exception as e:
-            print(f'工作流执行失败: {str(e)}')
+            logger.info(f'工作流执行失败: {str(e)}')
             # 重新获取执行记录
             db.session.expire_all()
             execution = WorkflowExecution.query.get(workflow_execution_id)
@@ -125,7 +122,6 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
     logger.info(f"[工作流执行] 入口节点: {entry_nodes}")
     logger.info(f"[工作流执行] 所有节点: {list(nodes.keys())}")
     logger.info(f"[工作流执行] 依赖关系图: {graph}")
-    sys.stdout.flush()
 
     # 节点执行结果
     node_results = {}
@@ -139,11 +135,9 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
     while queue:
         node_id = queue.pop(0)
         logger.info(f"[工作流执行] 处理节点: {node_id}")
-        sys.stdout.flush()
 
         if node_id in executed:
             logger.info(f"[工作流执行] 节点 {node_id} 已执行，跳过")
-            sys.stdout.flush()
             continue
 
         node = nodes[node_id]
@@ -151,13 +145,11 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
         # 检查依赖是否都已执行
         deps = graph[node_id]['deps']
         logger.info(f"[工作流执行] 节点 {node_id} 的依赖: {deps}")
-        sys.stdout.flush()
         deps_ready = True
         for dep in deps:
             dep_node_id = dep['node_id']
             if dep_node_id not in executed:
                 logger.info(f"[工作流执行] 依赖节点 {dep_node_id} 未执行，等待")
-                sys.stdout.flush()
                 deps_ready = False
                 break
 
@@ -165,56 +157,45 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
             if dep['condition']:
                 logger.info(f"[工作流执行] 检查条件: {dep['condition']}")
                 logger.info(f"[工作流执行] 当前node_results: {node_results}")
-                sys.stdout.flush()
                 # 传递整个node_results作为context，让evaluate_condition根据condition中的node_id查找
                 if not evaluate_condition(dep['condition'], node_results):
                     # 条件不满足，跳过此节点
                     logger.info(f"[工作流执行] 条件不满足，跳过节点 {node_id}")
-                    sys.stdout.flush()
                     executed.add(node_id)
                     create_node_execution(workflow_execution_id, node_id, 'skipped', '条件不满足')
                     deps_ready = False
                     break
                 else:
                     logger.info(f"[工作流执行] 条件满足")
-                    sys.stdout.flush()
 
         if not deps_ready:
             logger.info(f"[工作流执行] 节点 {node_id} 依赖未就绪，继续下一个")
-            sys.stdout.flush()
             continue
 
         # 执行节点
         logger.info(f"[工作流执行] 开始执行节点 {node_id}")
-        sys.stdout.flush()
         success, result = execute_node(workflow_execution_id, node, params, node_results, workflow_space)
         logger.info(f"[工作流执行] 节点 {node_id} 执行完成，success={success}, result={result}")
-        sys.stdout.flush()
         node_results[node_id] = result
         executed.add(node_id)
 
         if not success and node['node_type'] == 'script':
             # 脚本节点执行失败，终止工作流
             logger.info(f"[工作流执行] 脚本节点 {node_id} 失败，终止工作流")
-            sys.stdout.flush()
             return False
 
         # 将下一个节点加入队列
         next_nodes = graph[node_id]['next']
         logger.info(f"[工作流执行] 节点 {node_id} 的下一个节点: {next_nodes}")
-        sys.stdout.flush()
         for next_node in next_nodes:
             next_node_id = next_node['node_id']
             if next_node_id not in executed and next_node_id not in queue:
                 logger.info(f"[工作流执行] 将节点 {next_node_id} 加入队列")
-                sys.stdout.flush()
                 queue.append(next_node_id)
 
         logger.info(f"[工作流执行] 当前队列: {queue}, 已执行: {executed}")
-        sys.stdout.flush()
 
     logger.info(f"[工作流执行] 工作流执行完成")
-    sys.stdout.flush()
     return True
 
 
@@ -230,7 +211,6 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
 
         logger.info(f"[execute_node] 准备创建节点执行记录: node_id={node_id}")
         logger.info(f"[execute_node] 工作流执行空间: {workflow_space}")
-        sys.stdout.flush()
 
         # 创建节点执行记录
         node_execution = WorkflowNodeExecution(
@@ -240,30 +220,24 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
             start_time=datetime.utcnow()
         )
         logger.info(f"[execute_node] 节点执行记录已创建")
-        sys.stdout.flush()
 
         db.session.add(node_execution)
         logger.info(f"[execute_node] 节点执行记录已添加到session")
-        sys.stdout.flush()
 
         db.session.commit()
         logger.info(f"[execute_node] 节点执行记录已提交到数据库")
-        sys.stdout.flush()
 
         # 保存节点执行ID，因为后面session可能被清理
         node_execution_id = node_execution.id
         logger.info(f"[execute_node] 节点执行记录ID: {node_execution_id}")
-        sys.stdout.flush()
 
         result = None
 
         if node_type == 'script':
             # 执行脚本节点
             logger.info(f"[execute_node] 调用execute_script_node")
-            sys.stdout.flush()
             result = execute_script_node(script_id, params, node_execution, workflow_space)
             logger.info(f"[execute_node] execute_script_node返回: {result}")
-            sys.stdout.flush()
 
         elif node_type == 'delay':
             # 延迟节点
@@ -274,14 +248,12 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
             result = evaluate_condition_node(node_config, node_results)
 
         logger.info(f"[execute_node] 准备重新获取节点执行记录")
-        sys.stdout.flush()
 
         # 重新获取节点执行记录以确保更新生效（因为execute_script可能清理了session）
         db.session.expire_all()
         node_execution = WorkflowNodeExecution.query.get(node_execution_id)
 
         logger.info(f"[execute_node] 重新获取成功: {node_execution is not None}")
-        sys.stdout.flush()
 
         if node_execution:
             # 更新节点执行状态
@@ -290,7 +262,6 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
             node_execution.end_time = datetime.utcnow()
             db.session.commit()
             logger.info(f"[execute_node] 节点状态已更新为success")
-            sys.stdout.flush()
 
         return True, result
 
@@ -298,7 +269,6 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
         logger.error(f'[execute_node] 节点执行失败 [{node_dict.get("node_id", "unknown")}]: {str(e)}')
         import traceback
         logger.error(f'[execute_node] 异常堆栈:\n{traceback.format_exc()}')
-        sys.stdout.flush()
 
         # 重新获取节点执行记录
         if node_execution and hasattr(node_execution, 'id') and node_execution.id:
@@ -312,7 +282,6 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
                     db.session.commit()
             except Exception as e2:
                 logger.error(f'[execute_node] 更新失败状态时出错: {str(e2)}')
-                sys.stdout.flush()
         return False, None
 
 

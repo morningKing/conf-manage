@@ -1,6 +1,7 @@
 """
 Flask应用入口
 """
+import logging
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -10,9 +11,32 @@ from flask_cors import CORS
 from config import Config
 from models import db
 from api import api_bp
+from api.errors import register_error_handlers
 from services.scheduler import scheduler_manager
 from services.cleanup_service import run_cleanup_if_needed
 from websocket import socketio
+
+
+def _setup_logging():
+    """应用日志：RotatingFileHandler(logs/app.log) + stderr；幂等，防止重复初始化"""
+    root = logging.getLogger()
+    if any(getattr(h, '_confman_app_log', False) for h in root.handlers):
+        return
+    root.setLevel(logging.INFO)
+    fmt = logging.Formatter('%(asctime)s %(levelname)s [%(name)s] %(message)s')
+
+    fh = logging.handlers.RotatingFileHandler(
+        os.path.join(Config.LOGS_DIR, 'app.log'),
+        maxBytes=5 * 1024 * 1024, backupCount=5, encoding='utf-8')
+    fh.setFormatter(fmt)
+    fh._confman_app_log = True
+
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+    sh._confman_app_log = True
+
+    root.addHandler(fh)
+    root.addHandler(sh)
 
 
 def create_app(config_class=Config):
@@ -20,8 +44,11 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # 初始化配置
+    # 初始化配置（确保 logs 等目录存在）
     config_class.init_app(app)
+
+    # 配置日志
+    _setup_logging()
 
     # 初始化数据库
     db.init_app(app)
@@ -41,14 +68,8 @@ def create_app(config_class=Config):
     # 注册蓝图
     app.register_blueprint(api_bp)
 
-    # 错误处理
-    @app.errorhandler(404)
-    def not_found(error):
-        return jsonify({'code': 1, 'message': '资源不存在'}), 404
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        return jsonify({'code': 1, 'message': '服务器内部错误'}), 500
+    # 统一错误处理（404/405/异常兜底统一返回 JSON）
+    register_error_handlers(app)
 
     # 健康检查
     @app.route('/health')

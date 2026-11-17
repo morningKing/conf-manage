@@ -2,6 +2,7 @@
 文件夹管理API
 """
 from flask import request, jsonify
+from werkzeug.exceptions import HTTPException
 from . import api_bp
 from models import db, Folder, Script, Tag
 
@@ -13,6 +14,8 @@ def get_folder_tree():
         root_folders = Folder.query.filter(Folder.parent_id.is_(None)).order_by(Folder.sort_order, Folder.name).all()
         tree = [folder.to_tree_dict() for folder in root_folders]
         return jsonify({'code': 0, 'data': tree})
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -33,6 +36,8 @@ def get_folder_contents(folder_id):
                 'scripts': [s.to_dict() for s in scripts]
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -52,6 +57,8 @@ def get_root_contents():
                 'scripts': [s.to_dict() for s in root_scripts]
             }
         })
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -87,6 +94,8 @@ def create_script_folder():
             'data': folder.to_dict(),
             'message': '文件夹创建成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -122,6 +131,8 @@ def update_folder(folder_id):
             'data': folder.to_dict(),
             'message': '文件夹更新成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -145,6 +156,8 @@ def delete_folder(folder_id):
         db.session.commit()
 
         return jsonify({'code': 0, 'message': '文件夹删除成功'})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -185,6 +198,8 @@ def move_folder(folder_id):
             'data': folder.to_dict(),
             'message': '文件夹移动成功'
         })
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -201,6 +216,8 @@ def get_folder_path(folder_id):
             folder = folder.parent
 
         return jsonify({'code': 0, 'data': path})
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -213,6 +230,8 @@ def get_tags():
     try:
         tags = Tag.query.order_by(Tag.name).all()
         return jsonify({'code': 0, 'data': [tag.to_dict() for tag in tags]})
+    except HTTPException:
+        raise
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 
@@ -237,6 +256,8 @@ def create_tag():
         db.session.commit()
 
         return jsonify({'code': 0, 'data': tag.to_dict(), 'message': '标签创建成功'})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -260,6 +281,8 @@ def update_tag(tag_id):
 
         db.session.commit()
         return jsonify({'code': 0, 'data': tag.to_dict(), 'message': '标签更新成功'})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
@@ -273,6 +296,8 @@ def delete_tag(tag_id):
         db.session.delete(tag)
         db.session.commit()
         return jsonify({'code': 0, 'message': '标签删除成功'})
+    except HTTPException:
+        raise
     except Exception as e:
         db.session.rollback()
         return jsonify({'code': 1, 'message': str(e)}), 500
