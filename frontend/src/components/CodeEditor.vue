@@ -118,7 +118,6 @@ const cursorCol = ref(1)
 const triggerSearch = () => {
   if (!editorView) return
   // 触发搜索面板（使用 Mod-f 命令）
-  const searchKeymap = editorView.state.facet(EditorView.editorAttributes)
   editorView.focus()
   // 手动触发搜索面板打开
   import('@codemirror/search').then(({ openSearchPanel }) => {

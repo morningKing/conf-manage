@@ -233,7 +233,6 @@ const timeout = process.env.TIMEOUT || '30';
 <script setup>
 import { ref, watch } from 'vue'
 import { Plus, Delete, QuestionFilled } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 
 const props = defineProps({
   modelValue: {

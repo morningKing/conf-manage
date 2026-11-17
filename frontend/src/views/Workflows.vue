@@ -302,7 +302,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  List, Share, DataAnalysis, Timer, Link, Document, Upload, UploadFilled
+  List, Share, DataAnalysis, Timer, Link, Document, UploadFilled
 } from '@element-plus/icons-vue'
 import GlassButton from '../components/GlassButton.vue'
 import {

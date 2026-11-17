@@ -344,8 +344,8 @@ import {
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import {
-  getWebhooks, getWebhook, createWebhook, updateWebhook,
-  deleteWebhook, regenerateWebhookToken, toggleWebhook
+  getWebhooks, createWebhook, updateWebhook,
+  deleteWebhook, regenerateWebhookToken
 } from '@/api/webhooks'
 import GlassButton from '../components/GlassButton.vue'
 

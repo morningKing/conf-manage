@@ -332,8 +332,6 @@ import {
 
 // Glass Components
 import GlassSidebar from '@/components/GlassSidebar.vue'
-import GlassCard from '@/components/GlassCard.vue'
-import GlassButton from '@/components/GlassButton.vue'
 
 // Glass Theme Styles
 import '@/styles/glass-theme.scss'

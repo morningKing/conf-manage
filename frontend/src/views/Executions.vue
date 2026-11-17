@@ -328,7 +328,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Delete, VideoPause, RefreshRight, Close, DataLine, Select } from '@element-plus/icons-vue'
+import { Refresh, DataLine } from '@element-plus/icons-vue'
 import { getExecutions, getExecutionLogs, deleteExecution, deleteWorkflowExecution, cancelExecution, batchManageExecutions, getExecutionsStatistics, reExecuteScript } from '../api'
 import ExecutionFiles from '../components/ExecutionFiles.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
@@ -489,19 +489,6 @@ const canBatchCancel = computed(() => {
 const canBatchRetry = computed(() => {
   return selectedExecutions.value.some(exec => exec.status === 'failed' || exec.status === 'cancelled')
 })
-
-const getSelectedCount = (type) => {
-  switch (type) {
-    case 'canDelete':
-      return selectedExecutions.value.length
-    case 'canCancel':
-      return selectedExecutions.value.filter(exec => exec.status === 'running').length
-    case 'canRetry':
-      return selectedExecutions.value.filter(exec => exec.status === 'failed' || exec.status === 'cancelled').length
-    default:
-      return 0
-  }
-}
 
 // 批量操作方法
 const handleSelectionChange = (selection) => {

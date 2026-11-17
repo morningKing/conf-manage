@@ -28,7 +28,7 @@
           @node-click="handleTreeNodeClick"
           @node-contextmenu="handleTreeContextMenu"
         >
-          <template #default="{ node, data }">
+          <template #default="{ _node, data }">
             <div
               class="tree-node-content"
               @dragover.prevent="handleTreeDragOver($event, data.id)"
@@ -485,10 +485,9 @@ import ParameterConfig from '../components/ParameterConfig.vue'
 import ExecutionParams from '../components/ExecutionParams.vue'
 import ExecutionProgress from '../components/ExecutionProgress.vue'
 import ColorPicker from '../components/ColorPicker.vue'
-import GlassCard from '../components/GlassCard.vue'
 import GlassButton from '../components/GlassButton.vue'
 import {
-  Plus, Search, Folder, FolderOpened, FolderAdd, Document, Edit, EditPen,
+  Search, Folder, FolderOpened, FolderAdd, Document, Edit, EditPen,
   Delete, VideoPlay, View, Loading, Star, StarFilled
 } from '@element-plus/icons-vue'
 
@@ -1068,7 +1067,7 @@ const handleTreeDrop = async (event, folderId) => {
   dragScript = null
 }
 
-const handleGridFolderDragOver = (event, folderId) => {
+const handleGridFolderDragOver = (event, _folderId) => {
   if (!dragScript) return
   event.currentTarget.classList.add('drag-over')
 }

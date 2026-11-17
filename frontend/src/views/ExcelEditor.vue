@@ -76,7 +76,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshLeft, RefreshRight, Check, Plus, Delete, User, Loading } from '@element-plus/icons-vue'
 import { getExcelInfo, getExcelSheet, saveExcel, addExcelSheet, deleteExcelSheet, renameExcelSheet } from '../api'
@@ -89,7 +89,6 @@ import 'luckysheet/dist/plugins/plugins.css'
 import 'luckysheet/dist/css/luckysheet.css'
 
 const route = useRoute()
-const router = useRouter()
 
 // State
 const loading = ref(false)

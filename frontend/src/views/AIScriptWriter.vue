@@ -123,7 +123,7 @@
               :props="{ label: 'name', children: 'children' }"
               @node-click="handleFileClick"
             >
-              <template #default="{ node, data }">
+              <template #default="{ _node, data }">
                 <span class="file-node">
                   <el-icon v-if="data.type === 'file'"><Document /></el-icon>
                   <el-icon v-else><Folder /></el-icon>
@@ -353,30 +353,6 @@ const previewExecute = async () => {
     ElMessage.error(error.response?.data?.error || error.message || '执行失败')
   } finally {
     executing.value = false
-  }
-}
-
-// 加载执行空间的文件
-const loadExecutionFiles = async (executionId, tempDir) => {
-  try {
-    const response = await request.get(`/executions/${executionId}/files`)
-
-    // 将文件列表转换为树结构
-    const files = response.files || []
-    const fileTree = []
-
-    files.forEach(file => {
-      fileTree.push({
-        name: file.name,
-        path: file.path,
-        type: 'file',
-        executionId: executionId
-      })
-    })
-
-    executionFiles.value = fileTree
-  } catch (error) {
-    console.error('加载文件失败:', error)
   }
 }
 

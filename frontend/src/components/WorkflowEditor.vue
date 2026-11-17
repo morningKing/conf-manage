@@ -98,12 +98,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, defineProps, defineEmits, nextTick } from 'vue'
+import { ref, watch, defineProps, defineEmits, nextTick } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { Plus, Clock, Delete } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import ScriptNode from './workflow-nodes/ScriptNode.vue'
 import DelayNode from './workflow-nodes/DelayNode.vue'
 
@@ -137,7 +136,7 @@ const props = defineProps({
 const emit = defineEmits(['update:nodes', 'update:edges'])
 
 // Vue Flow 实例
-const { addNodes, addEdges, removeNodes, removeEdges, updateNode, updateEdge } = useVueFlow()
+useVueFlow()
 
 // 内部状态
 const flowNodes = ref([])
