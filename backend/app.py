@@ -73,11 +73,12 @@ if __name__ == '__main__':
     print('=' * 60)
     print('脚本工具管理系统后端服务')
     print('=' * 60)
-    print(f'服务地址: http://localhost:5001')
-    print(f'API地址: http://localhost:5001/api')
-    print(f'健康检查: http://localhost:5001/health')
-    print(f'WebSocket: ws://localhost:5001/excel')
+    print(f'服务地址: http://localhost:{Config.HOST_PORT}')
+    print(f'API地址: http://localhost:{Config.HOST_PORT}/api')
+    print(f'健康检查: http://localhost:{Config.HOST_PORT}/health')
+    print(f'WebSocket: ws://localhost:{Config.HOST_PORT}/excel')
     print('=' * 60)
     # 使用 use_reloader=False 防止定时任务在调试模式下被多次初始化
     # allow_unsafe_werkzeug=True 用于开发环境
-    socketio.run(app, host='0.0.0.0', port=5001, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=Config.HOST_BIND, port=Config.HOST_PORT,
+                 debug=Config.HOST_DEBUG, use_reloader=False, allow_unsafe_werkzeug=True)

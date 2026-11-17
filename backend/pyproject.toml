@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+exclude = ["node_modules", "frontend"]
+
+[tool.ruff.lint]
+# 初始门禁：pyflakes 的未定义名/重定义（F821/F811）+ 语法级 pycodestyle（E9）
+# F401（未用导入）等清理类规则在重构阶段逐步放开
+select = ["F821", "F811", "E9"]

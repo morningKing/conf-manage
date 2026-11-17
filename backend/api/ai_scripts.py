@@ -2,6 +2,7 @@
 AI脚本生成API
 """
 import json
+import logging
 import tempfile
 import os
 import subprocess
@@ -11,6 +12,8 @@ from . import api_bp
 from models import AIConfig
 from utils.http_utils import safe_post_json, validate_http_url
 from utils.safe_io import safe_write_text
+
+logger = logging.getLogger(__name__)
 
 
 def get_active_ai_config():

@@ -22,6 +22,11 @@ class Config:
     # Flask配置
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
+    # 服务监听配置
+    HOST_BIND = os.environ.get('HOST_BIND', '0.0.0.0')
+    HOST_PORT = int(os.environ.get('HOST_PORT', '5001'))
+    HOST_DEBUG = os.environ.get('HOST_DEBUG', 'true').strip().lower() in ('1', 'true', 'yes')
+
     # PostgreSQL数据库配置
     SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -70,8 +75,11 @@ class Config:
     # 清理阈值：保留最近N条执行记录
     CLEANUP_THRESHOLD = 500
 
-    # 跨域配置
-    CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:3000']
+    # 跨域配置（逗号分隔，默认覆盖常见 Vite 开发端口）
+    CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()] or [
+        'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175',
+        'http://localhost:5176', 'http://localhost:5177', 'http://localhost:3000'
+    ]
 
     # 文件上传配置
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
