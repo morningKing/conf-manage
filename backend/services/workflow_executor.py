@@ -31,7 +31,7 @@ def execute_workflow_async(workflow_execution_id):
 
             # 更新状态为运行中
             execution.status = 'running'
-            execution.start_time = datetime.now(timezone.utc)()
+            execution.start_time = datetime.now(timezone.utc)
             db.session.commit()
 
             # 创建工作流执行的共享工作空间
@@ -72,7 +72,7 @@ def execute_workflow_async(workflow_execution_id):
             if execution:
                 # 更新执行状态
                 execution.status = 'success' if success else 'failed'
-                execution.end_time = datetime.now(timezone.utc)()
+                execution.end_time = datetime.now(timezone.utc)
                 db.session.commit()
                 logger.info(f"[工作流执行] 工作流状态已更新为{execution.status}")
 
@@ -84,7 +84,7 @@ def execute_workflow_async(workflow_execution_id):
             if execution:
                 execution.status = 'failed'
                 execution.error = str(e)
-                execution.end_time = datetime.now(timezone.utc)()
+                execution.end_time = datetime.now(timezone.utc)
                 db.session.commit()
 
 
@@ -217,7 +217,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
             workflow_execution_id=workflow_execution_id,
             node_id=node_id,
             status='running',
-            start_time=datetime.now(timezone.utc)()
+            start_time=datetime.now(timezone.utc)
         )
         logger.info(f"[execute_node] 节点执行记录已创建")
 
@@ -259,7 +259,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
             # 更新节点执行状态
             node_execution.status = 'success'
             node_execution.output = json.dumps(result) if result else None
-            node_execution.end_time = datetime.now(timezone.utc)()
+            node_execution.end_time = datetime.now(timezone.utc)
             db.session.commit()
             logger.info(f"[execute_node] 节点状态已更新为success")
 
@@ -278,7 +278,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
                 if node_execution:
                     node_execution.status = 'failed'
                     node_execution.error = str(e)
-                    node_execution.end_time = datetime.now(timezone.utc)()
+                    node_execution.end_time = datetime.now(timezone.utc)
                     db.session.commit()
             except Exception as e2:
                 logger.error(f'[execute_node] 更新失败状态时出错: {str(e2)}')
@@ -389,8 +389,8 @@ def create_node_execution(workflow_execution_id, node_id, status, message=''):
         node_id=node_id,
         status=status,
         output=message,
-        start_time=datetime.now(timezone.utc)(),
-        end_time=datetime.now(timezone.utc)()
+        start_time=datetime.now(timezone.utc),
+        end_time=datetime.now(timezone.utc)
     )
     db.session.add(node_execution)
     db.session.commit()

@@ -115,7 +115,7 @@ def update_workflow_template(template_id):
         if 'template_config' in data:
             template.template_config = json.dumps(data['template_config'])
 
-        template.updated_at = datetime.now(timezone.utc)()
+        template.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({

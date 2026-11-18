@@ -153,7 +153,7 @@ def update_webhook(webhook_id):
         if 'enabled' in data:
             webhook.enabled = data['enabled']
 
-        webhook.updated_at = datetime.now(timezone.utc)()
+        webhook.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({
@@ -197,7 +197,7 @@ def regenerate_webhook_token(webhook_id):
             return jsonify({'code': 1, 'message': 'Token验证未启用'}), 400
 
         webhook.token = Webhook.generate_token()
-        webhook.updated_at = datetime.now(timezone.utc)()
+        webhook.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({
@@ -218,7 +218,7 @@ def toggle_webhook(webhook_id):
     try:
         webhook = Webhook.query.get_or_404(webhook_id)
         webhook.enabled = not webhook.enabled
-        webhook.updated_at = datetime.now(timezone.utc)()
+        webhook.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({

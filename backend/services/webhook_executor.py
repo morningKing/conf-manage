@@ -44,7 +44,7 @@ def execute_webhook(webhook_id, request_data, request_context):
 
         # 更新统计信息
         webhook.call_count += 1
-        webhook.last_called_at = datetime.now(timezone.utc)()
+        webhook.last_called_at = datetime.now(timezone.utc)
 
         # 准备执行参数
         params = prepare_execution_params(webhook, request_data)

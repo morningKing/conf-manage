@@ -146,7 +146,7 @@ def update_workflow(workflow_id):
         if 'enabled' in data:
             workflow.enabled = data['enabled']
 
-        workflow.updated_at = datetime.now(timezone.utc)()
+        workflow.updated_at = datetime.now(timezone.utc)
 
         # 更新节点与边（传入 None 表示不修改该部分）
         _sync_workflow_graph(
@@ -247,7 +247,7 @@ def toggle_workflow(workflow_id):
     try:
         workflow = Workflow.query.get_or_404(workflow_id)
         workflow.enabled = not workflow.enabled
-        workflow.updated_at = datetime.now(timezone.utc)()
+        workflow.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({
@@ -329,7 +329,7 @@ def cancel_workflow_execution(execution_id):
             return jsonify({'code': 1, 'message': '工作流已完成，无法取消'}), 400
 
         execution.status = 'cancelled'
-        execution.end_time = datetime.now(timezone.utc)()
+        execution.end_time = datetime.now(timezone.utc)
         db.session.commit()
 
         return jsonify({

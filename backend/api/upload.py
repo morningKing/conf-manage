@@ -2,6 +2,7 @@
 临时文件上传API
 """
 from flask import request, jsonify
+from config import Config
 import os
 import uuid
 from datetime import datetime
@@ -23,7 +24,7 @@ def upload_temp_file():
             return jsonify({'code': 1, 'message': '文件名为空'}), 400
 
         # 创建临时目录
-        temp_dir = os.path.join(os.getcwd(), 'temp_upload')
+        temp_dir = Config.UPLOAD_FOLDER  # 统一使用配置的上传目录，避免依赖启动位置
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
 
