@@ -71,8 +71,9 @@ const buttonClasses = computed(() => {
   border: none;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
-  border-radius: 20px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  border-radius: 4px;
+  font-size: 13px;
 }
 
 .glass-button--disabled {
@@ -82,25 +83,25 @@ const buttonClasses = computed(() => {
 
 /* Primary type - 使用实色背景 */
 .glass-button--primary {
-  background: #667eea;
+  background: var(--el-color-primary);
   color: white;
 }
 
 .glass-button--primary:hover:not(.glass-button--disabled) {
-  background: #764ba2;
+  background: var(--el-color-primary-dark-2);
 }
 
-/* Secondary type - 使用亮色背景 */
+/* Secondary type - 亮色描边 */
 .glass-button--secondary {
-  background: var(--bg-tertiary, #fafafa);
-  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
+  background: var(--el-bg-color);
+  color: var(--el-text-color-regular);
+  border: 1px solid var(--el-border-color);
 }
 
 .glass-button--secondary:hover:not(.glass-button--disabled) {
-  background: var(--bg-secondary, #ffffff);
-  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
-  color: var(--text-primary, #1e1e2e);
+  background: var(--el-fill-color-light);
+  border-color: var(--el-color-primary);
+  color: var(--el-text-color-primary);
 }
 
 /* Success type - 使用实色 */
@@ -135,18 +136,17 @@ const buttonClasses = computed(() => {
 
 /* Size variations */
 .glass-button--small {
-  padding: 4px 10px;
-  font-size: 10px;
-  border-radius: 12px;
-}
-
-.glass-button--default {
-  padding: 8px 16px;
+  padding: 5px 10px;
   font-size: 12px;
 }
 
+.glass-button--default {
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
 .glass-button--large {
-  padding: 10px 20px;
+  padding: 9px 18px;
   font-size: 14px;
 }
 

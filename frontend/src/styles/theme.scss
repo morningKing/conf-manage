@@ -1,0 +1,208 @@
+// ============================================================
+// theme.scss — 专业管理后台主题
+// Element Plus 紧凑密度 + 真实深色主题（html.dark，EP 官方机制）
+// 品牌主色：紫蓝 #667eea
+// ============================================================
+
+// ---------- 品牌主色（Element Plus 变量覆盖，深浅自动适配） ----------
+:root {
+  --el-color-primary: #667eea;
+  --el-color-primary-light-3: #8ba0f1;
+  --el-color-primary-light-5: #b0bff6;
+  --el-color-primary-light-7: #d5ddfa;
+  --el-color-primary-light-8: #e5e9fc;
+  --el-color-primary-light-9: #f2f4fd;
+  --el-color-primary-dark-2: #5265c8;
+
+  // 应用壳层令牌
+  --app-bg: #f5f7fa;
+  --card-padding: 12px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+  --transition-fast: 0.15s ease;
+}
+
+html.dark {
+  --el-color-primary: #7c8cf0;
+  // 深色模式下 light-N 系列向黑色混合（EP 官方约定）
+  --el-color-primary-light-3: #6474d8;
+  --el-color-primary-light-5: #4c56b8;
+  --el-color-primary-light-7: #3a419b;
+  --el-color-primary-light-8: #2e3480;
+  --el-color-primary-light-9: #262b6e;
+  --el-color-primary-dark-2: #90a0f4;
+
+  --app-bg: #0f1115;
+}
+
+// ---------- 全局基础 ----------
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+// ---------- 应用壳层 ----------
+.glass-app {
+  min-height: 100vh;
+  background: var(--app-bg);
+  color: var(--el-text-color-primary);
+}
+
+// 卡片（10 个列表页共用）
+.glass-card {
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--radius-md);
+  padding: var(--card-padding);
+
+  &:hover {
+    border-color: var(--el-border-color);
+  }
+}
+
+// ★ 卡片页头全局样式（修复 8 个页面无样式页头）
+.glass-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.glass-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+// 顶部栏
+.glass-header {
+  height: 44px;
+  padding: 0 16px;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// 主内容区
+.main-content {
+  padding: 12px;
+  overflow-y: auto;
+}
+
+// 轻量文本按钮（顶栏图标按钮用）
+.glass-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--radius-sm);
+  color: var(--el-text-color-regular);
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-primary);
+  }
+}
+
+.glass-btn-sm {
+  padding: 5px;
+}
+
+// ---------- Element Plus 紧凑密度覆盖 ----------
+.el-table {
+  font-size: 13px;
+
+  .el-table__cell {
+    padding: 6px 8px;
+  }
+}
+
+.el-dialog {
+  border-radius: 8px;
+
+  .el-dialog__body {
+    padding: 16px 20px;
+  }
+}
+
+.el-tag {
+  border-radius: 4px;
+}
+
+.el-button {
+  border-radius: var(--radius-sm);
+}
+
+// ---------- 滚动条 ----------
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--el-border-color);
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--el-border-color-dark);
+  }
+}
+
+// ---------- 过渡 ----------
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-slide-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.fade-slide-leave-active {
+  transition: all 0.1s ease-in;
+}
+
+.fade-slide-enter-from {
+  transform: translateX(12px);
+  opacity: 0;
+}
+
+.fade-slide-leave-to {
+  transform: translateX(-12px);
+  opacity: 0;
+}

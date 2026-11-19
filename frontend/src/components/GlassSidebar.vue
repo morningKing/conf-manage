@@ -98,33 +98,31 @@ const isActive = (path) => {
 
 <style scoped>
 .glass-sidebar {
-  width: 55px;
-  background: var(--bg-secondary, #ffffff);
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
-  border-radius: 12px;
-  height: calc(100vh - 30px);
-  margin: 15px;
+  width: 48px;
+  background: var(--el-bg-color);
+  border-right: 1px solid var(--el-border-color-lighter);
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
+  padding: 8px 0;
 }
 
 /* Logo Area */
 .logo-area {
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  background: var(--el-color-primary);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -159,40 +157,38 @@ const isActive = (path) => {
 }
 
 .nav-area::-webkit-scrollbar-thumb {
-  background: var(--border-low, rgba(102, 126, 234, 0.15));
+  background: var(--el-border-color-lighter);
   border-radius: 2px;
 }
 
 .nav-item {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-tertiary, #fafafa);
-  border-radius: 8px;
-  color: var(--text-secondary, rgba(30, 30, 46, 0.7));
+  border-radius: 4px;
+  color: var(--el-text-color-secondary);
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
 }
 
 .nav-item:hover {
-  background: var(--glass-active, rgba(102, 126, 234, 0.1));
-  color: var(--text-primary, #1e1e2e);
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 /* Tools Area */
 .tools-area {
-  padding-top: 16px;
-  margin-top: 16px;
-  border-top: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--el-border-color-lighter);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -201,22 +197,22 @@ const isActive = (path) => {
 }
 
 .tool-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-tertiary, #fafafa);
+  background: transparent;
   border: none;
-  border-radius: 8px;
-  color: var(--text-secondary, rgba(30, 30, 46, 0.7));
+  border-radius: 4px;
+  color: var(--el-text-color-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease;
 }
 
 .tool-btn:hover {
-  background: var(--glass-active, rgba(102, 126, 234, 0.1));
-  color: var(--text-primary, #1e1e2e);
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
 }
 
 /* Responsive: Mobile Bottom Navigation */
