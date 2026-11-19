@@ -10,3 +10,8 @@ xlrd==2.0.1
 flask-socketio>=5.3.0
 python-engineio>=4.3.0
 python-socketio>=5.5.0
+
+# MCP 服务（对外提供脚本/工作流执行工具）
+mcp>=2.3
+uvicorn>=0.30
+

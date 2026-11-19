@@ -94,6 +94,40 @@ docs/           # Nginx 部署指南 + archive/（历史过程文档）
 7. **备份**：pg_dump 数据库导出 + 文件系统 tar 包
 8. **系统设置**：AI 配置（api_key 掩码存储显示）、清理策略
 
+## MCP 服务（对外提供脚本执行能力）
+
+系统内置 MCP 服务器，把脚本/工作流执行能力以标准 MCP 工具暴露给 Claude Desktop、Cursor 等 AI 客户端：
+
+```bash
+# Streamable HTTP 模式（远程/多客户端；默认 127.0.0.1:8808，env 可配）
+cd backend && python mcp_server.py
+
+# stdio 模式（本地客户端直连）
+python mcp_server.py --transport stdio
+```
+
+- 鉴权：设置 `MCP_TOKEN` 后 http 模式要求 `Authorization: Bearer <token>`
+- 端口/绑定：`MCP_PORT`（默认 8808）、`MCP_HOST`（默认 127.0.0.1）
+- 自动加载根目录 `.env`（不覆盖已有环境变量）
+- MCP 进程内会清空 APScheduler 任务，避免与主服务重复触发定时任务
+
+工具清单：`list_scripts` / `get_script` / `run_script` / `wait_execution` /
+`get_execution` / `list_executions` / `cancel_execution` / `run_workflow` /
+`wait_workflow_execution`。
+
+客户端接入示例（Claude Desktop / Cursor，stdio 模式）：
+
+```json
+{
+  "mcpServers": {
+    "script-tool-manager": {
+      "command": "python",
+      "args": ["E:/path/to/conf-manage/backend/mcp_server.py", "--transport", "stdio"]
+    }
+  }
+}
+```
+
 ## 部署
 
 Nginx 反代部署见 [docs/NGINX_DEPLOYMENT.md](docs/NGINX_DEPLOYMENT.md)。生产环境注意：`SECRET_KEY` 必须更换、`HOST_DEBUG=false`、数据库密码不使用默认值。

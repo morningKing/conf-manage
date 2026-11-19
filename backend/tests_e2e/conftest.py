@@ -21,6 +21,7 @@ BASE_URL = f'http://localhost:{BASE_PORT}'
 STARTUP_TIMEOUT = 60
 
 _server_proc = None
+_db_url = None
 
 
 def _assert_port_free():
@@ -40,9 +41,10 @@ def _assert_port_free():
 
 
 def _start_server():
-    global _server_proc
+    global _server_proc, _db_url
     _assert_port_free()
     env = server_env()
+    _db_url = env.get('DATABASE_URL')
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # 服务输出写入文件（不能接 PIPE：无人读取时写满缓冲会阻塞整个服务）
     # 日志路径限定在系统临时目录内（basename 白名单 + 边界校验）
@@ -103,3 +105,9 @@ def api():
     """带统一 payload 解包的 HTTP 客户端"""
     from helpers import Api
     return Api(BASE_URL)
+
+
+@pytest.fixture(scope='session')
+def db_url():
+    """E2E 数据库连接串（供 MCP 等附加进程复用同一数据库）"""
+    return _db_url
