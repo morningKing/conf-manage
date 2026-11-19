@@ -190,9 +190,9 @@ def run_schedule_now(schedule_id):
     try:
         schedule = Schedule.query.get_or_404(schedule_id)
 
-        # 创建执行记录并执行
-        from ..models import Execution
-        from ..services.executor import execute_script
+        # 创建执行记录并执行（绝对导入：api 为顶层包，.. 越界会抛 ImportError）
+        from models import Execution
+        from services.executor import execute_script
         from threading import Thread
 
         execution = Execution(
@@ -203,20 +203,24 @@ def run_schedule_now(schedule_id):
         db.session.add(execution)
         db.session.commit()
 
+        # 序列化需在线程启动前完成，避免请求会话与新线程的懒加载竞争
+        exec_id = execution.id
+        data = execution.to_dict()
+
         # 线程必须携带应用上下文，否则 Flask-SQLAlchemy 的会话不可用
         from flask import current_app
         app = current_app._get_current_object()
 
         def _run_with_context():
             with app.app_context():
-                execute_script(execution.id)
+                execute_script(exec_id)
 
         thread = Thread(target=_run_with_context)
         thread.start()
 
         return jsonify({
             'code': 0,
-            'data': execution.to_dict(),
+            'data': data,
             'message': '任务已启动执行'
         })
     except HTTPException:

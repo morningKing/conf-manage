@@ -54,7 +54,7 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
     logger.info("=" * 70)
     logger.info("系统备份工具")
     logger.info("=" * 70)
-    logger.info()
+    logger.info('')
 
     # 定义需要备份的目录
     backup_items = []
@@ -136,7 +136,7 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
         logger.info(f"  ✓ {item['name']}: {files} 个文件, {size_mb:.2f} MB")
 
     logger.info(f"\n总计: {total_files} 个文件, {total_size / (1024*1024):.2f} MB")
-    logger.info()
+    logger.info('')
 
     # 创建备份
     logger.info(f"开始创建备份: {backup_file}")
@@ -167,7 +167,7 @@ def backup_system(backup_name=None, include_logs=False, include_execution_spaces
     logger.info(f"✓ 备份文件: {backup_file}")
     logger.info(f"✓ 备份大小: {backup_size_mb:.2f} MB ({backup_size:,} 字节)")
     logger.info(f"✓ 压缩率: {compression_ratio:.1f}%")
-    logger.info()
+    logger.info('')
 
     return backup_file
 

@@ -335,9 +335,10 @@ def get_excel_sheet_data():
                     row_data.append(value)
                 rows.append(row_data)
 
-            # 获取合并单元格信息
+            # 获取合并单元格信息（只读模式下 openpyxl 不提供 merged_cells）
             merge_cells = []
-            for merge_range in sheet.merged_cells.ranges:
+            merged_ranges = list(sheet.merged_cells.ranges) if hasattr(sheet, 'merged_cells') else []
+            for merge_range in merged_ranges:
                 merge_cells.append({
                     'r': merge_range.min_row - 1,  # 转换为 0-based 索引
                     'c': merge_range.min_col - 1,

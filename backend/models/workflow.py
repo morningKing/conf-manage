@@ -131,6 +131,7 @@ class WorkflowExecution(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'duration': (self.end_time - self.start_time).total_seconds() if self.end_time and self.start_time else None
         }
+        return d
 
 
 class WorkflowNodeExecution(db.Model):
