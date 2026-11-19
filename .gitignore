@@ -133,3 +133,9 @@ secrets.json
 
 # Mimosa security hook state
 .mimosa/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+test-results/

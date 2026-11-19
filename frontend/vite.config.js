@@ -14,7 +14,8 @@ export default defineConfig({
     port: 5177,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        // E2E 等场景可用 VITE_PROXY_TARGET 指向被测后端
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5001',
         changeOrigin: true
       }
     }

@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import Config  # noqa: E402
+# 注意：不要在此导入 config —— run_server.py 需在设置环境变量之后再加载 app/config
 
 PG_HOST = os.environ.get('DB_HOST', 'localhost')
 PG_PORT = os.environ.get('DB_PORT', '5432')
