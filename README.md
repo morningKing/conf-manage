@@ -44,6 +44,21 @@ cd ../frontend && npm run lint              # 前端 lint
 npm run build                               # 前端构建
 ```
 
+### E2E 测试（双层）
+
+```bash
+# 1) 后端 API E2E：真实服务进程（端口 5101）+ 独立 PG 库 confmanage_e2e
+#    自动重建测试库，绝不触碰业务库 confmanage；不可用 PG 时回退 SQLite
+cd backend && python -m pytest tests_e2e -q
+
+# 2) 浏览器 E2E：Playwright 驱动真实页面（自动拉起后端 + Vite dev）
+cd frontend
+npx playwright install chromium   # 首次
+npm run test:e2e                  # 无头模式；--headed 可见
+```
+
+注意：Windows 上若上次运行残留服务进程占用 5101，请先 `netstat -ano | findstr :5101` 清理（conftest 已内置端口预检并给出提示）。
+
 ## 环境变量
 
 见 [.env.example](.env.example)：数据库连接（或整串 `DATABASE_URL`）、`SECRET_KEY`、监听 `HOST_BIND/HOST_PORT/HOST_DEBUG`、`CORS_ORIGINS`、`ALLOW_PRIVATE_API_TARGETS`（AI 接口私网边界，默认允许以兼容本地大模型，加固部署设 false）。

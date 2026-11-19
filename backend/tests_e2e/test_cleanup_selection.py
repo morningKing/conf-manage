@@ -3,17 +3,18 @@
 import time
 
 import psycopg2
+import pytest
 
 from dbsetup import build_pg_url, E2E_DB_NAME, PG_HOST, PG_PORT, PG_USER, PG_PASSWORD
 
 
 def _seed_executions(n, script_id, minutes_ago=2880):
+    """直连 E2E 库插入历史执行记录（绕过逐条真实执行的成本）"""
     try:
         conn = psycopg2.connect(build_pg_url(E2E_DB_NAME), connect_timeout=3)
         conn.close()
     except Exception:
         pytest.skip('清理种子数据测试需要 PostgreSQL E2E 库')
-    """直连 E2E 库插入历史执行记录（绕过逐条真实执行的成本）"""
     conn = psycopg2.connect(build_pg_url(E2E_DB_NAME))
     cur = conn.cursor()
     for _ in range(n):
