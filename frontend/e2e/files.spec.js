@@ -6,7 +6,12 @@ import fs from 'node:fs'
 
 test('上传文件 → 列表可见 → 删除', async ({ page }) => {
   const fileName = `ui_file_${Date.now() % 10 ** 10}.txt`
-  const tmp = path.join(os.tmpdir(), fileName)
+  // 只接受纯文件名（basename 白名单）+ 根目录边界校验，杜绝 ../ 越出临时目录
+  const uploadsRoot = path.resolve(os.tmpdir())
+  const tmp = path.resolve(uploadsRoot, path.basename(fileName))
+  if (!tmp.startsWith(uploadsRoot + path.sep)) {
+    throw new Error('非法临时文件路径')
+  }
   fs.writeFileSync(tmp, 'ui e2e file body')
 
   await page.goto('/files')
