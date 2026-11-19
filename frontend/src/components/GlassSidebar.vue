@@ -54,7 +54,10 @@ import {
   Sunny,
   Moon,
   QuestionFilled,
-  Tools
+  Tools,
+  Coin,
+  PriceTag,
+  Files
 } from '@element-plus/icons-vue'
 
 // Props
@@ -80,6 +83,9 @@ const navItems = [
   { path: '/workflows', icon: Share, title: '工作流' },
   { path: '/files', icon: Folder, title: '文件管理' },
   { path: '/environments', icon: Setting, title: '环境配置' },
+  { path: '/global-variables', icon: Coin, title: '全局变量' },
+  { path: '/tags', icon: PriceTag, title: '标签管理' },
+  { path: '/backup', icon: Files, title: '备份管理' },
   { path: '/ai-settings', icon: Tools, title: '系统设置' },
   { path: '/ai-script-writer', icon: MagicStick, title: 'AI脚本助手' }
 ]

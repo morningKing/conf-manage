@@ -1,4 +1,4 @@
-// 侧边栏导航全量走查：9 个页面可达且渲染核心元素
+// 侧边栏导航全量走查：12 个页面可达且渲染核心元素
 import { test, expect } from '@playwright/test'
 
 const PAGES = [
@@ -9,6 +9,9 @@ const PAGES = [
   { path: '/workflows', title: '工作流', anchor: '创建工作流' },
   { path: '/files', title: '文件管理', anchor: null },
   { path: '/environments', title: '环境配置', anchor: null },
+  { path: '/global-variables', title: '全局变量', anchor: '新增变量' },
+  { path: '/tags', title: '标签管理', anchor: '新建标签' },
+  { path: '/backup', title: '备份管理', anchor: '创建系统备份' },
   { path: '/ai-settings', title: '系统设置', anchor: '清理管理' },
   { path: '/ai-script-writer', title: 'AI脚本助手', anchor: null },
 ]
