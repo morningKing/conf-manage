@@ -83,45 +83,43 @@
         </div>
       </div>
 
-      <!-- 内容网格 -->
-      <div class="content-grid" v-if="!searchMode">
+      <!-- 内容列表（紧凑） -->
+      <div class="content-list" v-if="!searchMode">
         <!-- 文件夹 -->
         <div
           v-for="folder in currentFolders"
           :key="'folder-' + folder.id"
-          class="grid-item folder-item"
+          class="list-row"
           @dblclick="navigateToFolder(folder.id)"
           @contextmenu.prevent="showFolderContextMenu($event, folder)"
           @dragover.prevent="handleGridFolderDragOver($event, folder.id)"
           @dragleave="handleGridFolderDragLeave($event)"
           @drop.prevent="handleGridFolderDrop($event, folder.id)"
         >
-          <div class="item-icon folder-icon" :style="{ color: folder.color || '#E6A23C' }">
-            <el-icon :size="40"><Folder /></el-icon>
-          </div>
-          <div class="item-name">{{ folder.name }}</div>
+          <el-icon :size="16" class="row-icon" :style="{ color: folder.color || '#E6A23C' }"><Folder /></el-icon>
+          <span class="item-name">{{ folder.name }}</span>
+          <span class="row-meta">文件夹</span>
         </div>
 
         <!-- 脚本 -->
         <div
           v-for="script in currentScripts"
           :key="'script-' + script.id"
-          class="grid-item script-item"
+          class="list-row"
           draggable="true"
           @dragstart="handleDragStart($event, script)"
           @dragend="handleDragEnd"
           @contextmenu.prevent="showScriptContextMenu($event, script)"
         >
-          <div class="item-icon script-icon" :class="script.type">
-            <el-icon :size="40"><Document /></el-icon>
-            <span class="type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
-          </div>
-          <div class="item-name">{{ script.name }}</div>
+          <el-icon :size="16" class="row-icon" :class="script.type"><Document /></el-icon>
+          <span class="item-name">{{ script.name }}</span>
+          <span class="row-desc">{{ script.description }}</span>
+          <span class="row-meta type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
         </div>
 
         <!-- 空状态 -->
         <div v-if="currentFolders.length === 0 && currentScripts.length === 0" class="empty-state">
-          <el-empty description="此文件夹为空">
+          <el-empty description="此文件夹为空" :image-size="80">
             <div class="empty-actions">
               <GlassButton label="新建脚本" type="primary" @click="handleCreateScript" />
               <GlassButton label="新建文件夹" type="secondary" @click="handleCreateFolder" />
@@ -131,22 +129,21 @@
       </div>
 
       <!-- 搜索结果 -->
-      <div class="content-grid" v-else>
+      <div class="content-list" v-else>
         <div
           v-for="script in searchResults"
           :key="'search-' + script.id"
-          class="grid-item script-item"
+          class="list-row"
           @contextmenu.prevent="showScriptContextMenu($event, script)"
         >
-          <div class="item-icon script-icon" :class="script.type">
-            <el-icon :size="40"><Document /></el-icon>
-            <span class="type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
-          </div>
-          <div class="item-name">{{ script.name }}</div>
-          <div class="item-path" v-if="script.folder">{{ script.folder.name }}</div>
+          <el-icon :size="16" class="row-icon" :class="script.type"><Document /></el-icon>
+          <span class="item-name">{{ script.name }}</span>
+          <span class="row-desc">{{ script.description }}</span>
+          <span class="row-meta" v-if="script.folder">{{ script.folder.name }}</span>
+          <span class="row-meta type-badge">{{ script.type === 'python' ? '.py' : '.js' }}</span>
         </div>
         <div v-if="searchResults.length === 0" class="empty-state">
-          <el-empty description="没有找到匹配的脚本" />
+          <el-empty description="没有找到匹配的脚本" :image-size="80" />
         </div>
       </div>
     </div>
@@ -1219,16 +1216,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px;
+  padding: 12px;
 }
 
 .content-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .breadcrumb-clickable {
@@ -1245,97 +1242,85 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* ===== 内容网格 ===== */
-.content-grid {
+/* ===== 紧凑内容列表 ===== */
+.content-list {
   flex: 1;
   overflow-y: auto;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 16px;
-  padding: 4px;
-}
-
-.grid-item {
-  width: 120px;
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 16px 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  user-select: none;
-  background: var(--bg-tertiary, #fafafa);
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
+  gap: 2px;
+  padding: 2px;
 }
 
-.grid-item:hover {
-  background: var(--bg-secondary, #ffffff);
-  border-color: var(--border-main, rgba(102, 126, 234, 0.5));
-}
-
-.grid-item.drag-over {
-  background: rgba(102, 126, 234, 0.15);
-  outline: 2px dashed rgba(102, 126, 234, 0.50);
-}
-
-.item-icon {
-  width: 60px;
-  height: 60px;
+.list-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  position: relative;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  transition: background 0.15s ease;
 }
 
-.folder-icon {
-  color: inherit;
+.list-row:hover {
+  background: var(--el-fill-color-light);
 }
 
-.script-icon.python {
-  color: #3776AB;
+.list-row.drag-over {
+  background: var(--el-color-primary-light-9);
+  outline: 1px dashed var(--el-color-primary);
 }
 
-.script-icon.javascript {
-  color: #F7DF1E;
-}
-
-.type-badge {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  font-size: 10px;
-  background: var(--el-bg-color);
-  padding: 0 4px;
-  border-radius: 3px;
+.row-icon {
+  flex-shrink: 0;
   color: var(--el-text-color-secondary);
-  border: 1px solid var(--el-border-color-lighter);
+}
+
+.row-icon.python {
+  color: #3776ab;
+}
+
+.row-icon.javascript {
+  color: #d4a017;
 }
 
 .item-name {
   font-size: 13px;
-  text-align: center;
-  word-break: break-all;
-  line-height: 1.3;
-  max-width: 100%;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  color: var(--text-primary, #1e1e2e);
+  text-overflow: ellipsis;
+  max-width: 280px;
 }
 
-.item-path {
+.row-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-meta {
+  flex-shrink: 0;
   font-size: 11px;
-  color: var(--text-muted, rgba(30, 30, 46, 0.5));
-  margin-top: 2px;
+  color: var(--el-text-color-secondary);
+}
+
+.type-badge {
+  font-size: 10px;
+  background: var(--el-fill-color);
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .empty-state {
   width: 100%;
-  padding: 60px 0;
+  padding: 24px 0;
 }
 
 .empty-actions {
