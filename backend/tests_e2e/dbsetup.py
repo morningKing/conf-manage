@@ -44,8 +44,10 @@ def ensure_e2e_database():
         cur.execute(
             "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
             "WHERE datname = %s AND pid <> pg_backend_pid()", (E2E_DB_NAME,))
-        cur.execute(f'DROP DATABASE IF EXISTS "{E2E_DB_NAME}"')
-        cur.execute(f'CREATE DATABASE "{E2E_DB_NAME}"')
+        # DDL 标识符用 psycopg2.sql 组合（不可参数化，但杜绝字符串拼接注入）
+        from psycopg2 import sql
+        cur.execute(sql.SQL('DROP DATABASE IF EXISTS {}').format(sql.Identifier(E2E_DB_NAME)))
+        cur.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(E2E_DB_NAME)))
         cur.close()
         conn.close()
         return build_pg_url(E2E_DB_NAME), 'postgresql'

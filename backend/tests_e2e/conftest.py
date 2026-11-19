@@ -45,7 +45,11 @@ def _start_server():
     env = server_env()
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # 服务输出写入文件（不能接 PIPE：无人读取时写满缓冲会阻塞整个服务）
-    log_path = os.path.join(tempfile.gettempdir(), f'e2e_server_{BASE_PORT}.log')
+    # 日志路径限定在系统临时目录内（basename 白名单 + 边界校验）
+    log_root = os.path.realpath(tempfile.gettempdir())
+    log_path = os.path.realpath(os.path.join(log_root, os.path.basename(f'e2e_server_{BASE_PORT}.log')))
+    if not log_path.startswith(log_root + os.sep):
+        raise RuntimeError('非法的 E2E 服务日志路径')
     log_fh = open(log_path, 'w', encoding='utf-8')
     proc = subprocess.Popen(
         [sys.executable, 'app.py'],
