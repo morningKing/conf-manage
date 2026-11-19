@@ -337,14 +337,9 @@ onMounted(() => {
 
 <style scoped>
 .ai-settings {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .help-text {
   font-size: 12px;
@@ -353,7 +348,7 @@ onMounted(() => {
 }
 
 .cleanup-section .glass-card-body {
-  padding: 20px;
+  padding: 12px;
 }
 
 .config-item {

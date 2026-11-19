@@ -1,15 +1,13 @@
 <template>
   <div class="tags-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>标签管理</span>
-          <el-button type="primary" @click="handleCreate">
-            <el-icon><Plus /></el-icon>
-            新建标签
-          </el-button>
-        </div>
-      </template>
+    <div class="glass-card">
+      <div class="glass-card-header">
+        <span class="glass-card-title">标签管理</span>
+        <el-button size="small" type="primary" @click="handleCreate">
+          <el-icon><Plus /></el-icon>
+          新建标签
+        </el-button>
+      </div>
 
       <el-table :data="tags" stripe>
         <el-table-column prop="name" label="标签名称" width="200" />
@@ -20,15 +18,8 @@
         </el-table-column>
         <el-table-column label="颜色" width="150">
           <template #default="{ row }">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div
-                :style="{
-                  width: '40px',
-                  height: '20px',
-                  backgroundColor: row.color,
-                  borderRadius: '4px'
-                }"
-              />
+            <div class="color-cell">
+              <div class="color-chip" :style="{ backgroundColor: row.color }" />
               <span>{{ row.color }}</span>
             </div>
           </template>
@@ -45,7 +36,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -168,12 +159,19 @@ onMounted(() => {
 
 <style scoped>
 .tags-container {
-  padding: 20px;
+  padding: 0;
 }
 
-.card-header {
+.color-cell {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
+}
+
+.color-chip {
+  width: 40px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--el-border-color-lighter);
 }
 </style>

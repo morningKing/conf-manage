@@ -257,7 +257,7 @@
     </el-dialog>
 
     <!-- 模板选择对话框 -->
-    <el-dialog v-model="templateDialogVisible" title="选择工作流模板" width="900px">
+    <el-dialog v-model="templateDialogVisible" title="选择工作流模板" width="720px">
       <el-form label-width="80px" style="margin-bottom: 16px">
         <el-form-item label="模板分类">
           <el-select v-model="selectedCategory" placeholder="全部分类" clearable style="width: 200px">
@@ -781,14 +781,9 @@ onMounted(() => {
 
 <style scoped>
 .workflows-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .template-grid {
   display: grid;

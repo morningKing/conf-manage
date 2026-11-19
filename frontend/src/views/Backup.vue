@@ -319,16 +319,9 @@ onMounted(() => {
 
 <style scoped>
 .backup-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 16px;
-  font-weight: bold;
-}
 
 .backup-actions {
   display: flex;

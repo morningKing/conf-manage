@@ -18,7 +18,7 @@
                 :data="{ path: currentPath }"
                 :on-success="handleUploadSuccess"
                 :show-file-list="false"
-                style="display: inline-block; margin-left: 10px"
+                class="inline-ml10"
               >
                 <GlassButton label="上传文件" type="primary" size="small">
                   <template #icon><Upload /></template>
@@ -27,15 +27,15 @@
             </div>
           </div>
 
-          <el-breadcrumb separator="/" style="margin: 20px 0">
-            <el-breadcrumb-item @click="navigateTo('')" style="cursor: pointer">
+          <el-breadcrumb separator="/" class="breadcrumb-bar">
+            <el-breadcrumb-item @click="navigateTo('')" class="cursor-pointer">
               根目录
             </el-breadcrumb-item>
             <el-breadcrumb-item
               v-for="(part, index) in pathParts"
               :key="index"
               @click="navigateTo(pathParts.slice(0, index + 1).join('/'))"
-              style="cursor: pointer"
+              class="cursor-pointer"
             >
               {{ part }}
             </el-breadcrumb-item>
@@ -45,13 +45,13 @@
             <el-table-column label="名称" min-width="300">
               <template #default="{ row }">
                 <div
-                  style="display: flex; align-items: center; cursor: pointer"
+                  class="file-name-cell"
                   @click="handleItemClick(row)"
                 >
-                  <el-icon v-if="row.is_dir" style="margin-right: 5px; color: #409eff">
+                  <el-icon v-if="row.is_dir" class="row-icon-dir">
                     <Folder />
                   </el-icon>
-                  <el-icon v-else style="margin-right: 5px; color: #67c23a">
+                  <el-icon v-else class="row-icon-file">
                     <Document />
                   </el-icon>
                   <span>{{ row.name }}</span>
@@ -98,7 +98,7 @@
               placeholder="选择执行记录"
               filterable
               @change="handleExecutionChange"
-              style="width: 400px"
+              class="w-select"
             >
               <el-option
                 v-for="exec in executions"
@@ -106,9 +106,9 @@
                 :label="`#${exec.id} - ${exec.script_name} (${formatExecutionTime(exec.created_at)})`"
                 :value="exec.id"
               >
-                <div style="display: flex; justify-content: space-between; align-items: center">
+                <div class="exec-item-header">
                   <span>#{{ exec.id }} - {{ exec.script_name }}</span>
-                  <el-tag :type="getStatusType(exec.status)" size="small" style="margin-left: 10px">
+                  <el-tag :type="getStatusType(exec.status)" size="small" class="tag-ml10">
                     {{ getStatusText(exec.status) }}
                   </el-tag>
                 </div>
@@ -117,13 +117,13 @@
             <el-button
               :icon="Refresh"
               @click="refreshExecutionFiles"
-              style="margin-left: 10px"
+              class="tag-ml10"
             >
               刷新文件
             </el-button>
           </div>
 
-          <div v-if="selectedExecution" style="margin-top: 20px">
+          <div v-if="selectedExecution" class="detail-block">
             <ExecutionFiles ref="executionFilesRef" :execution-id="selectedExecution" />
           </div>
           <el-empty v-else description="请选择一个执行记录查看文件" />
@@ -137,7 +137,7 @@
               placeholder="选择工作流执行记录"
               filterable
               @change="handleWorkflowExecutionChange"
-              style="width: 400px"
+              class="w-select"
             >
               <el-option
                 v-for="exec in workflowExecutions"
@@ -145,9 +145,9 @@
                 :label="`#${exec.id} - ${exec.workflow?.name || '未知工作流'} (${formatExecutionTime(exec.created_at)})`"
                 :value="exec.id"
               >
-                <div style="display: flex; justify-content: space-between; align-items: center">
+                <div class="exec-item-header">
                   <span>#{{ exec.id }} - {{ exec.workflow?.name || '未知工作流' }}</span>
-                  <el-tag :type="getStatusType(exec.status)" size="small" style="margin-left: 10px">
+                  <el-tag :type="getStatusType(exec.status)" size="small" class="tag-ml10">
                     {{ getStatusText(exec.status) }}
                   </el-tag>
                 </div>
@@ -156,13 +156,13 @@
             <el-button
               :icon="Refresh"
               @click="refreshWorkflowExecutionFiles"
-              style="margin-left: 10px"
+              class="tag-ml10"
             >
               刷新文件
             </el-button>
           </div>
 
-          <div v-if="selectedWorkflowExecution" style="margin-top: 20px">
+          <div v-if="selectedWorkflowExecution" class="detail-block">
             <ExecutionFiles ref="workflowExecutionFilesRef" :workflow-execution-id="selectedWorkflowExecution" />
           </div>
           <el-empty v-else description="请选择一个工作流执行记录查看文件" />
@@ -186,7 +186,7 @@
       width="90%"
       top="5vh"
     >
-      <div v-loading="previewLoading" style="min-height: 200px">
+      <div v-loading="previewLoading" class="preview-loading">
         <!-- Excel预览 -->
         <el-tabs v-if="previewData?.type === 'excel' && previewData.sheets" v-model="activeSheet" type="border-card">
           <el-tab-pane
@@ -199,7 +199,7 @@
               :data="sheet.rows"
               stripe
               border
-              style="width: 100%"
+              class="code-editor-full"
               max-height="600"
             >
               <el-table-column
@@ -218,15 +218,15 @@
         </el-tabs>
 
         <!-- 文本预览/编辑 -->
-        <div v-else-if="previewData?.type === 'text' || previewData?.type === 'json'" style="max-height: 600px; overflow: auto">
-          <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <div v-else-if="previewData?.type === 'text' || previewData?.type === 'json'" class="preview-scroll">
+          <div class="preview-toolbar">
             <el-switch
               v-if="isEditable(currentPreviewFile?.name)"
               v-model="editMode"
               active-text="编辑模式"
               inactive-text="预览模式"
             />
-            <div v-if="previewData.encoding" style="color: #909399; font-size: 12px;">
+            <div v-if="previewData.encoding" class="preview-encoding">
               编码: {{ previewData.encoding }}
             </div>
           </div>
@@ -235,25 +235,25 @@
             v-model="editContent"
             type="textarea"
             :rows="25"
-            style="font-family: 'Courier New', monospace;"
+            class="preview-code"
           />
-          <pre v-else style="background: #f5f5f5; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; line-height: 1.6; margin: 0;">{{ previewData.content }}</pre>
+          <pre v-else class="preview-pre">{{ previewData.content }}</pre>
         </div>
 
         <!-- 图片预览 -->
-        <div v-else-if="previewData?.type === 'image'" style="text-align: center; max-height: 600px; overflow: auto">
+        <div v-else-if="previewData?.type === 'image'" class="preview-scroll preview-center">
           <img
             :src="`data:${previewData.mime_type};base64,${previewData.content}`"
-            style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;"
+            class="preview-image"
             alt="预览图片"
           />
         </div>
 
         <!-- PDF预览 -->
-        <div v-else-if="previewData?.type === 'pdf'" style="height: 600px">
+        <div v-else-if="previewData?.type === 'pdf'" class="preview-pdf">
           <iframe
             :src="`data:application/pdf;base64,${previewData.content}`"
-            style="width: 100%; height: 100%; border: none"
+            class="preview-iframe"
           ></iframe>
         </div>
 
@@ -615,15 +615,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* —— 由 inline style 收敛而来 —— */
+.inline-ml10 { display: inline-block; margin-left: 10px; }
+.breadcrumb-bar { margin: 12px 0; }
+.cursor-pointer { cursor: pointer; }
+.file-name-cell { display: flex; align-items: center; cursor: pointer; }
+.row-icon-dir { margin-right: 5px; color: var(--el-color-primary); }
+.row-icon-file { margin-right: 5px; color: var(--el-color-success); }
+.w-select { width: 280px; }
+.exec-item-header { display: flex; justify-content: space-between; align-items: center; }
+.tag-ml10 { margin-left: 10px; }
+.detail-block { margin-top: 12px; }
+.preview-loading { min-height: 160px; }
+.code-editor-full { width: 100%; }
+.preview-scroll { max-height: 600px; overflow: auto; }
+.preview-center { text-align: center; }
+.preview-toolbar { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.preview-encoding { color: var(--el-text-color-secondary); font-size: 12px; }
+.preview-code { font-family: 'Courier New', monospace; }
+.preview-pre { background: var(--el-fill-color-darker); padding: 12px; border-radius: 4px; font-family: 'Courier New', monospace; line-height: 1.6; margin: 0; }
+.preview-image { max-width: 100%; height: auto; border: 1px solid var(--el-border-color); border-radius: 4px; }
+.preview-pdf { height: 600px; }
+.preview-iframe { width: 100%; height: 100%; border: none; }
+
 .files-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .tab-header {
   margin-bottom: 20px;

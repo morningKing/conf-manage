@@ -18,7 +18,7 @@
         <el-input
           v-model="searchText"
           placeholder="搜索Webhook名称或描述"
-          style="width: 300px;"
+          style="width: 240px;"
           clearable
           @input="handleSearch"
         >
@@ -179,7 +179,7 @@
     </el-dialog>
 
     <!-- Webhook URL对话框 -->
-    <el-dialog v-model="urlDialogVisible" title="Webhook URL" width="700px">
+    <el-dialog v-model="urlDialogVisible" title="Webhook URL" width="720px">
       <div class="webhook-info">
         <el-form label-width="100px">
           <el-form-item label="Webhook URL">
@@ -233,10 +233,10 @@
     </el-dialog>
 
     <!-- 测试对话框 -->
-    <el-dialog v-model="testDialogVisible" title="测试Webhook" width="700px">
+    <el-dialog v-model="testDialogVisible" title="测试Webhook" width="720px">
       <el-form label-width="100px">
         <el-form-item label="请求方法">
-          <el-select v-model="testRequest.method" style="width: 200px;">
+          <el-select v-model="testRequest.method" style="width: 240px;">
             <el-option label="POST" value="POST" />
             <el-option label="GET" value="GET" />
             <el-option label="PUT" value="PUT" />
@@ -276,7 +276,7 @@
     </el-dialog>
 
     <!-- 使用指南对话框 -->
-    <el-dialog v-model="showGuide" title="Webhook使用指南" width="800px">
+    <el-dialog v-model="showGuide" title="Webhook使用指南" width="720px">
       <div class="guide-content">
         <h3>什么是Webhook？</h3>
         <p>Webhook允许外部系统通过HTTP请求触发脚本执行，实现系统间的自动化集成。</p>
@@ -644,14 +644,9 @@ onMounted(() => {
 
 <style scoped>
 .webhooks-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .header-actions {
   display: flex;

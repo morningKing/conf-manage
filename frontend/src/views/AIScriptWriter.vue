@@ -134,7 +134,7 @@
           </div>
 
           <!-- 文件内容预览 -->
-          <el-dialog v-model="filePreviewVisible" title="文件预览" width="70%">
+          <el-dialog v-model="filePreviewVisible" title="文件预览" width="80%">
             <pre class="file-content">{{ currentFileContent }}</pre>
           </el-dialog>
         </div>
@@ -142,7 +142,7 @@
     </div>
 
     <!-- 保存对话框 -->
-    <el-dialog v-model="saveDialogVisible" title="保存为脚本" width="500px">
+    <el-dialog v-model="saveDialogVisible" title="保存为脚本" width="600px">
       <el-form :model="saveForm" :rules="saveRules" ref="saveFormRef" label-width="100px">
         <el-form-item label="脚本名称" prop="name">
           <el-input v-model="saveForm.name" placeholder="请输入脚本名称" />
@@ -441,14 +441,9 @@ onMounted(() => {
 
 <style scoped>
 .ai-script-writer {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .writer-container {
   display: flex;

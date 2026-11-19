@@ -67,17 +67,17 @@
         ref="executionsTable"
         @select-all="handleSelectAll"
       >
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="type_name" label="类型" width="120">
+        <el-table-column type="selection" width="40" />
+        <el-table-column prop="id" label="ID" width="64" />
+        <el-table-column prop="type_name" label="类型" width="90">
           <template #default="{ row }">
             <el-tag :type="row.execution_type === 'workflow' ? 'warning' : 'primary'" size="small">
               {{ row.type_name || '脚本执行' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="script_name" label="名称" width="200" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="script_name" label="名称" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="status" label="状态" width="84">
           <template #default="{ row }">
             <el-tag
               :type="getStatusType(row.status)"
@@ -87,7 +87,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="进度" width="200">
+        <el-table-column label="进度" width="140">
           <template #default="{ row }">
             <div v-if="row.status === 'running' || row.status === 'pending'">
               <ExecutionProgress
@@ -105,22 +105,22 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="start_time" label="开始时间" width="180">
+        <el-table-column prop="start_time" label="开始时间" width="150">
           <template #default="{ row }">
             {{ formatTime(row.start_time) }}
           </template>
         </el-table-column>
-        <el-table-column prop="end_time" label="结束时间" width="180">
+        <el-table-column prop="end_time" label="结束时间" width="150">
           <template #default="{ row }">
             {{ formatTime(row.end_time) }}
           </template>
         </el-table-column>
-        <el-table-column label="耗时" width="100">
+        <el-table-column label="耗时" width="80">
           <template #default="{ row }">
             {{ getDuration(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <GlassButton
               v-if="row.status === 'running'"
@@ -151,7 +151,7 @@
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
-        style="margin-top: 20px"
+        class="pagination"
       />
     </div>
 
@@ -713,17 +713,15 @@ onMounted(() => {
 
 <style scoped>
 .executions-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.glass-card-header {
+.pagination {
+  margin-top: 12px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
+  justify-content: flex-end;
 }
+
 
 .header-left {
   display: flex;

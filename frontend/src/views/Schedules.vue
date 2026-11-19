@@ -257,12 +257,7 @@ onMounted(() => {
 
 <style scoped>
 .schedules-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 </style>

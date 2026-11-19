@@ -35,8 +35,7 @@
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="variables.length === 0" description="暂无全局变量" />
-    </div>
+          </div>
 
     <!-- 创建/编辑对话框 -->
     <el-dialog
@@ -213,14 +212,9 @@ onMounted(() => {
 
 <style scoped>
 .global-variables-container {
-  padding: 20px;
+  padding: 12px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .encrypted-value {
   color: #909399;

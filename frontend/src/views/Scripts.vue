@@ -69,7 +69,7 @@
           <el-input
             v-model="searchText"
             placeholder="搜索脚本"
-            style="width: 200px;"
+            style="width: 240px;"
             clearable
             @input="handleSearch"
             @clear="handleSearchClear"
@@ -351,7 +351,7 @@
     </el-dialog>
 
     <!-- 执行对话框 -->
-    <el-dialog v-model="executeVisible" title="执行脚本" width="700px">
+    <el-dialog v-model="executeVisible" title="执行脚本" width="720px">
       <el-form :model="executeForm" label-width="100px">
         <el-form-item label="脚本名称">
           <el-input :value="currentScript?.name" disabled />
@@ -1379,7 +1379,7 @@ onUnmounted(() => {
 .script-dialog :deep(.el-dialog__body) {
   max-height: 70vh;
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px;
 }
 
 .script-form {
