@@ -441,7 +441,7 @@
     <el-dialog v-model="filePreviewVisible" :title="`预览: ${selectedFile?.name || ''}`" width="80%">
       <div class="file-preview-container">
         <pre v-if="filePreviewType === 'text'">{{ filePreviewContent }}</pre>
-        <div v-else style="color: #909399; text-align: center; padding: 40px;">{{ filePreviewContent }}</div>
+        <div v-else style="color: var(--el-text-color-secondary); text-align: center; padding: 40px;">{{ filePreviewContent }}</div>
       </div>
       <template #footer>
         <GlassButton label="关闭" type="secondary" @click="filePreviewVisible = false" />
@@ -1166,18 +1166,18 @@ onUnmounted(() => {
   border-radius: 8px;
   cursor: pointer;
   margin-bottom: 4px;
-  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
+  color: var(--el-text-color-regular, rgba(30, 30, 46, 0.8));
   transition: all 0.3s ease;
   background: transparent;
 }
 
 .tree-item:hover {
-  background: var(--glass-active, rgba(102, 126, 234, 0.1));
+  background: var(--el-fill-color, rgba(102, 126, 234, 0.1));
 }
 
 .tree-item.active {
-  background: var(--glass-highlight, rgba(102, 126, 234, 0.15));
-  color: var(--accent-primary, #667eea);
+  background: var(--el-color-primary-light-8, rgba(102, 126, 234, 0.15));
+  color: var(--el-color-primary, #667eea);
   font-weight: 500;
 }
 
@@ -1194,13 +1194,13 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
+  color: var(--el-text-color-regular, rgba(30, 30, 46, 0.8));
 }
 
 .tree-node-count {
   font-size: 12px;
-  color: var(--text-muted, rgba(30, 30, 46, 0.6));
-  background: var(--glass-base, rgba(102, 126, 234, 0.05));
+  color: var(--el-text-color-secondary, rgba(30, 30, 46, 0.6));
+  background: var(--el-fill-color-light, rgba(102, 126, 234, 0.05));
   padding: 0 6px;
   border-radius: 10px;
 }
@@ -1400,7 +1400,7 @@ onUnmounted(() => {
 }
 
 .code-editor-wrapper {
-  border: 1px solid var(--border-low);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -1441,7 +1441,7 @@ onUnmounted(() => {
 }
 
 .log-empty {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   text-align: center;
   padding: 40px;
   font-style: italic;
@@ -1467,7 +1467,7 @@ onUnmounted(() => {
 }
 
 .files-empty {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   text-align: center;
   padding: 40px;
   font-style: italic;

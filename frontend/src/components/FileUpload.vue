@@ -273,19 +273,19 @@ const formatFileSize = (bytes) => {
   align-items: center;
   margin-top: 10px;
   padding: 10px;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-radius: 4px;
 }
 
 .single-file-info .file-icon {
-  color: #409eff;
+  color: var(--el-color-primary);
   margin-right: 10px;
   font-size: 18px;
 }
 
 .single-file-info .file-name {
   flex: 1;
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -301,38 +301,38 @@ const formatFileSize = (bytes) => {
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  background-color: #fafafa;
+  background-color: var(--el-fill-color-light);
 }
 
 .upload-area:hover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
   background-color: #ecf5ff;
 }
 
 .upload-area.is-dragover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
   background-color: #ecf5ff;
   transform: scale(1.02);
 }
 
 .upload-icon {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-bottom: 16px;
 }
 
 .upload-area:hover .upload-icon {
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .upload-text .main-text {
   font-size: 16px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   margin: 0 0 8px 0;
 }
 
 .upload-text .sub-text {
   font-size: 14px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin: 0;
 }
 
@@ -345,10 +345,10 @@ const formatFileSize = (bytes) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid var(--el-border-color-lighter);
   margin-bottom: 10px;
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-weight: 500;
 }
 
@@ -366,18 +366,18 @@ const formatFileSize = (bytes) => {
 }
 
 .file-item:hover {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
 }
 
 .file-icon {
-  color: #409eff;
+  color: var(--el-color-primary);
   margin-right: 10px;
   font-size: 20px;
 }
 
 .file-name {
   flex: 1;
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -386,7 +386,7 @@ const formatFileSize = (bytes) => {
 }
 
 .file-size {
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 12px;
   margin-right: 10px;
   min-width: 60px;

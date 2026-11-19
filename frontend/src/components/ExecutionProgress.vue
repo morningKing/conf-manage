@@ -106,18 +106,18 @@ const finalStepDescription = computed(() => {
 .progress-percentage {
   font-size: 14px;
   font-weight: 600;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .progress-stage {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .progress-detail {
   margin-top: 20px;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-radius: 4px;
 }
 

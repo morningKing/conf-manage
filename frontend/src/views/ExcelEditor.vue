@@ -618,7 +618,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--bg-color, #f5f7fa);
+  background: var(--app-bg, var(--el-fill-color-light));
 }
 
 .excel-toolbar {
@@ -626,8 +626,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: var(--card-bg, #ffffff);
-  border-bottom: 1px solid var(--border-color, #e4e7ed);
+  background: var(--el-bg-color, #ffffff);
+  border-bottom: 1px solid var(--el-border-color, #e4e7ed);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -645,7 +645,7 @@ onBeforeUnmount(() => {
 .file-name {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-color, #303133);
+  color: var(--el-text-color-primary, #303133);
 }
 
 .toolbar-right {
@@ -658,7 +658,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, #909399);
   font-size: 14px;
 }
 
@@ -678,8 +678,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 20px;
-  background: var(--card-bg, #ffffff);
-  border-top: 1px solid var(--border-color, #e4e7ed);
+  background: var(--el-bg-color, #ffffff);
+  border-top: 1px solid var(--el-border-color, #e4e7ed);
 }
 
 .sheet-tabs {
@@ -699,7 +699,7 @@ onBeforeUnmount(() => {
 
 .save-status {
   font-size: 12px;
-  color: var(--text-color-secondary, #909399);
+  color: var(--el-text-color-secondary, #909399);
   display: flex;
   align-items: center;
   gap: 4px;

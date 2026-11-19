@@ -6,7 +6,7 @@
         <GlassButton label="添加AI配置" type="primary" size="small" @click="showAddDialog" />
       </div>
 
-      <div class="section-title" style="margin: 20px 0 10px; font-weight: 600; color: var(--text-primary)">AI配置管理</div>
+      <div class="section-title" style="margin: 20px 0 10px; font-weight: 600; color: var(--el-text-color-primary)">AI配置管理</div>
 
       <el-table :data="configs" style="width: 100%">
         <el-table-column prop="provider" label="提供商" width="120" />
@@ -45,13 +45,13 @@
       </div>
       <div class="glass-card-body">
         <!-- 白名单说明 -->
-        <div class="whitelist-tip" style="margin-bottom: 15px; padding: 10px; background: var(--glass-base); border-radius: 8px; border: 1px solid var(--border-low)">
-          <span style="color: var(--text-secondary)">
+        <div class="whitelist-tip" style="margin-bottom: 15px; padding: 10px; background: var(--el-fill-color-light); border-radius: 8px; border: 1px solid var(--el-border-color-lighter)">
+          <span style="color: var(--el-text-color-regular)">
             <el-icon style="margin-right: 5px"><InfoFilled /></el-icon>
             白名单功能：
           </span>
-          <span style="color: var(--text-muted)">
-            在 <router-link to="/schedules" style="color: var(--accent-primary)">定时任务</router-link> 页面或 <router-link to="/scripts" style="color: var(--accent-primary)">脚本管理</router-link> 页面，点击 ⭐ 星标图标可将任务或脚本加入白名单，其执行记录将不会被自动清理。
+          <span style="color: var(--el-text-color-secondary)">
+            在 <router-link to="/schedules" style="color: var(--el-color-primary)">定时任务</router-link> 页面或 <router-link to="/scripts" style="color: var(--el-color-primary)">脚本管理</router-link> 页面，点击 ⭐ 星标图标可将任务或脚本加入白名单，其执行记录将不会被自动清理。
           </span>
         </div>
 
@@ -343,7 +343,7 @@ onMounted(() => {
 
 .help-text {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-top: 5px;
 }
 
@@ -358,13 +358,13 @@ onMounted(() => {
 
 .config-label {
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   margin-right: 10px;
 }
 
 .config-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-left: 10px;
 }
 </style>

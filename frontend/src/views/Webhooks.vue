@@ -56,8 +56,8 @@
           <template #default="{ row }">
             <div class="stats">
               <span>调用: {{ row.call_count }}</span>
-              <span style="color: #67c23a;">成功: {{ row.success_count }}</span>
-              <span style="color: #f56c6c;">失败: {{ row.failed_count }}</span>
+              <span style="color: var(--el-color-success);">成功: {{ row.success_count }}</span>
+              <span style="color: var(--el-color-danger);">失败: {{ row.failed_count }}</span>
             </div>
           </template>
         </el-table-column>
@@ -672,7 +672,7 @@ onMounted(() => {
 
 .form-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-top: 5px;
 }
 
@@ -681,7 +681,7 @@ onMounted(() => {
 }
 
 .code-block {
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   padding: 15px;
   border-radius: 4px;
   overflow-x: auto;
@@ -695,7 +695,7 @@ onMounted(() => {
 .test-response {
   margin-top: 20px;
   padding: 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 4px;
 }
 
@@ -706,7 +706,7 @@ onMounted(() => {
 .guide-content h3 {
   margin-top: 20px;
   margin-bottom: 10px;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .guide-content ol, .guide-content ul {

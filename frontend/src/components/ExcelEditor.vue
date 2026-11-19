@@ -369,7 +369,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 70vh;
-  background: #fff;
+  background: var(--el-bg-color);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -379,7 +379,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
 }
 
@@ -391,7 +391,7 @@ defineExpose({
 
 .toolbar-left .filename {
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .toolbar-right {
@@ -402,20 +402,20 @@ defineExpose({
 .sheet-container {
   flex: 1;
   min-height: 400px;
-  background: #fff;
+  background: var(--el-bg-color);
   position: relative;
 }
 
 .status-bar {
   padding: 8px 16px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-top: 1px solid #dcdfe6;
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .status-bar .error {
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 </style>
 

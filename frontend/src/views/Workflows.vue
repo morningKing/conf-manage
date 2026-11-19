@@ -807,7 +807,7 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   height: 80px;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .template-info {
@@ -819,12 +819,12 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 500;
   margin-bottom: 8px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .template-desc {
   font-size: 13px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-bottom: 12px;
   min-height: 40px;
   line-height: 1.5;
@@ -839,7 +839,7 @@ onMounted(() => {
 
 .workflow-progress {
   padding: 16px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 4px;
   margin-bottom: 16px;
 }
@@ -854,13 +854,13 @@ onMounted(() => {
 .progress-label {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .progress-text {
   font-size: 18px;
   font-weight: 600;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .node-stats {
@@ -868,12 +868,12 @@ onMounted(() => {
   justify-content: space-around;
   margin-top: 12px;
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .node-stats span {
   padding: 4px 12px;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 4px;
 }
 
@@ -890,13 +890,13 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 500;
   margin-bottom: 16px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .no-logs {
   text-align: center;
   padding: 40px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-size: 14px;
 }
 
@@ -913,18 +913,18 @@ onMounted(() => {
 
 .node-name {
   font-weight: 500;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .node-time {
   margin-left: auto;
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .log-content {
   padding: 12px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
 }
 
 .log-section {
@@ -939,12 +939,12 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 8px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .log-output, .log-error {
-  background: #fff;
-  border: 1px solid #dcdfe6;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   padding: 12px;
   margin: 0;
@@ -960,12 +960,12 @@ onMounted(() => {
 .log-error {
   background: #fef0f0;
   border-color: #fbc4c4;
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 .log-info {
-  background: #fff;
-  border: 1px solid #dcdfe6;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   padding: 12px;
 }
@@ -973,7 +973,7 @@ onMounted(() => {
 .log-info p {
   margin: 4px 0;
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 /* 工作流上传组件样式 */
@@ -992,24 +992,24 @@ onMounted(() => {
 
 .workflow-upload .el-icon--upload {
   font-size: 67px;
-  color: #c0c4cc;
+  color: var(--el-text-color-placeholder);
   margin-bottom: 16px;
 }
 
 .workflow-upload .el-upload__text {
-  color: #606266;
+  color: var(--el-text-color-regular);
   font-size: 14px;
   text-align: center;
 }
 
 .workflow-upload .el-upload__text em {
-  color: #409eff;
+  color: var(--el-color-primary);
   font-style: normal;
 }
 
 .workflow-upload .el-upload__tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-top: 7px;
 }
 

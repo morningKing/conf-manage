@@ -561,8 +561,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  background-color: #f5f7fa;
-  border: 1px solid #dcdfe6;
+  background-color: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color);
   border-bottom: none;
   border-radius: 4px 4px 0 0;
 }
@@ -575,14 +575,14 @@ defineExpose({
 
 .line-col-info {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-family: monospace;
 }
 
 /* 编辑器包装器 */
 .code-editor-wrapper {
   width: 100%;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 0 0 4px 4px;
   overflow: hidden;
 }
@@ -646,9 +646,9 @@ defineExpose({
 
 /* 行号样式 */
 .code-editor :deep(.cm-gutters) {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-right: 1px solid #dcdfe6;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   padding-right: 8px;
 }
 
@@ -709,14 +709,14 @@ defineExpose({
 .template-item {
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .template-item:hover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
   background-color: #ecf5ff;
   transform: translateX(4px);
 }
@@ -731,18 +731,18 @@ defineExpose({
 .template-name {
   font-weight: 500;
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .template-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   line-height: 1.5;
 }
 
 /* 搜索面板样式 */
 .code-editor :deep(.cm-panel.cm-search) {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   padding: 8px;
 }

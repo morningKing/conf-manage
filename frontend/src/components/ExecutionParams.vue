@@ -146,7 +146,7 @@
           />
 
           <!-- 参数说明 -->
-          <div v-if="param.description && param.type !== 'text' && param.type !== 'textarea'" style="color: #909399; font-size: 12px; margin-top: 5px">
+          <div v-if="param.description && param.type !== 'text' && param.type !== 'textarea'" style="color: var(--el-text-color-secondary); font-size: 12px; margin-top: 5px">
             {{ param.description }}
           </div>
         </el-form-item>
@@ -264,7 +264,7 @@ defineExpose({
 }
 
 .params-form {
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   padding: 15px;
   border-radius: 4px;
 }

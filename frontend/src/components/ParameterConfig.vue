@@ -372,7 +372,7 @@ const emitChange = () => {
 <style scoped>
 .parameter-config {
   padding: 15px;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-radius: 4px;
 }
 
@@ -426,7 +426,7 @@ const emitChange = () => {
   margin: 0;
   font-family: 'Courier New', monospace;
   font-size: 11px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   white-space: pre;
   overflow-x: auto;
   line-height: 1.4;

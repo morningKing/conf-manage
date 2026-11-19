@@ -260,14 +260,14 @@ watch(() => props.modelValue, (newVal) => {
 <style scoped>
 .color-picker-panel {
   padding: 12px;
-  background: #fff;
+  background: var(--el-bg-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .preset-section .section-title {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   margin-bottom: 10px;
 }
 
@@ -338,7 +338,7 @@ watch(() => props.modelValue, (newVal) => {
 
 .preview-section .preview-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .preview-section .preview-tag {
@@ -347,7 +347,7 @@ watch(() => props.modelValue, (newVal) => {
 
 .preview-section .preview-hex {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   font-family: monospace;
 }
 </style>

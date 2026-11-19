@@ -440,28 +440,28 @@ const clearAll = () => {
 <style scoped>
 .workflow-editor {
   height: 600px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--el-bg-color);
 }
 
 .editor-toolbar {
   padding: 12px 16px;
   border-bottom: 1px solid #dcdfe6;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
 }
 
 .tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .flow-container {
   flex: 1;
   position: relative;
-  background: #fafafa;
+  background: var(--el-fill-color-light);
 }
 
 :deep(.vue-flow__node) {

@@ -135,7 +135,7 @@
             :min="1"
             :max="365"
           />
-          <div style="color: #909399; font-size: 12px; margin-top: 5px">
+          <div style="color: var(--el-text-color-secondary); font-size: 12px; margin-top: 5px">
             将删除 {{ cleanForm.keep_days }} 天前的所有备份文件
           </div>
         </el-form-item>

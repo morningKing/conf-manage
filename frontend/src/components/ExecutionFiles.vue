@@ -96,7 +96,7 @@
         <div v-else-if="previewType === 'image' && fileContent" style="text-align: center">
           <img
             :src="fileContent"
-            style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;"
+            style="max-width: 100%; height: auto; border: 1px solid var(--el-border-color); border-radius: 4px;"
             alt="预览图片"
           />
         </div>
@@ -340,9 +340,9 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-radius: 4px 4px 0 0;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-bottom: none;
 }
 
@@ -355,16 +355,16 @@ defineExpose({
 
 .header-info .el-icon {
   font-size: 18px;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .space-id {
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .files-content {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 0 0 4px 4px;
   min-height: 200px;
 }
@@ -377,13 +377,13 @@ defineExpose({
 
 .file-path .el-icon {
   font-size: 16px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .preview-content {
   max-height: 70vh;
   overflow: auto;
-  background-color: #f5f7fa;
+  background-color: var(--el-fill-color-light);
   border-radius: 4px;
   padding: 16px;
 }
@@ -394,7 +394,7 @@ defineExpose({
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #303133;
+  color: var(--el-text-color-primary);
   white-space: pre-wrap;
   word-wrap: break-word;
 }

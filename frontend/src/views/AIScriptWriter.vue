@@ -467,20 +467,20 @@ onMounted(() => {
 }
 
 .params-section {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .files-upload-section {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .files-upload-section .params-header {
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
   font-size: 14px;
@@ -488,7 +488,7 @@ onMounted(() => {
 
 .params-header {
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
   font-size: 14px;
@@ -518,7 +518,7 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -528,7 +528,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
 }
@@ -547,14 +547,14 @@ onMounted(() => {
 }
 
 .explanation-section {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .explanation-header {
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
 }
@@ -568,7 +568,7 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -578,7 +578,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
 }
@@ -603,11 +603,11 @@ onMounted(() => {
 .log-placeholder {
   padding: 40px 20px;
   text-align: center;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .files-section {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--el-border-color);
   border-radius: 4px;
   max-height: 300px;
   overflow: auto;
@@ -615,7 +615,7 @@ onMounted(() => {
 
 .files-header {
   padding: 10px 15px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-bottom: 1px solid #dcdfe6;
   font-weight: 500;
 }
@@ -640,7 +640,7 @@ onMounted(() => {
 
 /* 参数说明样式 */
 .el-alert code {
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;

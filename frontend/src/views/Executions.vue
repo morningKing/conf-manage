@@ -97,10 +97,10 @@
                 :show-detail="false"
               />
             </div>
-            <span v-else-if="row.status === 'success'" style="color: #67c23a;">
+            <span v-else-if="row.status === 'success'" style="color: var(--el-color-success);">
               100%
             </span>
-            <span v-else-if="row.status === 'failed'" style="color: #f56c6c;">
+            <span v-else-if="row.status === 'failed'" style="color: var(--el-color-danger);">
               {{ row.stage === 'cancelled' ? '已取消' : '失败' }}
             </span>
           </template>
@@ -735,11 +735,11 @@ onMounted(() => {
 }
 
 .selected-tag {
-  background: var(--glass-active, rgba(102, 126, 234, 0.1));
+  background: var(--el-fill-color, rgba(102, 126, 234, 0.1));
   border-radius: 12px;
   padding: 4px 10px;
   font-size: 12px;
-  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
+  color: var(--el-text-color-regular, rgba(30, 30, 46, 0.8));
 }
 
 .progress-section {
@@ -757,7 +757,7 @@ onMounted(() => {
 
 .error-container {
   border: 1px solid rgba(245, 108, 108, 0.3);
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 pre {
@@ -775,7 +775,7 @@ pre {
 }
 
 .batch-title {
-  color: var(--text-secondary, rgba(30, 30, 46, 0.8));
+  color: var(--el-text-color-regular, rgba(30, 30, 46, 0.8));
   font-size: 14px;
   margin-bottom: 12px;
 }
@@ -793,8 +793,8 @@ pre {
 
 .stat-card {
   text-align: center;
-  background: var(--bg-tertiary, #fafafa);
-  border: 1px solid var(--border-secondary, rgba(102, 126, 234, 0.3));
+  background: var(--el-bg-color, var(--el-fill-color-light));
+  border: 1px solid var(--el-border-color, rgba(102, 126, 234, 0.3));
   border-radius: 12px;
 }
 
@@ -817,14 +817,14 @@ pre {
 .stat-value {
   font-size: 28px;
   font-weight: bold;
-  color: var(--accent-primary, #667eea);
+  color: var(--el-color-primary, #667eea);
   line-height: 1;
   margin-bottom: 8px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: var(--text-muted, rgba(30, 30, 46, 0.6));
+  color: var(--el-text-color-secondary, rgba(30, 30, 46, 0.6));
 }
 
 .status-stats {
@@ -838,12 +838,12 @@ pre {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid var(--border-low, rgba(102, 126, 234, 0.15));
+  border-bottom: 1px solid var(--el-border-color-lighter, rgba(102, 126, 234, 0.15));
 }
 
 .status-count {
   font-weight: bold;
-  color: var(--accent-primary, #667eea);
+  color: var(--el-color-primary, #667eea);
 }
 
 .status-info {

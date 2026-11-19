@@ -267,11 +267,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 16px;
-  background-color: #f0f9ff;
-  border-radius: 8px;
-  border: 1px solid #b3d8ff;
-  margin-bottom: 16px;
+  padding: 8px 14px;
+  background-color: var(--el-color-primary-light-9);
+  border-radius: 4px;
+  border: 1px solid var(--el-color-primary-light-7);
+  margin-bottom: 12px;
 }
 
 .selection-info {
@@ -285,7 +285,7 @@ onMounted(() => {
 }
 
 .max-hint {
-  color: #e6a23c;
+  color: var(--el-color-warning);
   font-size: 12px;
 }
 
