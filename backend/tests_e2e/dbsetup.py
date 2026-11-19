@@ -22,6 +22,13 @@ PG_USER = os.environ.get('DB_USER', 'postgres')
 PG_PASSWORD = os.environ.get('DB_PASSWORD', 'jay123')
 E2E_DB_NAME = os.environ.get('E2E_DB_NAME', 'confmanage_e2e')
 
+# DDL 标识符入库前先做严格白名单校验（仅字母/数字/下划线，字母或下划线开头），
+# 不合规立即拒绝 —— 标识符无法用 %s 参数化，白名单是防止注入的唯一有效手段
+import re as _re  # noqa: E402
+
+if not _re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', E2E_DB_NAME):
+    raise SystemExit(f'E2E_DB_NAME 含非法字符（仅允许字母/数字/下划线）: {E2E_DB_NAME!r}')
+
 
 def build_pg_url(dbname):
     return f'postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{dbname}'

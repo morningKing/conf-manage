@@ -3,10 +3,12 @@ PostgreSQL 数据库迁移脚本
 统一管理所有数据库迁移操作
 """
 import os
+import re
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import psycopg2
+from psycopg2 import sql
 from config import Config
 
 # 数据库连接配置
@@ -22,6 +24,26 @@ DB_CONFIG = {
 def get_connection():
     """获取数据库连接"""
     return psycopg2.connect(**DB_CONFIG)
+
+
+# --- DDL 安全辅助：标识符/列定义片段无法用 %s 参数化，必须走严格白名单 ---
+_IDENT_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+# 列定义片段仅允许 DDL 白名单字符（禁止分号、注释、引号逃逸面）
+_TYPE_DEF_RE = re.compile(r"^[A-Za-z0-9_ ()',\-\"']+$")
+
+
+def _ident(name):
+    """校验并返回安全的 SQL 标识符（表名/列名）"""
+    if not _IDENT_RE.match(name or ''):
+        raise ValueError(f'非法 SQL 标识符: {name!r}')
+    return sql.Identifier(name)
+
+
+def _type_def(fragment):
+    """校验列类型/列定义片段（来自脚本内的硬编码迁移定义）"""
+    if not _TYPE_DEF_RE.match(fragment or ''):
+        raise ValueError(f'非法列定义片段: {fragment!r}')
+    return sql.SQL(fragment)
 
 
 def check_column_exists(table_name, column_name):
@@ -59,7 +81,8 @@ def add_column(table_name, column_name, column_type):
     conn = get_connection()
     cur = conn.cursor()
     print(f'[ADD] Adding {table_name}.{column_name} ({column_type})...')
-    cur.execute(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}')
+    cur.execute(sql.SQL('ALTER TABLE {} ADD COLUMN {} {}').format(
+        _ident(table_name), _ident(column_name), _type_def(column_type)))
     conn.commit()
     conn.close()
     print(f'[OK] {table_name}.{column_name} added')
@@ -75,7 +98,8 @@ def create_table(table_name, columns_def):
     conn = get_connection()
     cur = conn.cursor()
     print(f'[CREATE] Creating table {table_name}...')
-    cur.execute(f'CREATE TABLE {table_name} ({columns_def})')
+    cur.execute(sql.SQL('CREATE TABLE {} ({})').format(
+        _ident(table_name), _type_def(columns_def)))
     conn.commit()
     conn.close()
     print(f'[OK] Table {table_name} created')
@@ -140,12 +164,13 @@ def show_table_structure():
 
     print('\n=== Current Table Structure ===')
     for table in tables:
-        cur.execute(f"""
+        # 表名为值而非标识符，用 %s 参数化
+        cur.execute("""
             SELECT column_name, data_type, is_nullable
             FROM information_schema.columns
-            WHERE table_name = '{table}'
+            WHERE table_name = %s
             ORDER BY ordinal_position
-        """)
+        """, (table,))
         columns = cur.fetchall()
         print(f'\n{table}:')
         for col_name, dtype, nullable in columns:
@@ -173,10 +198,10 @@ if __name__ == '__main__':
             print(f'\n=== Checking {args.table} ===')
             conn = get_connection()
             cur = conn.cursor()
-            cur.execute(f"""
+            cur.execute("""
                 SELECT column_name FROM information_schema.columns
-                WHERE table_name = '{args.table}' ORDER BY ordinal_position
-            """)
+                WHERE table_name = %s ORDER BY ordinal_position
+            """, (args.table,))
             columns = [row[0] for row in cur.fetchall()]
             print(f'{args.table}: {columns}')
             conn.close()
