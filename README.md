@@ -128,6 +128,12 @@ python mcp_server.py --transport stdio
 }
 ```
 
+## 文档
+
+- [使用指南（重构后）](docs/USER_GUIDE.md) —— 部署、界面导览、脚本/管道/Webhook/Excel/备份用法、MCP 接入、常见问题
+- [数据迁移指南](docs/DATA_MIGRATION.md) —— 存量库 Alembic 升级（preserve 列/索引）、备份与回滚
+- [Nginx 部署](docs/NGINX_DEPLOYMENT.md)
+
 ## 部署
 
 Nginx 反代部署见 [docs/NGINX_DEPLOYMENT.md](docs/NGINX_DEPLOYMENT.md)。生产环境注意：`SECRET_KEY` 必须更换、`HOST_DEBUG=false`、数据库密码不使用默认值。
