@@ -230,10 +230,67 @@ def cancel_execution(execution_id: int) -> str:
 
 
 @server.tool()
+def list_pipelines(keyword: str = None, limit: int = 20) -> str:
+    """列出管道（工作流）清单：id/名称/描述/步骤数/启用状态"""
+    with _ctx():
+        query = Workflow.query
+        if keyword:
+            query = query.filter(Workflow.name.ilike(f'%{keyword}%'))
+        rows = query.order_by(Workflow.updated_at.desc()).limit(max(1, min(limit, 100))).all()
+        return _json([{
+            'id': w.id,
+            'name': w.name,
+            'description': w.description,
+            'steps': w.nodes.count(),
+            'enabled': w.enabled,
+            'updated_at': w.updated_at.isoformat() if w.updated_at else None,
+        } for w in rows])
+
+
+@server.tool()
+def get_pipeline(pipeline_id: int) -> str:
+    """获取管道详情：按执行顺序排列的步骤（脚本名/步骤参数/延时）"""
+    with _ctx():
+        wf = db.session.get(Workflow, pipeline_id)
+        if wf is None:
+            raise ValueError(f'管道不存在: {pipeline_id}')
+
+        def _order(node_id):
+            digits = ''.join(ch for ch in str(node_id) if ch.isdigit())
+            return int(digits) if digits else 10 ** 6
+
+        steps = []
+        for node in sorted(wf.nodes.all(), key=lambda n: _order(n.node_id)):
+            try:
+                cfg = json.loads(node.config) if node.config else {}
+            except (json.JSONDecodeError, TypeError):
+                cfg = {}
+            if node.node_type == 'delay':
+                steps.append({'index': len(steps) + 1, 'type': 'delay', 'delay_seconds': cfg.get('delay', 0)})
+            else:
+                steps.append({
+                    'index': len(steps) + 1,
+                    'type': 'script',
+                    'script_id': node.script_id,
+                    'script_name': node.script.name if node.script else None,
+                    'params': cfg.get('params') or {},
+                })
+        return _json({
+            'id': wf.id,
+            'name': wf.name,
+            'description': wf.description,
+            'enabled': wf.enabled,
+            'steps': steps,
+        })
+
+
+@server.tool()
 def run_workflow(workflow_id: int = None, workflow_name: str = None,
                  params: dict = None, wait_seconds: int = 60) -> str:
-    """执行工作流（DAG，二选一传 workflow_id 或 workflow_name）。
+    """执行管道（线性工作流；二选一传 workflow_id 或 workflow_name）。
 
+    params 为管道级参数（步骤级参数在管道定义中，优先级更高）。
+    管道步骤顺序执行、失败即停，步骤间数据经共享工作流空间文件传递。
     超时未结束返回 workflow_execution_id（status=running），用
     wait_workflow_execution 跟踪。
     """

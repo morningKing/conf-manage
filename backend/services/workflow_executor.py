@@ -63,18 +63,25 @@ def execute_workflow_async(workflow_execution_id):
             params = json.loads(execution.params) if execution.params else {}
 
             # 执行工作流（传递工作流执行空间）
-            success = execute_workflow_graph(execution, graph, nodes, params, workflow_space)
+            result_status = execute_workflow_graph(execution, graph, nodes, params, workflow_space)
 
             # 重新获取执行记录以确保更新生效（因为工作流执行过程中session可能被清理）
             db.session.expire_all()
             execution = WorkflowExecution.query.get(workflow_execution_id)
 
             if execution:
-                # 更新执行状态
-                execution.status = 'success' if success else 'failed'
-                execution.end_time = datetime.now(timezone.utc)
-                db.session.commit()
-                logger.info(f"[工作流执行] 工作流状态已更新为{execution.status}")
+                if result_status == 'cancelled':
+                    # 保留 API 写入的 cancelled 状态，仅补齐结束时间
+                    if not execution.end_time:
+                        execution.end_time = datetime.now(timezone.utc)
+                        db.session.commit()
+                    logger.info(f"[工作流执行] 工作流已被取消，保留 cancelled 状态")
+                else:
+                    # 更新执行状态
+                    execution.status = result_status
+                    execution.end_time = datetime.now(timezone.utc)
+                    db.session.commit()
+                    logger.info(f"[工作流执行] 工作流状态已更新为{execution.status}")
 
         except Exception as e:
             logger.info(f'工作流执行失败: {str(e)}')
@@ -86,6 +93,24 @@ def execute_workflow_async(workflow_execution_id):
                 execution.error = str(e)
                 execution.end_time = datetime.now(timezone.utc)
                 db.session.commit()
+
+
+def _is_cancelled(workflow_execution_id):
+    """工作流是否已被 API 取消"""
+    db.session.expire_all()
+    wf_state = db.session.get(WorkflowExecution, workflow_execution_id)
+    return bool(wf_state and wf_state.status == 'cancelled')
+
+
+def _finalize_cancelled(workflow_execution_id, nodes, executed):
+    """取消收尾：所有未执行的节点标记 skipped"""
+    done_ids = {ne.node_id for ne in WorkflowNodeExecution.query.filter_by(
+        workflow_execution_id=workflow_execution_id).all()}
+    for remaining_id in nodes:
+        if remaining_id in executed or remaining_id in done_ids:
+            continue
+        create_node_execution(workflow_execution_id, remaining_id, 'skipped', '已取消')
+    db.session.commit()
 
 
 def build_dependency_graph(nodes, edges):
@@ -133,6 +158,12 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
     queue = entry_nodes.copy()
 
     while queue:
+        # 取消检查：API 将状态置为 cancelled 后，剩余节点标记 skipped 并停止
+        if _is_cancelled(workflow_execution_id):
+            logger.info('[工作流执行] 检测到取消，停止执行，剩余节点标记 skipped')
+            _finalize_cancelled(workflow_execution_id, nodes, executed)
+            return 'cancelled'
+
         node_id = queue.pop(0)
         logger.info(f"[工作流执行] 处理节点: {node_id}")
 
@@ -180,9 +211,13 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
         executed.add(node_id)
 
         if not success and node['node_type'] == 'script':
-            # 脚本节点执行失败，终止工作流
+            # 脚本节点失败：若是因取消杀掉进程，则走取消收尾；否则按失败终止
+            if _is_cancelled(workflow_execution_id):
+                logger.info(f"[工作流执行] 节点 {node_id} 因取消终止")
+                _finalize_cancelled(workflow_execution_id, nodes, executed)
+                return 'cancelled'
             logger.info(f"[工作流执行] 脚本节点 {node_id} 失败，终止工作流")
-            return False
+            return 'failed'
 
         # 将下一个节点加入队列
         next_nodes = graph[node_id]['next']
@@ -196,7 +231,7 @@ def execute_workflow_graph(workflow_execution, graph, nodes, params, workflow_sp
         logger.info(f"[工作流执行] 当前队列: {queue}, 已执行: {executed}")
 
     logger.info(f"[工作流执行] 工作流执行完成")
-    return True
+    return 'success'
 
 
 def execute_node(workflow_execution_id, node_dict, params, node_results, workflow_space):
@@ -236,7 +271,7 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
         if node_type == 'script':
             # 执行脚本节点
             logger.info(f"[execute_node] 调用execute_script_node")
-            result = execute_script_node(script_id, params, node_execution, workflow_space)
+            result = execute_script_node(script_id, params, node_config, node_execution, workflow_space)
             logger.info(f"[execute_node] execute_script_node返回: {result}")
 
         elif node_type == 'delay':
@@ -270,11 +305,12 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
         import traceback
         logger.error(f'[execute_node] 异常堆栈:\n{traceback.format_exc()}')
 
-        # 重新获取节点执行记录
-        if node_execution and hasattr(node_execution, 'id') and node_execution.id:
+        # 重新获取节点执行记录（execute_script 内部 remove 过会话，
+        # node_execution 已分离——必须用预存的本地 int id，不能再访问实例属性）
+        if node_execution_id:
             try:
                 db.session.expire_all()
-                node_execution = WorkflowNodeExecution.query.get(node_execution.id)
+                node_execution = WorkflowNodeExecution.query.get(node_execution_id)
                 if node_execution:
                     node_execution.status = 'failed'
                     node_execution.error = str(e)
@@ -285,13 +321,39 @@ def execute_node(workflow_execution_id, node_dict, params, node_results, workflo
         return False, None
 
 
-def execute_script_node(script_id, params, node_execution, workflow_space):
-    """执行脚本节点"""
+def _parse_node_config(node_config):
+    """节点 config 在库中以 JSON 字符串存储，兼容传入 dict
+
+    最多解码两层（防御历史数据中的双重编码），无法解析时返回空 dict。
+    """
+    current = node_config
+    for _ in range(2):
+        if not current or isinstance(current, dict):
+            return current or {}
+        if isinstance(current, str):
+            try:
+                current = json.loads(current)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        else:
+            return {}
+    return current if isinstance(current, dict) else {}
+
+
+def execute_script_node(script_id, params, node_config, node_execution, workflow_space):
+    """执行脚本节点
+
+    参数合并优先级：步骤级 params（节点 config.params）> 工作流级 params > 内置 WORKFLOW_SPACE
+    """
     if not script_id:
         raise Exception('脚本节点未关联脚本')
 
-    # 将工作流执行空间路径添加到参数中
-    enhanced_params = params.copy() if params else {}
+    step_params = _parse_node_config(node_config).get('params') or {}
+    if not isinstance(step_params, dict):
+        logger.warning(f'[execute_script_node] 步骤参数不是对象，已忽略: {step_params!r}')
+        step_params = {}
+
+    enhanced_params = {**(params or {}), **step_params}
     enhanced_params['WORKFLOW_SPACE'] = workflow_space
 
     # 创建脚本执行记录

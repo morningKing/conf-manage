@@ -56,12 +56,8 @@
             placeholder="请输入工作流描述"
           />
         </el-form-item>
-        <el-form-item label="工作流图">
-          <WorkflowEditor
-            v-model:nodes="form.nodes"
-            v-model:edges="form.edges"
-            :scripts="scripts"
-          />
+        <el-form-item label="管道步骤">
+          <PipelineBuilder v-model:steps="form.steps" :scripts="scripts" class="pipeline-wrap" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -153,15 +149,21 @@
 
       <el-divider />
 
-      <!-- 工作流图显示，节点状态实时更新 -->
-      <div class="workflow-status-container">
-        <WorkflowEditor
-          v-model:nodes="statusNodes"
-          v-model:edges="statusEdges"
-          :scripts="scripts"
-          :readonly="true"
-          :node-statuses="nodeStatuses"
-        />
+      <!-- 管道步骤状态列表，实时更新 -->
+      <div class="pipeline-status-list">
+        <div
+          v-for="(step, idx) in statusSteps"
+          :key="step.node_id"
+          class="pipeline-status-row"
+          :class="step.status"
+        >
+          <div class="step-index">{{ idx + 1 }}</div>
+          <span class="step-name">{{ step.name }}</span>
+          <el-tag :type="getStatusType(step.status)" size="small">
+            {{ getStatusText(step.status) }}
+          </el-tag>
+          <span v-if="step.duration != null" class="step-duration">{{ step.duration }}s</span>
+        </div>
       </div>
 
       <el-divider />
@@ -321,7 +323,8 @@ import {
   cancelWorkflowExecution
 } from '@/api'
 import request from '@/api/request'
-import WorkflowEditor from '@/components/WorkflowEditor.vue'
+import PipelineBuilder from '@/components/PipelineBuilder.vue'
+import { toGraph, fromGraph, validateSteps, sortNodes } from '@/utils/pipeline'
 import { useEventSource } from '@/composables/useEventSource'
 import ExecutionFiles from '@/components/ExecutionFiles.vue'
 
@@ -345,7 +348,6 @@ const executionStatus = ref('pending')
 const currentExecutionId = ref(null)
 const nodeStatuses = ref({})
 const statusNodes = ref([])
-const statusEdges = ref([])
 const activeNodeLogs = ref([])  // 当前展开的日志节点
 const activeDetailTab = ref('logs')  // 当前激活的详情标签页
 const workflowExecutionFilesRef = ref(null)  // 工作流执行文件组件引用
@@ -354,8 +356,7 @@ const { connect: connectStatusStream, disconnect: disconnectStatusStream } = use
 const form = ref({
   name: '',
   description: '',
-  nodes: [],
-  edges: []
+  steps: []
 })
 
 // 加载工作流列表
@@ -430,11 +431,11 @@ const selectTemplate = async (template) => {
     })
 
     currentWorkflow.value = null
+    const { steps } = fromGraph(res.data.nodes, res.data.edges)
     form.value = {
       name: res.data.name,
       description: res.data.description,
-      nodes: res.data.nodes || [],
-      edges: res.data.edges || []
+      steps
     }
 
     templateDialogVisible.value = false
@@ -451,8 +452,7 @@ const showCreateDialog = () => {
   form.value = {
     name: '',
     description: '',
-    nodes: [],
-    edges: []
+    steps: []
   }
   dialogVisible.value = true
 }
@@ -464,13 +464,16 @@ const editWorkflow = async (workflow) => {
     const data = res.data
 
     currentWorkflow.value = workflow
+    const { steps, droppedConditions } = fromGraph(data.nodes, data.edges)
     form.value = {
       name: data.name,
       description: data.description,
-      nodes: data.nodes || [],
-      edges: data.edges || []
+      steps
     }
     dialogVisible.value = true
+    if (droppedConditions > 0) {
+      ElMessage.warning(`已降级为线性管道：${droppedConditions} 个条件边被移除（不影响执行数据）`)
+    }
   } catch (error) {
     ElMessage.error('加载工作流详情失败')
   }
@@ -482,13 +485,19 @@ const handleSave = async () => {
     ElMessage.warning('请输入工作流名称')
     return
   }
+  const stepsError = validateSteps(form.value.steps, scripts.value)
+  if (stepsError) {
+    ElMessage.warning(stepsError)
+    return
+  }
+  const graph = toGraph(form.value.steps)
 
   try {
     if (currentWorkflow.value) {
-      await updateWorkflow(currentWorkflow.value.id, form.value)
+      await updateWorkflow(currentWorkflow.value.id, { ...form.value, ...graph })
       ElMessage.success('更新成功')
     } else {
-      await createWorkflow(form.value)
+      await createWorkflow({ ...form.value, ...graph })
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -580,8 +589,7 @@ const handleExecute = async () => {
 
     // 获取工作流详情用于状态显示
     const workflowRes = await getWorkflow(currentWorkflow.value.id)
-    statusNodes.value = workflowRes.data.nodes || []
-    statusEdges.value = workflowRes.data.edges || []
+    statusNodes.value = sortNodes(workflowRes.data.nodes || [])
 
     // 打开状态监控窗口
     openStatusStream(executionId)
@@ -683,6 +691,22 @@ const getStatusText = (status) => {
 const totalNodes = computed(() => {
   const count = statusNodes.value.length
   return count
+})
+
+// 管道步骤视图：排序后的节点 + SSE 状态合并
+const statusSteps = computed(() => {
+  return statusNodes.value.map((n) => {
+    const cfg = typeof n.config === 'string' ? (() => { try { return JSON.parse(n.config) } catch { return {} } })() : (n.config || {})
+    const st = nodeStatuses.value[n.node_id] || {}
+    return {
+      node_id: n.node_id,
+      name: n.script?.name || (n.node_type === 'delay' ? `延时 ${cfg.delay || 0} 秒` : n.node_id),
+      status: st.status || 'pending',
+      duration: st.end_time && st.start_time
+        ? Math.round((new Date(st.end_time) - new Date(st.start_time)) / 100) / 10
+        : null,
+    }
+  })
 })
 
 const completedNodes = computed(() => {
@@ -877,8 +901,58 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.workflow-status-container {
-  min-height: 400px;
+.pipeline-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pipeline-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
+}
+
+.pipeline-status-row.running {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+.pipeline-status-row.failed {
+  border-color: var(--el-color-danger);
+}
+
+.pipeline-status-row .step-index {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-color-primary);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pipeline-status-row .step-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pipeline-status-row .step-duration {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 /* 执行日志样式 */

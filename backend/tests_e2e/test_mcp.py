@@ -124,7 +124,8 @@ def test_mcp_lists_expected_tools(mcp_server):
     names = {t.name for t in tools.tools}
     assert {'list_scripts', 'get_script', 'run_script', 'wait_execution',
             'get_execution', 'list_executions', 'cancel_execution',
-            'run_workflow', 'wait_workflow_execution'} <= names
+            'run_workflow', 'wait_workflow_execution',
+            'list_pipelines', 'get_pipeline'} <= names
 
 
 def test_mcp_run_script_end_to_end(api, mcp_server):
@@ -179,3 +180,44 @@ def test_mcp_cancel_running(api, mcp_server):
         assert cancel['status'] in ('failed', 'cancelled'), cancel
     finally:
         api.delete(script['id'])
+
+
+def test_mcp_pipeline_tools(api, mcp_server):
+    """MCP 管道工具：list_pipelines / get_pipeline / run_workflow"""
+    s1 = api.create_script(code='print("mcp pipe a")')
+    s2 = api.create_script(code='print("mcp pipe b")')
+    name = f'mcp_pipe_{int(time.time() * 1000) % 10**9}'
+    wf = api.payload(api.post('/workflows', {
+        'name': name,
+        'nodes': [
+            {'node_id': 'node_1', 'node_type': 'script', 'script_id': s1['id'],
+             'config': {'params': {'STEP': 'one'}}, 'position': {'x': 0, 'y': 0}},
+            {'node_id': 'node_2', 'node_type': 'script', 'script_id': s2['id'],
+             'config': {}, 'position': {'x': 100, 'y': 0}},
+        ],
+        'edges': [{'edge_id': 'edge_1', 'source': 'node_1', 'target': 'node_2'}],
+        'enabled': True,
+    }))
+    try:
+        # list_pipelines 能找到
+        listed = json.loads(_result_text(_mcp_call(
+            'list_pipelines', {'keyword': name[:12]})))
+        assert any(p['id'] == wf['id'] and p['steps'] == 2 for p in listed), listed
+
+        # get_pipeline 返回有序步骤与步骤参数
+        detail = json.loads(_result_text(_mcp_call(
+            'get_pipeline', {'pipeline_id': wf['id']})))
+        assert [st['index'] for st in detail['steps']] == [1, 2]
+        assert detail['steps'][0]['script_id'] == s1['id']
+        assert detail['steps'][0]['params'] == {'STEP': 'one'}
+
+        # run_workflow 端到端
+        run = json.loads(_result_text(_mcp_call(
+            'run_workflow', {'workflow_name': name, 'wait_seconds': 90})))
+        assert run['status'] == 'success', run
+        statuses = {n['node_id']: n['status'] for n in run['nodes']}
+        assert statuses == {'node_1': 'success', 'node_2': 'success'}
+    finally:
+        api.delete(f"/workflows/{wf['id']}")
+        api.delete(s1['id'])
+        api.delete(s2['id'])

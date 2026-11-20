@@ -321,7 +321,11 @@ def get_workflow_execution(execution_id):
 
 @api_bp.route('/workflow-executions/<int:execution_id>/cancel', methods=['POST'])
 def cancel_workflow_execution(execution_id):
-    """取消工作流执行"""
+    """取消工作流执行
+
+    置 cancelled 状态并终止当前运行中节点的脚本进程；
+    执行线程在下一个节点边界检测到取消后，把剩余节点标为 skipped。
+    """
     try:
         execution = WorkflowExecution.query.get_or_404(execution_id)
 
@@ -330,6 +334,17 @@ def cancel_workflow_execution(execution_id):
 
         execution.status = 'cancelled'
         execution.end_time = datetime.now(timezone.utc)
+
+        # 终止当前运行中节点的脚本进程（真取消，而不是等它跑完）
+        from services.execution_service import kill_process_tree
+        running_ne = WorkflowNodeExecution.query.filter_by(
+            workflow_execution_id=execution_id, status='running').first()
+        if running_ne and running_ne.execution and running_ne.execution.pid:
+            try:
+                kill_process_tree(running_ne.execution.pid)
+            except Exception:
+                pass  # 进程可能已自行退出
+
         db.session.commit()
 
         return jsonify({

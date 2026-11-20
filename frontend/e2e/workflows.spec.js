@@ -52,3 +52,79 @@ test('从页面执行工作流并弹出状态对话框', async ({ page }) => {
   await page.request.delete(`/api/scripts/${s1}`)
   await page.request.delete(`/api/scripts/${s2}`)
 })
+
+test('管道编辑器：步骤增删与旧图降级提示', async ({ page }) => {
+  // 建两个脚本供下拉选择
+  const s1 = await mkScript(page, 'print("pb 1")')
+  const s2 = await mkScript(page, 'print("pb 2")')
+
+  await page.goto('/workflows')
+  await page.getByRole('button', { name: '创建工作流' }).click()
+  const dialog = page.locator('.el-dialog:visible').first()
+  await expect(dialog).toBeVisible()
+
+  // 初始无步骤
+  await expect(dialog.getByText('管道为空')).toBeVisible()
+
+  // 添加两个脚本步骤
+  const addBtn = dialog.getByRole('button', { name: /添加脚本步骤/ })
+  await addBtn.click()
+  await addBtn.click()
+  await expect(dialog.locator('.pipeline-step')).toHaveCount(2)
+
+  // 删除一个 -> 只剩 1 步；再添加恢复
+  await dialog.locator('.pipeline-step').nth(0).getByRole('button').last().click()
+  await expect(dialog.locator('.pipeline-step')).toHaveCount(1)
+  await addBtn.click()
+  await expect(dialog.locator('.pipeline-step')).toHaveCount(2)
+
+  await dialog.getByRole('button', { name: '取消' }).click()
+  await page.request.delete(`/api/scripts/${s1}`)
+  await page.request.delete(`/api/scripts/${s2}`)
+})
+
+test('旧 DAG 工作流在编辑器中拍平为线性步骤', async ({ page }) => {
+  // 带 3 个节点的旧结构（含位置坐标），通过 API 创建
+  const ids = []
+  for (const code of ['print("a")', 'print("b")', 'print("c")']) {
+    const r = await (await page.request.post('/api/scripts', {
+      data: { name: `ui_dag_s_${Date.now() % 10 ** 10}_${Math.random().toString(36).slice(2, 5)}`, type: 'python', code },
+    })).json()
+    ids.push(r?.data?.id ?? r?.id)
+  }
+  const nodes = ids.map((id, i) => ({
+    node_id: `node_${i + 1}`, node_type: 'script', script_id: id,
+    config: {}, position: { x: i * 100, y: 50 },
+  }))
+  const edges = [
+    { edge_id: 'e1', source: 'node_1', target: 'node_2' },
+    { edge_id: 'e2', source: 'node_2', target: 'node_3' },
+  ]
+  const created = await (await page.request.post('/api/workflows', {
+    data: { name: `ui_dag_${Date.now() % 10 ** 10}`, nodes, edges, enabled: true },
+  })).json()
+  const wfId = created?.data?.id ?? created?.id
+
+  await page.goto('/workflows')
+  await page.reload()
+  const rowByName = page.locator('.el-table__row, [class*="item"]').filter({ hasText: 'ui_dag_' }).first()
+  await expect(rowByName).toBeVisible()
+
+  // 打开编辑：应看到 3 个线性步骤（拍平），且没有 Vue Flow 画布
+  await rowByName.getByRole('button', { name: '编辑' }).click()
+  const dialog = page.locator('.el-dialog:visible').first()
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.pipeline-step')).toHaveCount(3)
+  await expect(dialog.locator('.vue-flow')).toHaveCount(0)
+
+  await dialog.getByRole('button', { name: '取消' }).click()
+  await page.request.delete(`/api/workflows/${wfId}`)
+  for (const id of ids) await page.request.delete(`/api/scripts/${id}`)
+})
+
+async function mkScript(page, code) {
+  const r = await (await page.request.post('/api/scripts', {
+    data: { name: `ui_pb_s_${Date.now() % 10 ** 10}_${Math.random().toString(36).slice(2, 6)}`, type: 'python', code },
+  })).json()
+  return r?.data?.id ?? r?.id
+}

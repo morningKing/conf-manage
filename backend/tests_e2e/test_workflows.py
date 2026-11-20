@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""工作流：创建/执行/状态流/模板"""
+"""工作流：创建/执行/状态流/模板/管道语义"""
 import time
 
 from helpers import find_id
@@ -100,3 +100,104 @@ def test_workflow_template_flow(api):
         api.expect_ok(api.delete(f'/workflow-templates/{tpl_id}'))
     finally:
         api.delete(s['id'])
+
+
+def _ne_by_node(result, node_id):
+    """从执行详情中按 node_id 取节点执行记录"""
+    for ne in result.get('node_executions') or []:
+        if ne['node_id'] == node_id:
+            return ne
+    raise AssertionError(f'缺少节点执行记录: {node_id}')
+
+
+def test_pipeline_step_params(api):
+    """管道每步骤独立参数：步骤级覆盖工作流级"""
+    s1 = api.create_script(code=(
+        'import os\n'
+        'print("S1 MODE:", os.environ.get("MODE", ""), "SOURCE:", os.environ.get("SOURCE", ""))\n'
+    ))
+    s2 = api.create_script(code=(
+        'import os\n'
+        'print("S2 MODE:", os.environ.get("MODE", ""), "SOURCE:", os.environ.get("SOURCE", ""))\n'
+    ))
+    wf = api.payload(api.post('/workflows', {
+        'name': f'e2e_pipe_params_{int(time.time() * 1000) % 10**9}',
+        'nodes': [
+            {'node_id': 'node_1', 'node_type': 'script', 'script_id': s1['id'],
+             'config': {'params': {'MODE': 'step1', 'SOURCE': 'file_a'}},
+             'position': {'x': 0, 'y': 0}},
+            {'node_id': 'node_2', 'node_type': 'script', 'script_id': s2['id'],
+             'config': {'params': {'MODE': 'step2'}},
+             'position': {'x': 100, 'y': 0}},
+        ],
+        'edges': [{'edge_id': 'edge_1', 'source': 'node_1', 'target': 'node_2'}],
+        'enabled': True,
+    }))
+    try:
+        resp = api.post(f"/workflows/{wf['id']}/execute", {'params': {'SOURCE': 'wf_level'}})
+        api.expect_ok(resp)
+        wf_exec_id = find_id(resp)
+        result = api.wait_workflow_execution(wf_exec_id)
+        assert result['status'] == 'success', result
+
+        ne1 = _ne_by_node(result, 'node_1')
+        ne2 = _ne_by_node(result, 'node_2')
+        assert ne1['status'] == 'success'
+        assert ne2['status'] == 'success'
+        # 步骤级覆盖工作流级；未覆盖键继承工作流级
+        assert 'S1 MODE: step1 SOURCE: file_a' in (ne1['execution']['output'] or '')
+        assert 'S2 MODE: step2 SOURCE: wf_level' in (ne2['execution']['output'] or '')
+    finally:
+        api.delete(f"/workflows/{wf['id']}")
+        api.delete(s1['id'])
+        api.delete(s2['id'])
+
+
+def test_pipeline_cancel_marks_remaining_skipped(api):
+    """取消管道：运行中脚本结束后剩余步骤标 skipped，终态保持 cancelled"""
+    s1 = api.create_script(code='import time\nprint("long step")\ntime.sleep(5)\n')
+    s2 = api.create_script(code='print("should be skipped")')
+    wf = api.payload(api.post('/workflows', {
+        'name': f'e2e_pipe_cancel_{int(time.time() * 1000) % 10**9}',
+        'nodes': [
+            {'node_id': 'node_1', 'node_type': 'script', 'script_id': s1['id'],
+             'config': {}, 'position': {'x': 0, 'y': 0}},
+            {'node_id': 'node_2', 'node_type': 'script', 'script_id': s2['id'],
+             'config': {}, 'position': {'x': 100, 'y': 0}},
+        ],
+        'edges': [{'edge_id': 'edge_1', 'source': 'node_1', 'target': 'node_2'}],
+        'enabled': True,
+    }))
+    try:
+        resp = api.post(f"/workflows/{wf['id']}/execute", {'params': {}})
+        api.expect_ok(resp)
+        wf_exec_id = find_id(resp)
+
+        # 等待 node_1 进入 running 后取消
+        deadline = time.time() + 20
+        while time.time() < deadline:
+            detail = api.payload(api.get(f'/workflow-executions/{wf_exec_id}'))
+            nes = {ne['node_id']: ne for ne in detail.get('node_executions', [])}
+            if nes.get('node_1', {}).get('status') == 'running':
+                break
+            time.sleep(0.5)
+        api.expect_ok(api.post(f'/workflow-executions/{wf_exec_id}/cancel'))
+
+        # 终态必须是 cancelled（不被执行线程覆盖为 success/failed）
+        result = api.wait_workflow_execution(wf_exec_id)
+        assert result['status'] == 'cancelled', result
+        # 剩余节点的 skipped 标记由执行线程异步写入（脚本进程被杀后收敛），允许短暂延迟
+        deadline = time.time() + 10
+        ne2 = None
+        while time.time() < deadline:
+            detail = api.payload(api.get(f'/workflow-executions/{wf_exec_id}'))
+            nes = {ne['node_id']: ne for ne in detail.get('node_executions', [])}
+            if nes.get('node_2', {}).get('status') == 'skipped':
+                ne2 = nes['node_2']
+                break
+            time.sleep(0.5)
+        assert ne2 is not None and ne2['status'] == 'skipped'
+    finally:
+        api.delete(f"/workflows/{wf['id']}")
+        api.delete(s1['id'])
+        api.delete(s2['id'])
