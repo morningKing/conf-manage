@@ -8,6 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+### One-click dev stack
+```bash
+python start.py                 # loads .env, checks PG/ports, runs alembic upgrade,
+                                # starts backend 5001 + frontend 5177 (Ctrl+C stops both)
+python start.py --skip-migrate  # skip DB migrations
+```
+
 ### Backend (Flask on port 5001)
 ```bash
 pip install -r requirements.txt

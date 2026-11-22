@@ -13,18 +13,23 @@
 ## 快速开始
 
 ```bash
-# 1. 准备 PostgreSQL（默认库 confmanage / 用户 postgres）
+# 0. 准备 PostgreSQL（默认库 confmanage / 用户 postgres）并安装依赖
 cp .env.example .env   # 修改 DB_PASSWORD、SECRET_KEY 等
+pip install -r requirements.txt
+cd frontend && npm install && cd ..
 
-# 2. 后端（端口 5001）
-cd backend
-pip install -r ../requirements.txt
-python app.py
+# 一键启动（推荐）：加载 .env → 预检 PG/端口 → Alembic 迁移 → 并行启动前后端
+python start.py
+```
 
-# 3. 前端
-cd frontend
-npm install
-npm run dev
+`python start.py` 会打印前端入口（http://localhost:5177）与后端健康检查地址；
+Ctrl+C 或任一服务退出即整体停止。参数：`--skip-migrate` 跳过数据库迁移。
+
+手动分步启动（等价）：
+
+```bash
+cd backend && python -m alembic upgrade head && python app.py   # 后端 5001
+cd frontend && npm run dev                                       # 前端 5177
 ```
 
 ### 数据库迁移（Alembic）

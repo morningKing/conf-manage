@@ -34,9 +34,23 @@ cd frontend && npm install && npm run dev   # http://localhost:5177
 
 生产环境：`SECRET_KEY` 必须更换、`HOST_DEBUG=false`、参见 `docs/NGINX_DEPLOYMENT.md`。
 
-### 启动脚本说明
+### 启动方式
 
-根目录 `start-backend.*` / `start-frontend.*` 可用但**仍是两个终端各跑一个**，且后端脚本每次全量 `pip install`、不加载 `.env`、不执行迁移。日常开发推荐手动两条命令（先 `alembic upgrade head` 再 `python app.py`）。
+**一键启动（推荐）**：
+
+```bash
+python start.py                 # .env 加载 → PG/端口预检 → Alembic 迁移 → 双端并行启动
+python start.py --skip-migrate  # 跳过迁移
+```
+
+- 前端 http://localhost:5177，后端健康检查 http://localhost:5001/health
+- Ctrl+C 或任一服务退出即整体停止（含 vite 进程）
+- 依赖检查：Python 依赖缺失 / 前端 node_modules 缺失会给出明确安装指引
+- 前端代理目标自动指向 `HOST_PORT`（后端端口非 5001 也无需改配置）
+
+手动分步启动（等价）：`cd backend && python -m alembic upgrade head && python app.py` +
+`cd frontend && npm install && npm run dev`。根目录 `start-backend.*` / `start-frontend.*`
+为旧的两个终端各跑一个的方式，仍可用但不再推荐。
 
 ## 3. 界面导览（侧边栏 12 页）
 
