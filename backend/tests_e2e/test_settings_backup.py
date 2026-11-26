@@ -110,5 +110,10 @@ def test_environment_crud(api):
         # 探测接口
         detect = api.post('/environments/detect', {'type': 'python'})
         assert isinstance(detect, dict)
+
+        # 删除必须成功（曾因 list.count() 误用恒 500）
+        api.expect_ok(api.delete(f"/environments/{created['id']}"))
+        created = None
     finally:
-        api.delete(f"/environments/{created['id']}")
+        if created:
+            api.delete(f"/environments/{created['id']}")

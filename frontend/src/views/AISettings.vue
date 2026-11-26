@@ -157,7 +157,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import GlassButton from '../components/GlassButton.vue'
-import request from '@/api/request'
+import { getAIConfigs, createAIConfig, updateAIConfig, deleteAIConfig, activateAIConfig } from '@/api/ai'
 import { getCleanupStats, executeCleanup, getCleanupConfig, updateCleanupConfig } from '../api'
 
 const configs = ref([])
@@ -191,8 +191,7 @@ const cleanupLoading = ref(false)
 
 const loadConfigs = async () => {
   try {
-    const response = await request.get('/ai-configs')
-    configs.value = response
+    configs.value = await getAIConfigs()
   } catch (error) {
     ElMessage.error('加载AI配置失败')
   }
@@ -228,10 +227,10 @@ const submitForm = async () => {
     await formRef.value.validate()
 
     if (isEdit.value) {
-      await request.put(`/ai-configs/${form.value.id}`, form.value)
+      await updateAIConfig(form.value.id, form.value)
       ElMessage.success('更新成功')
     } else {
-      await request.post('/ai-configs', form.value)
+      await createAIConfig(form.value)
       ElMessage.success('添加成功')
     }
 
@@ -246,7 +245,7 @@ const submitForm = async () => {
 
 const activateConfig = async (config) => {
   try {
-    await request.post(`/ai-configs/${config.id}/activate`)
+    await activateAIConfig(config.id)
     ElMessage.success('激活成功')
     loadConfigs()
   } catch (error) {
@@ -262,7 +261,7 @@ const deleteConfig = async (config) => {
       type: 'warning'
     })
 
-    await request.delete(`/ai-configs/${config.id}`)
+    await deleteAIConfig(config.id)
     ElMessage.success('删除成功')
     loadConfigs()
   } catch (error) {

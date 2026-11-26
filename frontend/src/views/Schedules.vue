@@ -62,7 +62,7 @@
     <!-- 创建/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogTitle"
+      :title="isEdit ? '编辑任务' : '新建任务'"
       width="600px"
       :close-on-click-modal="false"
     >
@@ -111,7 +111,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus, Star, StarFilled } from '@element-plus/icons-vue'
 import {
   getSchedules,
@@ -124,71 +124,42 @@ import {
   getScripts
 } from '../api'
 import GlassButton from '../components/GlassButton.vue'
+import { useCrud } from '@/composables/useCrud'
 
-const schedules = ref([])
 const scripts = ref([])
-const dialogVisible = ref(false)
-const dialogTitle = ref('新建任务')
-const form = ref({
-  name: '',
-  script_id: null,
-  cron: '',
-  description: '',
-  params: '{}',
-  enabled: true
-})
-const currentSchedule = ref(null)
 
-const loadSchedules = async () => {
-  try {
-    const res = await getSchedules()
-    schedules.value = res.data
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-const loadScripts = async () => {
-  try {
-    const res = await getScripts()
-    scripts.value = res.data
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-const handleCreate = () => {
-  dialogTitle.value = '新建任务'
-  form.value = {
+const {
+  items: schedules,
+  dialogVisible,
+  isEdit,
+  form,
+  load: loadSchedules,
+  openCreate: handleCreate,
+  openEdit: handleEdit,
+  save: handleSave,
+  removeRow: handleDelete,
+} = useCrud({
+  list: async () => (await getSchedules()).data,
+  create: (val) => createSchedule(val),
+  update: (id, val) => updateSchedule(id, val),
+  remove: (row) => deleteSchedule(row.id),
+  emptyForm: () => ({
     name: '',
     script_id: null,
     cron: '',
     description: '',
     params: '{}',
-    enabled: true
-  }
-  currentSchedule.value = null
-  dialogVisible.value = true
-}
+    enabled: true,
+  }),
+  toForm: (row) => ({ ...row }),
+  confirmText: () => '确定要删除此任务吗?',
+  name: '任务',
+})
 
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑任务'
-  form.value = { ...row }
-  currentSchedule.value = row
-  dialogVisible.value = true
-}
-
-const handleSave = async () => {
+const loadScripts = async () => {
   try {
-    if (currentSchedule.value) {
-      await updateSchedule(currentSchedule.value.id, form.value)
-      ElMessage.success('更新成功')
-    } else {
-      await createSchedule(form.value)
-      ElMessage.success('创建成功')
-    }
-    dialogVisible.value = false
-    loadSchedules()
+    const res = await getScripts()
+    scripts.value = res.data
   } catch (error) {
     console.error(error)
   }
@@ -224,23 +195,6 @@ const handleRunNow = async (row) => {
     ElMessage.success('任务已启动,请在执行历史中查看')
   } catch (error) {
     console.error(error)
-  }
-}
-
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm('确定要删除此任务吗?', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await deleteSchedule(row.id)
-    ElMessage.success('删除成功')
-    loadSchedules()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error(error)
-    }
   }
 }
 

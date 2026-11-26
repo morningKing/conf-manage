@@ -173,7 +173,8 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, Folder } from '@element-plus/icons-vue'
-import request from '@/api/request'
+import { generateScript as apiGenerateScript, improveScript as apiImproveScript, explainScript as apiExplainScript, previewExecute as apiPreviewExecute } from '@/api/ai'
+import { createScript, getFolderTree, previewExecutionFile } from '@/api'
 import { useRouter } from 'vue-router'
 import FileUpload from '@/components/FileUpload.vue'
 import GlassButton from '../components/GlassButton.vue'
@@ -215,10 +216,7 @@ const generateScript = async () => {
   explanation.value = ''
 
   try {
-    // 使用非流式接口
-    const response = await request.post('/ai/generate-script', {
-      prompt: prompt.value
-    })
+    const response = await apiGenerateScript(prompt.value)
 
     generatedScript.value = response.script || ''
     ElMessage.success('脚本生成成功')
@@ -236,10 +234,7 @@ const improveScript = async () => {
 
   generating.value = true
   try {
-    const response = await request.post('/ai/improve-script', {
-      script: generatedScript.value,
-      request: improvementRequest
-    })
+    const response = await apiImproveScript(generatedScript.value, improvementRequest)
     const oldScript = generatedScript.value
     generatedScript.value = response.script || ''
 
@@ -263,9 +258,7 @@ const improveScript = async () => {
 const explainScript = async () => {
   generating.value = true
   try {
-    const response = await request.post('/ai/explain-script', {
-      script: generatedScript.value
-    })
+    const response = await apiExplainScript(generatedScript.value)
 
     explanation.value = response.explanation || ''
   } catch (error) {
@@ -310,10 +303,10 @@ const previewExecute = async () => {
       })
 
       // 不设置Content-Type，让浏览器自动设置（包含boundary）
-      response = await request.post('/ai/preview-execute', formData)
+      response = await apiPreviewExecute(formData)
     } else {
       // 无文件：使用JSON格式
-      response = await request.post('/ai/preview-execute', {
+      response = await apiPreviewExecute({
         code: generatedScript.value,
         params: params
       })
@@ -346,8 +339,9 @@ const previewExecute = async () => {
 const handleFileClick = async (data) => {
   if (data.type === 'file' && data.executionId) {
     try {
-      const response = await request.get(`/executions/${data.executionId}/files/${encodeURIComponent(data.path)}/preview`)
-      currentFileContent.value = response.content || ''
+      const response = await previewExecutionFile(data.executionId, encodeURIComponent(data.path))
+      // 文本文件经拦截器解包后为字符串；兜底兼容对象形态
+      currentFileContent.value = typeof response === 'string' ? response : (response?.content || '')
       filePreviewVisible.value = true
     } catch (error) {
       ElMessage.error('读取文件失败: ' + (error.message || '未知错误'))
@@ -398,7 +392,7 @@ const confirmSave = async () => {
       scriptData.folder_id = saveForm.value.folder_id
     }
 
-    await request.post('/scripts', scriptData)
+    await createScript(scriptData)
 
     ElMessage.success('保存成功')
     saveDialogVisible.value = false
@@ -417,7 +411,7 @@ const confirmSave = async () => {
 // 加载文件夹
 const loadFolders = async () => {
   try {
-    const response = await request.get('/folders/tree')
+    const response = await getFolderTree()
     const flatList = []
     const flatten = (items, prefix = '') => {
       for (const item of items) {

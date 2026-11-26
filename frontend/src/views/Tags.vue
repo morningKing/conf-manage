@@ -3,13 +3,13 @@
     <div class="glass-card">
       <div class="glass-card-header">
         <span class="glass-card-title">标签管理</span>
-        <el-button size="small" type="primary" @click="handleCreate">
+        <el-button size="small" type="primary" @click="openCreate">
           <el-icon><Plus /></el-icon>
           新建标签
         </el-button>
       </div>
 
-      <el-table :data="tags" stripe>
+      <el-table :data="items" stripe v-loading="loading">
         <el-table-column prop="name" label="标签名称" width="200" />
         <el-table-column label="标签预览" width="200">
           <template #default="{ row }">
@@ -31,8 +31,8 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="removeRow(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -41,7 +41,7 @@
     <!-- 创建/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogTitle"
+      :title="isEdit ? '编辑标签' : '新建标签'"
       width="600px"
     >
       <el-form :model="form" label-width="100px">
@@ -58,103 +58,47 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" @click="save">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getTags, createTag, updateTag, deleteTag } from '../api'
 import { Plus } from '@element-plus/icons-vue'
 import ColorPicker from '../components/ColorPicker.vue'
+import { useCrud } from '@/composables/useCrud'
 
-const tags = ref([])
-const dialogVisible = ref(false)
-const dialogTitle = ref('新建标签')
-const form = ref({
-  name: '',
-  color: '#67C23A'
-})
-const currentTag = ref(null)
-
-const loadTags = async () => {
-  try {
-    const res = await getTags()
-    tags.value = res.data
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('加载标签失败')
-  }
-}
-
-const handleCreate = () => {
-  dialogTitle.value = '新建标签'
-  form.value = {
-    name: '',
-    color: '#67C23A'
-  }
-  currentTag.value = null
-  dialogVisible.value = true
-}
-
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑标签'
-  form.value = { ...row }
-  currentTag.value = row
-  dialogVisible.value = true
-}
-
-const handleSave = async () => {
-  try {
-    if (!form.value.name) {
+const {
+  items, loading, dialogVisible, isEdit, form,
+  load, openCreate, openEdit, save, removeRow,
+} = useCrud({
+  list: async () => (await getTags()).data,
+  create: (val) => createTag(val),
+  update: (id, val) => updateTag(id, val),
+  remove: (row) => deleteTag(row.id),
+  emptyForm: () => ({ name: '', color: '#67C23A' }),
+  toForm: (row) => ({ ...row }),
+  validate: (val) => {
+    if (!val.name) {
       ElMessage.warning('请输入标签名称')
-      return
+      return false
     }
-
-    if (currentTag.value) {
-      await updateTag(currentTag.value.id, form.value)
-      ElMessage.success('更新成功')
-    } else {
-      await createTag(form.value)
-      ElMessage.success('创建成功')
-    }
-    dialogVisible.value = false
-    loadTags()
-  } catch (error) {
-    console.error(error)
-    ElMessage.error(error.response?.data?.message || '操作失败')
-  }
-}
-
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm('确定要删除此标签吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await deleteTag(row.id)
-    ElMessage.success('删除成功')
-    loadTags()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error(error)
-      ElMessage.error(error.response?.data?.message || '删除失败')
-    }
-  }
-}
+    return true
+  },
+  confirmText: () => '确定要删除此标签吗？',
+  name: '标签',
+})
 
 const formatTime = (time) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN')
 }
 
-onMounted(() => {
-  loadTags()
-})
+onMounted(load)
 </script>
 
 <style scoped>

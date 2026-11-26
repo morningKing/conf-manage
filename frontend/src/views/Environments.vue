@@ -56,7 +56,7 @@
     <!-- 创建/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogTitle"
+      :title="isEdit ? '编辑环境' : '新建环境'"
       width="600px"
       :close-on-click-modal="false"
     >
@@ -102,7 +102,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import GlassButton from '../components/GlassButton.vue'
 import {
@@ -113,24 +113,13 @@ import {
   setDefaultEnvironment,
   detectEnvironment
 } from '../api'
+import { useCrud } from '@/composables/useCrud'
 
 const activeTab = ref('python')
-const environments = ref([])
-const dialogVisible = ref(false)
-const dialogTitle = ref('新建环境')
-const currentEnvironment = ref(null)
 const detecting = ref(false)
 const saving = ref(false)
 const detectedVersion = ref('')
 const formRef = ref(null)
-
-const form = ref({
-  name: '',
-  type: 'python',
-  executable_path: '',
-  description: '',
-  is_default: false
-})
 
 const rules = {
   name: [{ required: true, message: '请输入环境名称', trigger: 'blur' }],
@@ -138,45 +127,69 @@ const rules = {
   executable_path: [{ required: true, message: '请输入解释器路径', trigger: 'blur' }]
 }
 
-const pythonEnvironments = computed(() => {
-  return environments.value.filter(env => env.type === 'python')
-})
-
-const nodeEnvironments = computed(() => {
-  return environments.value.filter(env => env.type === 'javascript')
-})
-
-const loadEnvironments = async () => {
-  try {
-    const res = await getEnvironments()
-    environments.value = res.data
-  } catch (error) {
-    ElMessage.error('加载环境列表失败')
-    console.error(error)
-  }
-}
-
-const handleCreate = () => {
-  dialogTitle.value = '新建环境'
-  form.value = {
+const {
+  items: environments,
+  dialogVisible,
+  isEdit,
+  current: currentEnvironment,
+  form,
+  load: loadEnvironments,
+  openCreate,
+  openEdit,
+  save,
+  removeRow,
+} = useCrud({
+  list: async () => (await getEnvironments()).data,
+  create: (val) => createEnvironment(val),
+  update: (id, val) => updateEnvironment(id, val),
+  remove: (row) => deleteEnvironment(row.id),
+  emptyForm: () => ({
     name: '',
     type: activeTab.value,
     executable_path: '',
     description: '',
-    is_default: false
-  }
-  currentEnvironment.value = null
+    is_default: false,
+  }),
+  toForm: (row) => ({ ...row }),
+  validate: () => new Promise((resolve) => {
+    if (!formRef.value) {
+      resolve(false)
+      return
+    }
+    formRef.value.validate((valid) => resolve(valid))
+  }),
+  confirmText: (row) => `确定要删除环境 "${row.name}" 吗？`,
+  name: '环境',
+})
+
+const pythonEnvironments = computed(() =>
+  environments.value.filter(env => env.type === 'python')
+)
+
+const nodeEnvironments = computed(() =>
+  environments.value.filter(env => env.type === 'javascript')
+)
+
+const handleCreate = () => {
+  openCreate()
   detectedVersion.value = ''
-  dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
-  dialogTitle.value = '编辑环境'
-  form.value = { ...row }
-  currentEnvironment.value = row
+  openEdit(row)
   detectedVersion.value = row.version || ''
-  dialogVisible.value = true
 }
+
+const handleSave = async () => {
+  saving.value = true
+  try {
+    await save()
+  } finally {
+    saving.value = false
+  }
+}
+
+const handleDelete = (row) => removeRow(row)
 
 const handleDetectVersion = async () => {
   if (!form.value.executable_path || !form.value.type) {
@@ -199,31 +212,6 @@ const handleDetectVersion = async () => {
   }
 }
 
-const handleSave = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    saving.value = true
-    try {
-      if (currentEnvironment.value) {
-        await updateEnvironment(currentEnvironment.value.id, form.value)
-        ElMessage.success('更新成功')
-      } else {
-        await createEnvironment(form.value)
-        ElMessage.success('创建成功')
-      }
-      dialogVisible.value = false
-      loadEnvironments()
-    } catch (error) {
-      ElMessage.error(error.response?.data?.message || '保存失败')
-    } finally {
-      saving.value = false
-    }
-  })
-}
-
 const handleSetDefault = async (row) => {
   try {
     await setDefaultEnvironment(row.id)
@@ -234,26 +222,7 @@ const handleSetDefault = async (row) => {
   }
 }
 
-const handleDelete = async (row) => {
-  try {
-    await ElMessageBox.confirm(`确定要删除环境 "${row.name}" 吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    await deleteEnvironment(row.id)
-    ElMessage.success('删除成功')
-    loadEnvironments()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.message || '删除失败')
-    }
-  }
-}
-
-onMounted(() => {
-  loadEnvironments()
-})
+onMounted(loadEnvironments)
 </script>
 
 <style scoped>

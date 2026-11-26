@@ -83,7 +83,6 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import GlassButton from '../components/GlassButton.vue'
 import {
   getGlobalVariables,
@@ -91,18 +90,9 @@ import {
   updateGlobalVariable,
   deleteGlobalVariable as deleteGlobalVariableApi
 } from '@/api/globalVariables'
+import { useCrud } from '@/composables/useCrud'
 
-const variables = ref([])
-const dialogVisible = ref(false)
-const currentVariable = ref(null)
 const formRef = ref(null)
-
-const form = ref({
-  key: '',
-  value: '',
-  description: '',
-  is_encrypted: false
-})
 
 const rules = {
   key: [
@@ -116,87 +106,38 @@ const rules = {
   value: [{ required: true, message: '请输入变量值', trigger: 'blur' }]
 }
 
-// 加载全局变量列表
-const loadVariables = async () => {
-  try {
-    const res = await getGlobalVariables()
-    variables.value = res.data
-  } catch (error) {
-    ElMessage.error('加载全局变量列表失败')
-  }
-}
-
-// 显示创建对话框
-const showCreateDialog = () => {
-  currentVariable.value = null
-  form.value = {
-    key: '',
-    value: '',
-    description: '',
-    is_encrypted: false
-  }
-  dialogVisible.value = true
-}
-
-// 编辑变量
-const editVariable = async (variable) => {
-  try {
-    currentVariable.value = variable
-    form.value = {
-      key: variable.key,
-      value: variable.value,
-      description: variable.description || '',
-      is_encrypted: variable.is_encrypted
+const {
+  items: variables,
+  dialogVisible,
+  current: currentVariable,
+  form,
+  load: loadVariables,
+  openCreate: showCreateDialog,
+  openEdit: editVariable,
+  save: handleSave,
+  removeRow: deleteVariable,
+} = useCrud({
+  list: async () => (await getGlobalVariables()).data,
+  create: (val) => createGlobalVariable(val),
+  update: (id, val) => updateGlobalVariable(id, val),
+  remove: (row) => deleteGlobalVariableApi(row.id),
+  emptyForm: () => ({ key: '', value: '', description: '', is_encrypted: false }),
+  toForm: (row) => ({
+    key: row.key,
+    value: row.value,
+    description: row.description || '',
+    is_encrypted: row.is_encrypted,
+  }),
+  validate: () => new Promise((resolve) => {
+    if (!formRef.value) {
+      resolve(false)
+      return
     }
-    dialogVisible.value = true
-  } catch (error) {
-    ElMessage.error('加载变量详情失败')
-  }
-}
-
-// 保存变量
-const handleSave = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    try {
-      if (currentVariable.value) {
-        await updateGlobalVariable(currentVariable.value.id, form.value)
-        ElMessage.success('更新成功')
-      } else {
-        await createGlobalVariable(form.value)
-        ElMessage.success('创建成功')
-      }
-      dialogVisible.value = false
-      loadVariables()
-    } catch (error) {
-      ElMessage.error(error.response?.data?.message || '保存失败')
-    }
-  })
-}
-
-// 删除变量
-const deleteVariable = async (variable) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除变量 "${variable.key}" 吗？删除后脚本将无法使用该变量。`,
-      '提示',
-      {
-        type: 'warning'
-      }
-    )
-
-    await deleteGlobalVariableApi(variable.id)
-    ElMessage.success('删除成功')
-    loadVariables()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
-  }
-}
+    formRef.value.validate((valid) => resolve(valid))
+  }),
+  confirmText: (row) => `确定要删除变量 "${row.key}" 吗？删除后脚本将无法使用该变量。`,
+  name: '变量',
+})
 
 // 格式化日期
 const formatDate = (dateString) => {
@@ -205,9 +146,7 @@ const formatDate = (dateString) => {
   return date.toLocaleString('zh-CN')
 }
 
-onMounted(() => {
-  loadVariables()
-})
+onMounted(loadVariables)
 </script>
 
 <style scoped>

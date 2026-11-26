@@ -349,27 +349,25 @@ import {
 } from '@/api/webhooks'
 import { getScripts } from '@/api'
 import GlassButton from '../components/GlassButton.vue'
+import { useCrud } from '@/composables/useCrud'
 
 // 数据
-const webhooks = ref([])
 const scripts = ref([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const searchText = ref('')
-const loading = ref(false)
 const submitting = ref(false)
 
-// 对话框
-const dialogVisible = ref(false)
+// 对话框（URL/测试/指南为独立对话框，CRUD 对话框由 useCrud 管理）
 const urlDialogVisible = ref(false)
 const testDialogVisible = ref(false)
 const showGuide = ref(false)
-const isEdit = ref(false)
 
 // 表单
 const formRef = ref(null)
-const form = ref({
+
+const emptyWebhookForm = () => ({
   name: '',
   webhook_key: '',
   description: '',
@@ -400,22 +398,42 @@ const testResponse = ref(null)
 const testing = ref(false)
 
 // 方法
-const loadWebhooks = async () => {
-  loading.value = true
-  try {
+const {
+  items: webhooks,
+  loading,
+  dialogVisible,
+  isEdit,
+  form,
+  load: loadWebhooks,
+  openCreate: handleCreate,
+  openEdit: handleEdit,
+  save,
+  removeRow,
+} = useCrud({
+  list: async () => {
     const response = await getWebhooks({
       page: currentPage.value,
       per_page: pageSize.value,
-      search: searchText.value
+      search: searchText.value,
     })
-    webhooks.value = response.data.items
     total.value = response.data.total
-  } catch (error) {
-    ElMessage.error('加载Webhook列表失败')
-  } finally {
-    loading.value = false
-  }
-}
+    return response.data.items
+  },
+  create: (val) => createWebhook(val),
+  update: (id, val) => updateWebhook(id, val),
+  remove: (row) => deleteWebhook(row.id),
+  emptyForm: emptyWebhookForm,
+  toForm: (row) => ({ ...row }),
+  validate: () => new Promise((resolve) => {
+    if (!formRef.value) {
+      resolve(false)
+      return
+    }
+    formRef.value.validate((valid) => resolve(valid))
+  }),
+  confirmText: () => '确定要删除这个Webhook吗？',
+  name: 'Webhook',
+})
 
 const loadScripts = async () => {
   try {
@@ -424,28 +442,6 @@ const loadScripts = async () => {
   } catch (error) {
     ElMessage.error('加载脚本列表失败')
   }
-}
-
-const handleCreate = () => {
-  isEdit.value = false
-  form.value = {
-    name: '',
-    webhook_key: '',
-    description: '',
-    script_id: null,
-    execution_mode: 'async',
-    timeout: 30,
-    token_enabled: false,
-    pass_full_request: true,
-    enabled: true
-  }
-  dialogVisible.value = true
-}
-
-const handleEdit = (webhook) => {
-  isEdit.value = true
-  form.value = { ...webhook }
-  dialogVisible.value = true
 }
 
 const generateRandomKey = () => {
@@ -459,44 +455,15 @@ const generateRandomKey = () => {
 }
 
 const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-
-    submitting.value = true
-    try {
-      if (isEdit.value) {
-        await updateWebhook(form.value.id, form.value)
-        ElMessage.success('更新成功')
-      } else {
-        await createWebhook(form.value)
-        ElMessage.success('创建成功')
-      }
-      dialogVisible.value = false
-      loadWebhooks()
-    } catch (error) {
-      ElMessage.error(error.response?.data?.message || '操作失败')
-    } finally {
-      submitting.value = false
-    }
-  })
-}
-
-const handleDelete = async (webhook) => {
+  submitting.value = true
   try {
-    await ElMessageBox.confirm('确定要删除这个Webhook吗？', '确认删除', {
-      type: 'warning'
-    })
-    await deleteWebhook(webhook.id)
-    ElMessage.success('删除成功')
-    loadWebhooks()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
+    await save()
+  } finally {
+    submitting.value = false
   }
 }
+
+const handleDelete = (webhook) => removeRow(webhook)
 
 const showWebhookUrl = (webhook) => {
   currentWebhook.value = webhook

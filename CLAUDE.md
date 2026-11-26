@@ -72,8 +72,9 @@ E2E infrastructure notes (backend/tests_e2e/):
 - `frontend/src/views/` - 13 page components
 - `frontend/src/components/` - Reusable components (CodeEditor with CodeMirror 6, PipelineBuilder for workflow editing); Excel editing has two stacks: Univer (in ExecutionFiles dialog preview) and Luckysheet (standalone /excel-editor page with socket.io collab) — both intentional, see README
 - `frontend/src/utils/pipeline.js` - steps ↔ backend `{nodes, edges}` conversion layer (toGraph generates chain edges; fromGraph flattens legacy DAGs by node order and reports dropped condition edges; validateSteps)
-- `frontend/src/api/` - `request.js` (axios instance, interceptor unwraps `response.data`, pops ElMessage on error) + per-domain modules; workflow endpoints live in `workflow.js` and are re-exported from `index.js`
+- `frontend/src/api/` - `request.js` (axios instance, interceptor unwraps `response.data`, pops ElMessage on error) + per-domain modules (`ai.js` for AI configs + script generation, `workflow.js`, …); workflow endpoints are re-exported from `index.js`
 - `frontend/src/composables/useEventSource.js` - SSE lifecycle helper (used by log streams in Scripts.vue and Workflows.vue)
+- `frontend/src/composables/useCrud.js` - list-page CRUD boilerplate (dialog state, validation hook, save/delete with ElMessage/MessageBox); adopted by Tags/GlobalVariables/Environments/Schedules/Webhooks — new list pages should use it instead of hand-rolling handlers
 - `frontend/src/router/index.js` - Vue Router configuration; Vite proxy `/api` → `http://localhost:5001`
 
 ### Key Data Models

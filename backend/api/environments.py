@@ -138,11 +138,12 @@ def delete_environment(env_id):
     try:
         environment = Environment.query.get_or_404(env_id)
 
-        # 检查是否有脚本在使用
-        if environment.scripts.count() > 0:
+        # 检查是否有脚本在使用（scripts 为列表关系，用 len 而非 count()）
+        script_count = len(environment.scripts)
+        if script_count > 0:
             return jsonify({
                 'code': 1,
-                'message': f'该环境正在被 {environment.scripts.count()} 个脚本使用，无法删除'
+                'message': f'该环境正在被 {script_count} 个脚本使用，无法删除'
             }), 400
 
         db.session.delete(environment)
